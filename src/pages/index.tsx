@@ -1,869 +1,675 @@
-import { Geist, Geist_Mono } from "next/font/google";
-import SummaryCard from "@/components/SummaryCard";
-import { Users, DollarSign, TrendingUp, TrendingDown, Calendar, Clock, Filter, ArrowUpRight, ChevronRight, Sparkles, Wallet, Receipt, UserCheck, UserX, Package, AlertCircle, CheckCircle2, ArrowRight, X } from "lucide-react";
+"use client";
+
 import { useEffect, useState } from "react";
-import { api } from "@/utils/axiosInstance";
-import { baseUrl } from "../../config";
-import toast from "react-hot-toast";
-import { useRouter } from "next/router";
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
-import { getUserData } from "@/utils/tokenHelper";
+import type { ComponentType } from "react";
+import { useRouter } from "next/navigation";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+import Layout from "@/components/Layout";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+} from "recharts";
+import {
+  Users,
+  Calendar,
+  Award,
+  ArrowUpRight,
+  ArrowDownRight,
+  Phone,
+  Mail,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  AlertCircle,
+  User,
+  Calendar as CalendarIcon,
+  TrendingUp,
+  DollarSign,
+  Target,
+  Activity,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
+import axios from "axios";
+import { baseUrl, getAuthToken } from "@/config";
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+interface StatusCount {
+  statusId: string;
+  statusName: string;
+  count: number;
+}
 
-// Custom Tooltip for Charts
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl p-3 shadow-lg">
-        <p className="text-sm font-medium text-gray-900">{label}</p>
-        <p className="text-lg font-bold text-gray-900">
-          ₹{payload[0].value.toLocaleString()}
-        </p>
-      </div>
-    );
-  }
-  return null;
-};
+interface LeadSummary {
+  totalLeads: number;
+  currentMonthLeads: number;
+  statusWiseCounts: StatusCount[];
+}
 
-// Custom Tooltip for Pie Charts
-const PieTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl p-3 shadow-lg">
-        <p className="text-sm font-medium text-gray-900">{payload[0].name}</p>
-        <p className="text-lg font-bold text-gray-900">{payload[0].value}</p>
-      </div>
-    );
-  }
-  return null;
-};
+interface SummaryCard {
+  key: string;
+  label: string;
+  value: number | string;
+  trend?: number;
+  tone?: "up" | "down" | "neutral";
+  Icon: ComponentType<{ className?: string }>;
+  iconBg: string;
+  iconColor: string;
+  type: "total" | "month" | "status" | "revenue" | "custom";
+  statusId?: string;
+}
 
-export default function Home() {
+const ITEMS_PER_PAGE = 10;
+
+export default function Dashboard() {
   const router = useRouter();
-  const [stats, setStats] = useState<any>(null);
-  const [graphData, setGraphData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState("thisMonth");
-  const [customStartDate, setCustomStartDate] = useState("");
-  const [customEndDate, setCustomEndDate] = useState("");
-  const [topLimit, setTopLimit] = useState(5);
+
+  const [summary, setSummary] = useState<LeadSummary | null>(null);
+  const [leadsBySource, setLeadsBySource] = useState<
+    { name: string; value: number; fill: string }[]
+  >([]);
+  const [staffPerformance, setStaffPerformance] = useState<
+    { name: string; converted: number; pending: number; lost: number }[]
+  >([]);
+
+  // Upcoming Follow-ups (paginated)
+  const [upcomingPage, setUpcomingPage] = useState(1);
+  const [upcomingTotalPages, setUpcomingTotalPages] = useState(1);
+  const [upcomingFollowups, setUpcomingFollowups] = useState<any[]>([]);
+  const [upcomingLoading, setUpcomingLoading] = useState(false);
+  const [visibleStatusNames, setVisibleStatusNames] = useState<string[] | null>(null);
+  // Due Follow-ups (paginated)
+  const [duePage, setDuePage] = useState(1);
+  const [dueTotalPages, setDueTotalPages] = useState(1);
+  const [dueFollowups, setDueFollowups] = useState<any[]>([]);
+  const [dueLoading, setDueLoading] = useState(false);
+
+  const token =
+    typeof window !== "undefined" ? getAuthToken() : null;
+
+  // Redirect if no token
+  useEffect(() => {
+    if (!token) router.replace("/login");
+  }, [router, token]);
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      New: "bg-blue-100 text-blue-700 border-blue-200",
+      Contacted: "bg-purple-100 text-purple-700 border-purple-200",
+      "Follow-Up": "bg-orange-100 text-orange-700 border-orange-200",
+      Interested: "bg-green-100 text-green-700 border-green-200",
+      Qualified: "bg-emerald-100 text-emerald-700 border-emerald-200",
+      "Not Interested": "bg-gray-100 text-gray-700 border-gray-200",
+      Lost: "bg-red-100 text-red-700 border-red-200",
+      Won: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    };
+    return colors[status] || "bg-gray-100 text-gray-700 border-gray-200";
+  };
+
+  const fetchLeadSummary = async () => {
+    if (!token) return;
+    try {
+      const res = await axios.get(baseUrl.leadCountSummary, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSummary(res.data.data);
+    } catch (err) {
+      console.error("Lead summary error:", err);
+    }
+  };
+
+  const fetchLeadsBySource = async () => {
+    if (!token) return;
+    try {
+      const res = await axios.get(baseUrl.leadSources, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const chartData = (res.data.data ?? []).map((item: any, idx: number) => ({
+        name: item.name,
+        value: item.count || 0,
+        fill: [
+          "#9c27b0", // darker blue (blue-700)
+          "#047857", // darker green (green-700)
+          "#B45309", // darker amber (amber-700)
+          "#B91C1C", // darker red (red-700)
+          "#1D4ED8", // darker purple (purple-700)
+        ][idx % 5],
+      }));
+
+      setLeadsBySource(chartData);
+    } catch (err) {
+      console.error("Leads by source error:", err);
+    }
+  };
+
+  const fetchStaffPerformance = async () => {
+    if (!token) return;
+    try {
+      const res = await axios.get(baseUrl.getAllStaff, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const chartData = (res.data.data ?? []).map((staff: any) => ({
+        name: staff.fullName || "Unknown",
+        converted: staff.status?.toLowerCase() === "active" ? 1 : 0,
+        pending: staff.status?.toLowerCase() === "inactive" ? 1 : 0,
+        lost: 0,
+      }));
+      setStaffPerformance(chartData);
+    } catch (err) {
+      console.error("Staff performance error:", err);
+    }
+  };
+
+  const fetchUpcomingFollowups = async (page: number) => {
+    if (!token) return;
+    setUpcomingLoading(true);
+    try {
+      const res = await axios.get(
+        `${baseUrl.leadUpcomingFollowups}?page=${page}&limit=${ITEMS_PER_PAGE}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      console.log("Upcoming followups response:", res);
+      const { data, pagination } = res.data;
+      setUpcomingFollowups(data || []);
+      setUpcomingTotalPages(pagination?.totalPages || 1);
+      setUpcomingPage(pagination?.currentPage || 1);
+    } catch (err) {
+      console.error("Upcoming followups error:", err);
+      setUpcomingFollowups([]);
+    } finally {
+      setUpcomingLoading(false);
+    }
+  };
+
+  const fetchDueFollowups = async (page: number) => {
+    if (!token) return;
+    setDueLoading(true);
+    try {
+      const res = await axios.get(
+        `${baseUrl.leadDueFollowups}?page=${page}&limit=${ITEMS_PER_PAGE}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      console.log("Due followups response:", res);
+      const { data, pagination } = res.data;
+      setDueFollowups(data || []);
+      setDueTotalPages(pagination?.totalPages || 1);
+      setDuePage(pagination?.currentPage || 1);
+    } catch (err) {
+      console.error("Due followups error:", err);
+      setDueFollowups([]);
+    } finally {
+      setDueLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const checkAccess = async () => {
-      const userData = await getUserData();
-      if (!userData?.canAccessDashboard) {
-        if (userData?.canAccessAccountMaster) {
-          router.replace("/account-master");
-        } else if (userData?.permissions && userData.permissions.length > 0) {
-          router.replace("/leads");
-        } else if (userData?.canAccessSettings) {
-          router.replace("/settings/role");
+    if (token) {
+      fetchLeadSummary();
+      fetchLeadsBySource();
+      fetchStaffPerformance();
+      fetchUpcomingFollowups(1);
+      fetchDueFollowups(1);
+    }
+  }, [token]);
+
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = window.localStorage.getItem("kanbanVisibleStatusNames");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setVisibleStatusNames(parsed.filter((x) => typeof x === "string"));
+          }
+        } catch {
         }
-        return;
       }
-      fetchDashboardStats();
-      fetchGraphData();
+    }
+  }, []);
+
+  const PaginationControls = ({
+    currentPage,
+    totalPages,
+    onPageChange,
+    disabled,
+  }: {
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+    disabled: boolean;
+  }) => {
+    // Calculate page numbers to show
+    const getPageNumbers = () => {
+      const pages = [];
+      const maxVisible = 5;
+
+      if (totalPages <= maxVisible) {
+        for (let i = 1; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+
+        let start = Math.max(2, currentPage - 1);
+        let end = Math.min(totalPages - 1, currentPage + 1);
+
+        if (currentPage <= 3) {
+          end = Math.min(totalPages - 1, 4);
+        }
+
+        if (currentPage >= totalPages - 2) {
+          start = Math.max(2, totalPages - 3);
+        }
+
+        if (start > 2) {
+          pages.push('...');
+        }
+
+        for (let i = start; i <= end; i++) {
+          pages.push(i);
+        }
+
+        if (end < totalPages - 1) {
+          pages.push('...');
+        }
+
+        if (totalPages > 1) {
+          pages.push(totalPages);
+        }
+      }
+
+      return pages;
     };
 
-    checkAccess();
-  }, [dateRange, customStartDate, customEndDate, topLimit]);
+    return (
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 bg-white border-t border-gray-200">
+        <div className="text-sm text-gray-600">
+          Showing page {currentPage} of {totalPages}
+        </div>
 
-  const getDateRange = () => {
-    const today = new Date();
-    let startDate, endDate;
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1 || disabled}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-[#f9fafc] text-gray-700 hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#f9fafc] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
 
-    switch (dateRange) {
-      case "today":
-        startDate = new Date(today.setHours(0, 0, 0, 0));
-        endDate = new Date(today.setHours(23, 59, 59, 999));
-        break;
-      case "thisWeek":
-        const firstDay = today.getDate() - today.getDay();
-        startDate = new Date(today.setDate(firstDay));
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date();
-        break;
-      case "thisMonth":
-        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-        endDate = new Date();
-        break;
-      case "custom":
-        if (customStartDate && customEndDate) {
-          startDate = new Date(customStartDate);
-          endDate = new Date(customEndDate);
-          endDate.setHours(23, 59, 59, 999);
-        }
-        break;
-    }
+          <div className="flex items-center gap-1">
+            {getPageNumbers().map((page, index) => (
+              page === '...' ? (
+                <span key={`ellipsis-${index}`} className="px-3 py-1.5 text-sm text-gray-600">
+                  ...
+                </span>
+              ) : (
+                <button
+                  key={`page-${page}`}
+                  onClick={() => onPageChange(page as number)}
+                  disabled={disabled}
+                  className={`inline-flex min-w-[2.25rem] h-9 items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${currentPage === page
+                    ? 'bg-secondary text-white hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+                    : 'border border-gray-300 bg-[#f9fafc] text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+                    }`}
+                >
+                  {page}
+                </button>
+              )
+            ))}
+          </div>
 
-    return { startDate, endDate };
+          <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages || disabled}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-[#f9fafc] text-gray-700 hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#f9fafc] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    );
   };
 
-  const fetchDashboardStats = async () => {
-    try {
-      const { startDate, endDate } = getDateRange();
-      let url = baseUrl.DASHBOARD_STATS;
-      const params = [];
-      if (startDate && endDate) {
-        params.push(`startDate=${startDate.toISOString()}`);
-        params.push(`endDate=${endDate.toISOString()}`);
-      }
-      params.push(`topLimit=${topLimit}`);
-      if (params.length > 0) {
-        url += `?${params.join('&')}`;
-      }
-      const response = await api.get(url);
-      setStats(response.data.data);
-    } catch (error) {
-      console.error("Dashboard Error:", error);
-      toast.error("Failed to fetch dashboard stats");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const renderFollowupTable = (
+    title: string,
+    items: any[],
+    loading: boolean,
+    page: number,
+    totalPages: number,
+    setPage: (p: number) => void,
+    dateHeader: string = "Follow up Date",
+  ) => (
+    <div className="rounded-xl bg-white shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
+      <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {dateHeader === "Follow up Date" ? (
+              <Clock className="h-5 w-5 text-blue-600" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-red-500" />
+            )}
+            <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+          </div>
+          <span className={`inline-flex items-center rounded-full ${dateHeader === "Follow up Date" ? "bg-gray-100 text-gray-800" : "bg-red-100 text-red-700"} px-3 py-1 text-xs font-medium `}>
+            {items.length} Total
+          </span>
+        </div>
+      </div>
 
-  const fetchGraphData = async () => {
-    try {
-      const { startDate, endDate } = getDateRange();
-      let url = baseUrl.DASHBOARD_GRAPHS;
-      const params = [];
-      if (startDate && endDate) {
-        params.push(`startDate=${startDate.toISOString()}`);
-        params.push(`endDate=${endDate.toISOString()}`);
-      }
-      if (params.length > 0) {
-        url += `?${params.join('&')}`;
-      }
-      const response = await api.get(url);
-      setGraphData(response.data.data);
-    } catch (error) {
-      console.error("Graph Error:", error);
-    }
-  };
+      {loading ? (
+        <div className="p-12 text-center flex-1 flex items-center justify-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+          <p className="mt-3 text-sm text-gray-600">Loading follow-ups...</p>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="p-12 text-center flex-1 flex items-center justify-center">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+            <Calendar className="h-6 w-6 text-gray-400" />
+          </div>
+          <p className="mt-3 text-sm text-gray-600">No follow-ups found</p>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto flex-1">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-secondary text-sm uppercase tracking-wider text-white">
+                <tr>
+                  <th className="px-6 py-4 font-semibold">Lead</th>
+                  <th className="px-6 py-4 font-semibold">Contact</th>
+                  <th className="px-6 py-4 font-semibold">Source</th>
+                  <th className="px-6 py-4 font-semibold">Status</th>
+                  <th className="px-6 py-4 font-semibold">Assigned To</th>
+                  <th className="px-6 py-4 font-semibold">{dateHeader}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {items.map((lead, index) => (
+                  <tr
+                    key={lead._id || lead.id || index}
+                    className="hover:bg-blue-50/50 transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
+                          <User className="h-4 w-4 text-blue-700" />
+                        </div>
+                        <span className="font-medium text-gray-900">
+                          {lead.lead?.fullName || lead.fullName || "-"}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Phone className="h-3.5 w-3.5 text-gray-400" />
+                          <span className="text-sm">
+                            {lead.lead?.contact || lead.contact || "-"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Mail className="h-3.5 w-3.5 text-gray-400" />
+                          <span className="text-sm">
+                            {lead.lead?.email || lead.email || "-"}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-gray-700">
+                        {lead.lead?.leadSource?.name || lead.leadSource?.name || "-"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${getStatusColor(
+                          lead.lead?.leadStatus?.name || lead.leadStatus?.name || "",
+                        )}`}
+                      >
+                        {lead.lead?.leadStatus?.name || lead.leadStatus?.name || "-"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-100">
+                          <span className="text-xs font-medium text-purple-700">
+                            {lead.assignedTo?.fullName?.charAt(0) || lead.lead?.assignedTo?.fullName?.charAt(0) || "?"}
+                          </span>
+                        </div>
+                        <span className="text-sm text-gray-700">
+                          {lead.assignedTo?.fullName || lead.lead?.assignedTo?.fullName || "-"}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <CalendarIcon className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm font-medium text-gray-900">
+                          {lead.nextFollowupDate
+                            ? new Date(lead.nextFollowupDate).toLocaleDateString("en-IN", {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            })
+                            : "-"}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-  // Handle Start Date Change with Validation
-  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newStartDate = e.target.value;
-    setCustomStartDate(newStartDate);
+          <PaginationControls
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            disabled={loading}
+          />
+        </>
+      )}
+    </div>
+  );
 
-    // If end date exists and is before new start date, reset end date
-    if (customEndDate && newStartDate > customEndDate) {
-      setCustomEndDate(newStartDate);
-      toast.success("End date updated to match start date", {
-        icon: "📅",
-        style: { borderRadius: '12px', background: '#1e1b4b', color: '#fff' }
-      });
-    }
-  };
+  const summaryCards: any[] = summary
+    ? [
+      {
+        key: "total",
+        label: "Total Leads",
+        value: summary.totalLeads,
+        trend: 12.5,
+        tone: "up",
+        Icon: Users,
+        iconBg: "bg-blue-50",      // lighter
+        iconColor: "text-blue-500", // softer
+        type: "total",
+      },
+      {
+        key: "month",
+        label: "New Leads (This Month)",
+        value: summary.currentMonthLeads,
+        trend: 8.2,
+        tone: "up",
+        Icon: Calendar,
+        iconBg: "bg-green-50",     // lighter
+        iconColor: "text-green-500", // softer
+        type: "month",
+      },
+      ...summary.statusWiseCounts.filter((item) => visibleStatusNames?.includes(item.statusName)).map((s) => ({
+        key: `status-${s.statusId}`,
+        label: `${s.statusName.charAt(0).toUpperCase() + s.statusName.slice(1)} Leads`,
+        value: s.count,
+        trend: 0,
+        tone: "neutral",
+        Icon: Award,
+        iconBg: "bg-purple-50",     // lighter
+        iconColor: "text-purple-500", // softer
+        type: "status",
+        statusId: s.statusId,
+      })),
+    ]
+    : [];
 
-  // Handle End Date Change with Validation
-  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newEndDate = e.target.value;
-
-    // Prevent selecting end date before start date
-    if (customStartDate && newEndDate < customStartDate) {
-      toast.error("End date cannot be before start date", {
-        icon: "❌",
-        style: { borderRadius: '12px', background: '#fef2f2', color: '#dc2626' }
-      });
+  const handleCardClick = (card: SummaryCard) => {
+    if (card.type === "total") {
+      router.push("/leads");
       return;
     }
 
-    setCustomEndDate(newEndDate);
-  };
+    if (card.type === "month") {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-  // Clear Custom Dates
-  const clearCustomDates = () => {
-    setCustomStartDate("");
-    setCustomEndDate("");
-  };
+      const format = (d: Date) => d.toISOString().split("T")[0];
 
-  // Get today's date in YYYY-MM-DD format for max attribute
-  const getTodayDate = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  };
+      const params = new URLSearchParams({
+        from: format(start),
+        to: format(end),
+      });
 
-  if (loading) {
-    return (
-      <div className="min-h-screen  flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <div className="h-16 w-16 rounded-full border-4 border-indigo-200"></div>
-            <div className="absolute top-0 left-0 h-16 w-16 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin"></div>
-          </div>
-          <p className="text-gray-600 font-medium animate-pulse">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+      router.push(`/leads?${params.toString()}`);
+      return;
+    }
 
-  const statusCounts = stats?.statusCounts || {};
-  const todayFollowUps = stats?.todayFollowUps || [];
-  const paymentStats = stats?.paymentStats || { totalRevenue: 0, totalPaid: 0, totalPending: 0 };
-  const pendingPaymentLeads = stats?.pendingPaymentLeads || [];
-  const topModels = stats?.topModels || [];
-  const accountStats = stats?.accountStats || { totalAccounts: 0, convertedToLead: 0, notConvertedToLead: 0 };
-
-  const paymentGraphData = graphData?.paymentGraph || [];
-  const leadStatusGraphData = graphData?.leadStatusGraph || [];
-  const accountConversionGraphData = graphData?.accountConversionGraph || [];
-  const categoryPercentages = stats?.categoryPercentages || [];
-
-  const COLORS = ['#a5b4fc', '#c4b5fd', '#f9a8d4', '#fda4af', '#fdba74', '#fde047', '#86efac', '#5eead4', '#7dd3fc'];
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
-  };
-
-  const getStatusColor = (index: number) => {
-    const colors = [
-      { bg: "bg-violet-500", light: "bg-violet-50", border: "border-violet-200", text: "text-violet-700", icon: "text-violet-600" },
-      { bg: "bg-pink-500", light: "bg-pink-50", border: "border-pink-200", text: "text-pink-700", icon: "text-pink-600" },
-      { bg: "bg-indigo-500", light: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700", icon: "text-indigo-600" },
-      { bg: "bg-cyan-500", light: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-700", icon: "text-cyan-600" },
-      { bg: "bg-orange-500", light: "bg-orange-50", border: "border-orange-200", text: "text-orange-700", icon: "text-orange-600" },
-      { bg: "bg-teal-500", light: "bg-teal-50", border: "border-teal-200", text: "text-teal-700", icon: "text-teal-600" },
-      { bg: "bg-amber-500", light: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", icon: "text-amber-600" },
-      { bg: "bg-emerald-500", light: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700", icon: "text-emerald-600" },
-      { bg: "bg-rose-500", light: "bg-rose-50", border: "border-rose-200", text: "text-rose-700", icon: "text-rose-600" },
-    ];
-    return colors[index % colors.length];
+    if (card.type === "status" && card.statusId) {
+      const params = new URLSearchParams({
+        status: String(card.statusId),
+      });
+      router.push(`/leads?${params.toString()}`);
+    }
   };
 
   return (
-    <div className={`${geistSans.className} ${geistMono.className} min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50`}>
-      {/* Header Section */}
-      <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-gray-200">
-        <div className="px-6 py-5">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Dashboard Overview
-              </h1>
-              <p className="text-gray-600 text-sm mt-1">Welcome back! Here's what's happening today.</p>
-            </div>
+    <Layout label="Dashboard">
+      <div className="flex flex-col h-full bg-gray-50">
 
-            {/* Date Filter Pills */}
-            <div className="flex flex-wrap items-center gap-2">
-              {["today", "thisWeek", "thisMonth"].map((range) => (
-                <button
-                  key={range}
-                  onClick={() => setDateRange(range)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    dateRange === range
-                      ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md"
-                      : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
-                  }`}
-                >
-                  {range === "today" ? "Today" : range === "thisWeek" ? "This Week" : "This Month"}
-                </button>
-              ))}
-              <button
-                onClick={() => setDateRange("custom")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                  dateRange === "custom"
-                    ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md"
-                    : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
-                }`}
-              >
-                <Calendar className="h-4 w-4" />
-                Custom
-              </button>
-            </div>
-          </div>
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="grid grid-cols-12 gap-6">
+            {/* Left Column - Follow-up Tables (3/12 width) */}
+            <div className="col-span-6 space-y-6">
+              {/* Upcoming Follow-ups */}
+              <div className="h-[calc(50vh-2rem)]">
+                {renderFollowupTable(
+                  "Upcoming Follow-ups",
+                  upcomingFollowups,
+                  upcomingLoading,
+                  upcomingPage,
+                  upcomingTotalPages,
+                  (p) => {
+                    if (p >= 1 && p <= upcomingTotalPages) fetchUpcomingFollowups(p);
+                  },
+                  "Follow up Date",
+                )}
+              </div>
 
-          {/* Enhanced Custom Date Range Picker */}
-          {dateRange === "custom" && (
-            <div className="mt-4">
-              <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                <div className="flex flex-col lg:flex-row items-stretch lg:items-end gap-4">
-                  {/* Start Date */}
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-600 mb-2">
-                      Start Date
-                    </label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-500" />
-                      <input
-                        type="date"
-                        value={customStartDate}
-                        onChange={handleStartDateChange}
-                        max={getTodayDate()}
-                        className="w-full pl-10 pr-4 py-2.5 bg-blue-50 border border-blue-200 rounded-lg text-gray-700 focus:outline-none focus:border-blue-400 focus:bg-white transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Arrow */}
-                  <div className="hidden lg:flex items-center justify-center pb-2">
-                    <ArrowRight className="h-5 w-5 text-purple-400" />
-                  </div>
-
-                  {/* End Date */}
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-600 mb-2">
-                      End Date
-                    </label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-purple-500" />
-                      <input
-                        type="date"
-                        value={customEndDate}
-                        onChange={handleEndDateChange}
-                        min={customStartDate || undefined}
-                        max={getTodayDate()}
-                        disabled={!customStartDate}
-                        className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:outline-none transition-all ${
-                          !customStartDate
-                            ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-                            : 'bg-purple-50 border-purple-200 text-gray-700 focus:border-purple-400 focus:bg-white'
-                        }`}
-                      />
-                    </div>
-                  </div>
-                </div>
+              {/* Due Follow-ups */}
+              <div className="h-[calc(50vh-2rem)]">
+                {renderFollowupTable(
+                  "Due Follow-ups",
+                  dueFollowups,
+                  dueLoading,
+                  duePage,
+                  dueTotalPages,
+                  (p) => {
+                    if (p >= 1 && p <= dueTotalPages) fetchDueFollowups(p);
+                  },
+                  "Due Date",
+                )}
               </div>
             </div>
-          )}
-        </div>
-      </div>
 
-      <div className="p-6 space-y-6">
-        {/* Payment Stats - Hero Section */}
-        <section>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 p-5 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2.5 bg-white rounded-lg shadow-sm">
-                  <Wallet className="h-5 w-5 text-blue-600" />
-                </div>
-                <TrendingUp className="h-4 w-4 text-blue-500" />
-              </div>
-              <p className="text-blue-700 text-xs font-medium">Total Revenue</p>
-              <p className="text-2xl font-bold text-blue-900 mt-1">{formatCurrency(paymentStats.totalRevenue)}</p>
-            </div>
-
-            <div className="rounded-xl bg-gradient-to-br from-green-50 to-emerald-100 border border-green-200 p-5 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2.5 bg-white rounded-lg shadow-sm">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                </div>
-                <TrendingUp className="h-4 w-4 text-green-500" />
-              </div>
-              <p className="text-green-700 text-xs font-medium">Total Paid</p>
-              <p className="text-2xl font-bold text-green-900 mt-1">{formatCurrency(paymentStats.totalPaid)}</p>
-            </div>
-
-            <div className="rounded-xl bg-gradient-to-br from-orange-50 to-red-100 border border-orange-200 p-5 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2.5 bg-white rounded-lg shadow-sm">
-                  <Receipt className="h-5 w-5 text-orange-600" />
-                </div>
-                <TrendingDown className="h-4 w-4 text-orange-500" />
-              </div>
-              <p className="text-orange-700 text-xs font-medium">Total Pending</p>
-              <p className="text-2xl font-bold text-orange-900 mt-1">{formatCurrency(paymentStats.totalPending)}</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column */}
-          <div className="lg:col-span-8 space-y-6">
-            {/* Payment Chart */}
-            {paymentGraphData.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-                <div className="p-5 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg">
-                      <DollarSign className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <h2 className="text-base font-semibold text-gray-800">Revenue Analytics</h2>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={paymentGraphData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                      <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} tickFormatter={(value) => `₹${value / 1000}k`} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                        {paymentGraphData.map((entry: any, index: number) => {
-                          const colors = ['#93c5fd', '#6ee7b7', '#fdba74'];
-                          return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
-                        })}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-
-            {/* Lead Status Section */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-              <div className="p-5 border-b border-gray-100">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg">
-                      <Users className="h-5 w-5 text-purple-600" />
-                    </div>
-                    <h2 className="text-base font-semibold text-gray-800">Lead Status Overview</h2>
-                  </div>
-                  <button
-                    onClick={() => router.push('/leads')}
-                    className="text-sm text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
-                  >
-                    View All <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {Object.entries(statusCounts).map(([status, count]: [string, any], index: number) => {
-                    const color = getStatusColor(index);
-                    return (
-                      <div
-                        key={status}
-                        onClick={() => router.push(`/leads?status=${encodeURIComponent(status)}`)}
-                        className="group relative overflow-hidden rounded-xl border border-gray-100 bg-white p-4 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer"
-                      >
-                        <div className={`absolute top-0 left-0 w-full h-1 ${color.bg}`}></div>
-                        <div className="flex items-start justify-between">
-                          <div className={`p-2 rounded-lg ${color.light}`}>
-                            <Users className={`h-4 w-4 ${color.icon}`} />
-                          </div>
-                          <span className={`text-2xl font-bold ${color.text}`}>{count}</span>
-                        </div>
-                        <p className="mt-3 text-sm font-medium text-gray-700 truncate">{status}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Lead Status Pie Chart */}
-                {leadStatusGraphData.length > 0 && (
-                  <div className="mt-6 pt-6 border-t border-gray-100">
-                    <ResponsiveContainer width="100%" height={250}>
+            {/* Middle Column - Chart (6/12 width) */}
+            <div className="col-span-3">
+              <div className="rounded-xl bg-white shadow-sm border border-gray-200 p-6 h-full">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Lead Source Count</h3>
+                <div className="flex flex-col items-center justify-center h-[calc(100%-3rem)]">
+                  <div className="h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={leadStatusGraphData}
+                          data={leadsBySource}
                           cx="50%"
                           cy="50%"
                           innerRadius={60}
                           outerRadius={100}
-                          paddingAngle={3}
-                          dataKey="value"
-                          nameKey="label"
-                        >
-                          {leadStatusGraphData.map((entry: any, index: number) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<PieTooltip />} />
-                        <Legend
-                          layout="horizontal"
-                          verticalAlign="bottom"
-                          align="center"
-                          formatter={(value: string) => <span className="text-sm text-gray-600">{value}</span>}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Account Conversion Section */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
-              <div className="p-6 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-green-100 rounded-xl">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
-                  </div>
-                  <h2 className="text-lg font-semibold text-gray-900">Account Conversion</h2>
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div
-                    onClick={() => router.push('/account-master')}
-                    className="group relative overflow-hidden rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-teal-50 p-5 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer"
-                  >
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-200/30 rounded-full -translate-y-1/2 translate-x-1/2 blur-xl"></div>
-                    <div className="relative">
-                      <div className="flex items-center justify-between">
-                        <div className="p-2 bg-emerald-100 rounded-lg">
-                          <UserCheck className="h-5 w-5 text-emerald-600" />
-                        </div>
-                        <ArrowUpRight className="h-5 w-5 text-emerald-400 group-hover:text-emerald-600 transition-colors" />
-                      </div>
-                      <p className="mt-4 text-3xl font-bold text-emerald-700">{accountStats.convertedToLead}</p>
-                      <p className="mt-1 text-sm text-emerald-600 font-medium">Converted to Lead</p>
-                    </div>
-                  </div>
-
-                  <div
-                    onClick={() => router.push('/account-master')}
-                    className="group relative overflow-hidden rounded-xl border border-amber-100 bg-gradient-to-br from-amber-50 to-orange-50 p-5 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer"
-                  >
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-amber-200/30 rounded-full -translate-y-1/2 translate-x-1/2 blur-xl"></div>
-                    <div className="relative">
-                      <div className="flex items-center justify-between">
-                        <div className="p-2 bg-amber-100 rounded-lg">
-                          <UserX className="h-5 w-5 text-amber-600" />
-                        </div>
-                        <ArrowUpRight className="h-5 w-5 text-amber-400 group-hover:text-amber-600 transition-colors" />
-                      </div>
-                      <p className="mt-4 text-3xl font-bold text-amber-700">{accountStats.notConvertedToLead}</p>
-                      <p className="mt-1 text-sm text-amber-600 font-medium">Not Converted</p>
-                    </div>
-                  </div>
-                </div>
-
-                {accountConversionGraphData.length > 0 && (
-                  <div className="mt-6">
-                    <ResponsiveContainer width="100%" height={200}>
-                      <PieChart>
-                        <Pie
-                          data={accountConversionGraphData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={50}
-                          outerRadius={80}
                           paddingAngle={5}
                           dataKey="value"
-                          nameKey="label"
                         >
-                          {accountConversionGraphData.map((entry: any, index: number) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          {leadsBySource.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
                           ))}
                         </Pie>
-                        <Tooltip content={<PieTooltip />} />
+                        <Tooltip />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Category Percentage Section */}
-            {categoryPercentages.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
-                <div className="p-6 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-pink-100 rounded-xl">
-                      <TrendingUp className="h-5 w-5 text-pink-600" />
-                    </div>
-                    <h2 className="text-lg font-semibold text-gray-900">Category Distribution</h2>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <ResponsiveContainer width="100%" height={Math.max(300, categoryPercentages.length * 50)}>
-                    <BarChart data={categoryPercentages} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e5e7eb" />
-                      <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
-                      <YAxis type="category" dataKey="category" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} width={120} />
-                      <Tooltip 
-                        content={({ active, payload }: any) => {
-                          if (active && payload && payload.length) {
-                            return (
-                              <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl p-3 shadow-lg">
-                                <p className="text-sm font-medium text-gray-900">{payload[0].payload.category}</p>
-                                <p className="text-sm text-gray-600 mt-1">Total Units: {payload[0].payload.count}</p>
-                                <p className="text-lg font-bold text-green-600 mt-1">Avg Rate: ₹{payload[0].value}</p>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                      <Bar dataKey="avgRate" radius={[0, 8, 8, 0]}>
-                        {categoryPercentages.map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {categoryPercentages.map((cat: any, index: number) => (
-                      <div key={index} className="flex items-center gap-2 p-3 rounded-lg bg-gray-50">
-                        <div 
-                          className="w-3 h-3 rounded-full flex-shrink-0" 
-                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-gray-700 truncate">{cat.category}</p>
-                          <p className="text-sm font-bold text-green-600">₹{cat.avgRate}</p>
+                  <div className="w-full mt-6 space-y-3">
+                    {leadsBySource.map((source, index) => (
+                      <div key={index} className="flex items-center justify-between px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: source.fill }}></div>
+                          <span className="text-sm font-medium text-gray-700">{source.name}</span>
                         </div>
+                        <span className="text-sm font-bold text-gray-900">{source.value} leads</span>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Right Column - Top Models */}
-          <div className="lg:col-span-4 space-y-6">
-            {topModels.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm sticky top-28">
-                <div className="p-6 border-b border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-indigo-100 rounded-xl">
-                        <Package className="h-5 w-5 text-indigo-600" />
-                      </div>
-                      <h2 className="text-lg font-semibold text-gray-900">Top Models</h2>
-                    </div>
-                    <select
-                      value={topLimit}
-                      onChange={(e) => setTopLimit(parseInt(e.target.value))}
-                      className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value={5}>Top 5</option>
-                      <option value={10}>Top 10</option>
-                      <option value={20}>Top 20</option>
-                      <option value={100}>Top 100</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="p-4 max-h-[600px] overflow-y-auto">
-                  <div className="space-y-2">
-                    {topModels.map((model: any, index: number) => (
+            {/* Right Column - Statistics (3/12 width) */}
+            <div className="col-span-3">
+              <div className="rounded-xl bg-white shadow-sm border border-gray-200 p-6 h-full overflow-y-auto">
+                <h3 className="text-lg font-semibold text-gray-800 mb-6 sticky top-0 bg-white">Statistics</h3>
+                <div className="space-y-4">
+                  {summaryCards.slice(1).map((card, i) => {
+                    const Icon = card.Icon;
+                    return (
                       <div
-                        key={index}
-                        className="group p-4 rounded-xl bg-gray-50 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 transition-all duration-300 cursor-pointer border border-gray-100"
+                        key={i}
+                        className={`
+              rounded-xl p-4 shadow-sm cursor-pointer 
+              hover:shadow-md transition-all 
+              ${card.iconBg} 
+              border border-gray-200 
+              
+            `}
+                        onClick={() => handleCardClick(card)}
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start gap-3 flex-1">
-                            <div className="relative flex-shrink-0">
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-orange-500' :
-                                  index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400' :
-                                    index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-700' :
-                                    'bg-gradient-to-br from-indigo-400 to-purple-500'
-                                }`}>
-                                {index + 1}
-                              </div>
-                              {index < 3 && (
-                                <Sparkles className="absolute -top-1 -right-1 h-4 w-4 text-yellow-500" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="text-sm font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">{model.inquiryCategory}</h3>
-                              <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-xs font-medium">
-                                  <Package className="h-3 w-3" />
-                                  {model.modelNo}
-                                </span>
-                             
-                                {model.color && (
-                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 text-xs font-medium">
-                                    
-                                    {model.color}
-                                  </span>
-                                )}
-                              </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+
+                            <div>
+                              <div className="text-sm font-semibold text-gray-600">{card.label}</div>
+                              <div className="text-2xl font-bold text-gray-900">{card.value}</div>
                             </div>
                           </div>
-                          <div className="text-right flex-shrink-0 ml-3">
-                            <p className="text-xl font-bold text-indigo-600">{model.count}</p>
-                            <p className="text-xs text-gray-400">units</p>
-                          </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Bottom Section - Follow-ups & Pending Payments */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Today's Follow Ups */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-blue-100 rounded-xl">
-                    <Calendar className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Today's Follow Ups</h2>
-                    <p className="text-sm text-gray-500">{todayFollowUps.length} scheduled</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="p-4 max-h-[400px] overflow-y-auto">
-              {todayFollowUps.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                  <Calendar className="h-12 w-12 mb-3 opacity-50" />
-                  <p className="text-sm">No follow-ups scheduled for today</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {todayFollowUps.map((followUp: any, index: number) => (
-                    <div
-                      key={index}
-                      onClick={() => router.push(`/lead-details/${followUp.leadId}`)}
-                      className="group p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 cursor-pointer transition-all duration-300"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">{followUp.companyName}</h3>
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                              {followUp.leadStatus}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">{followUp.clientName}</p>
-                          <p className="text-sm text-gray-600 mt-2 line-clamp-2">{followUp.followUpDescription}</p>
-                          <div className="flex items-center gap-2 mt-3 text-xs text-gray-400">
-                            <Clock className="h-3 w-3" />
-                            {new Date(followUp.followUpDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
-                          </div>
-                        </div>
-                        <ArrowUpRight className="h-5 w-5 text-gray-300 group-hover:text-blue-500 transition-colors" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Upcoming Deliveries */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-purple-100 rounded-xl">
-                    <Package className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Upcoming Deliveries</h2>
-                    <p className="text-sm text-gray-500">{(stats?.upcomingDeliveries || []).length} in next 7 days</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="p-4 max-h-[400px] overflow-y-auto">
-              {(stats?.upcomingDeliveries || []).length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                  <Package className="h-12 w-12 mb-3 opacity-50" />
-                  <p className="text-sm">No upcoming deliveries</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {(stats?.upcomingDeliveries || []).map((delivery: any, index: number) => (
-                    <div
-                      key={index}
-                      onClick={() => router.push(`/lead-details/${delivery.leadId}`)}
-                      className="group p-4 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50/50 cursor-pointer transition-all duration-300"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">{delivery.companyName}</h3>
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
-                              {delivery.leadStatus}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">{delivery.clientName}</p>
-                          <div className="flex items-center justify-between mt-3">
-                            <div className="flex items-center gap-2 text-xs text-gray-600">
-                              <Calendar className="h-3 w-3" />
-                              {new Date(delivery.deliveryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                            </div>
-                            <span className="text-xs font-semibold text-gray-700">₹{delivery.totalAmount}</span>
-                          </div>
-                        </div>
-                        <ArrowUpRight className="h-5 w-5 text-gray-300 group-hover:text-purple-500 transition-colors" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Pending Payments */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-orange-100 rounded-xl">
-                    <AlertCircle className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Final Payment Pending</h2>
-                    <p className="text-sm text-gray-500">{pendingPaymentLeads.length} pending</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="p-4 max-h-[400px] overflow-y-auto">
-              {pendingPaymentLeads.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                  <Receipt className="h-12 w-12 mb-3 opacity-50" />
-                  <p className="text-sm">No pending payments</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {pendingPaymentLeads.map((lead: any, index: number) => (
-                    <div
-                      key={index}
-                      onClick={() => router.push(`/lead-details/${lead.leadId}`)}
-                      className="group p-4 rounded-xl border border-rose-100 bg-rose-50/50 hover:bg-rose-100/50 cursor-pointer transition-all duration-300"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-semibold text-gray-900 group-hover:text-rose-700 transition-colors">{lead.companyName}</h3>
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700">
-                              {lead.leadStatus}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">{lead.clientName}</p>
-                        </div>
-                        <ArrowUpRight className="h-5 w-5 text-rose-300 group-hover:text-rose-500 transition-colors" />
-                      </div>
-                      <div className="mt-3 grid grid-cols-3 gap-3">
-                        <div className="text-center p-2 rounded-lg bg-white/60">
-                          <p className="text-xs text-gray-400">Total</p>
-                          <p className="text-sm font-bold text-gray-700">₹{lead.totalAmount}</p>
-                        </div>
-                        <div className="text-center p-2 rounded-lg bg-emerald-100/60">
-                          <p className="text-xs text-emerald-500">Paid</p>
-                          <p className="text-sm font-bold text-emerald-700">₹{lead.paidAmount}</p>
-                        </div>
-                        <div className="text-center p-2 rounded-lg bg-rose-100/60">
-                          <p className="text-xs text-rose-500">Pending</p>
-                          <p className="text-sm font-bold text-rose-700">₹{lead.pendingAmount}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }

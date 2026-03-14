@@ -12,7 +12,7 @@ interface DialogProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export default function Dialog({
+export default function DeleteDialog({
   isOpen,
   onClose,
   title,
@@ -31,36 +31,33 @@ export default function Dialog({
     };
   }, [isOpen]);
 
+  if (!isOpen) return null;
+
   const sizeClasses = {
-    sm: 'md:w-1/3',
-    md: 'md:w-1/2',
-    lg: 'md:w-2/3',
-    xl: 'md:w-3/4',
+    sm: 'max-w-md',
+    md: 'max-w-lg',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
   };
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex justify-end ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
     >
       {/* Backdrop */}
-      <div
-        className={`absolute inset-0 bg-black/50 backdrop-blur- transition-opacity duration-300 ${
-          isOpen ? 'opacity-100' : 'opacity-0'
-        }`}
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-200" />
 
-      {/* Sliding Dialog */}
+      {/* Dialog */}
       <div
-        className={`
-          relative h-full w-full ${sizeClasses[size]} bg-white shadow-2xl flex flex-col
-          transform transition-transform duration-300
-          ${isOpen ? 'translate-x-0' : 'translate-x-full'}
-        `}
+        className={`relative w-full ${sizeClasses[size]} bg-white rounded-xl shadow-2xl transform transition-all duration-300`}
         onClick={(e) => e.stopPropagation()}
+        style={{
+          animation: 'fadeInScale 0.3s ease-out',
+        }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between bg-secondary px-6 py-4">
+        <div className="flex items-center justify-between bg-secondary px-6 py-4 rounded-t-xl">
           <h2 className="text-lg font-bold text-white">{title}</h2>
           <button
             onClick={onClose}
@@ -71,12 +68,12 @@ export default function Dialog({
           </button>
         </div>
 
-        {/* Body */}
-        <div className="px-6 py-6 flex-1 overflow-y-auto">{children}</div>
+        {/* Content */}
+        <div className="px-6 py-6 max-h-[70vh] overflow-y-auto">{children}</div>
 
         {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4">
+          <div className="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 rounded-b-xl">
             {footer}
           </div>
         )}
