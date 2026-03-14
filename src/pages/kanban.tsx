@@ -2200,7 +2200,7 @@ export default function LeadsPage() {
           {/* Board View */}
           {view === "board" && (
             <div className="h-full overflow-x-auto">
-              <div className="flex gap-4 h-full min-w-max">
+              <div className="flex gap-4 h-full w-100">
                 {statusGroups.filter(
                   (status) =>
                     !visibleStatusNames ||
