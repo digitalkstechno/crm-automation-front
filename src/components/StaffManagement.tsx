@@ -6,6 +6,7 @@ import { FiEye, FiEyeOff } from 'react-icons/fi';
 import axios from 'axios';
 import { baseUrl, getAuthToken } from '@/config';
 import { toast } from 'react-toastify';
+import Select from 'react-select';
 
 interface SalesExecutive {
   image?: string;
@@ -16,6 +17,8 @@ interface SalesExecutive {
   status?: string;
   role?: string;
   id?: string | number;
+  teams?: string[];
+  organizations?: string[];
 }
 
 interface SalesExecutiveFormProps {
@@ -52,6 +55,8 @@ export default function SalesExecutiveForm({
   const [error, setError] = useState<string | null>(null);
   const isUpdate = !!initialData?.id;
   const [roles, setRoles] = useState<{ _id: string; roleName: string }[]>([]);
+  const [teams, setTeams] = useState<{ _id: string; name: string }[]>([]);
+  const [organizations, setOrganizations] = useState<{ _id: string; name: string }[]>([]);
   const statusOptions = ['Active', 'Inactive', 'Pending'];
 const [token, setToken] = useState<string | null>(null);
 console.log("roles", roles);
@@ -70,6 +75,8 @@ console.log("roles", roles);
       password: '',
       status: 'Active',
       role: '',
+      teams: [],
+      organizations: [],
     });
     setSelectedFile(null);
     setPreviewImage(null);
@@ -90,6 +97,8 @@ console.log("roles", roles);
         password: '',
         status: initialData.status || 'Active',
         role: initialData.role || '',
+        teams: initialData.teams || [],
+        organizations: initialData.organizations || [],
       });
 
       if (initialData.image) {
@@ -105,28 +114,22 @@ console.log("roles", roles);
   }, [initialData]);
 
 
- useEffect(() => {
-  const storedToken = getAuthToken();
-  axios
-    .get(baseUrl.getAllRoles, {
-      headers: { Authorization: `Bearer ${storedToken}` },
-    })
-    .then((res) => {
-      console.log('✅ Full API Response:', res);
-      console.log('📦 res.data:', res.data);
-      console.log('📄 res.data.data:', res.data?.data);
-      console.log('👤 res.data.roles:', res.data?.roles);
+  useEffect(() => {
+    const storedToken = getAuthToken();
+    const headers = { Authorization: `Bearer ${storedToken}` };
 
-      const payload = res.data?.data || res.data?.roles || [];
-      console.log('🎯 Final Payload (used in state):', payload);
+    axios.get(baseUrl.getAllRoles, { headers })
+      .then((res) => setRoles(res.data?.data || res.data?.roles || []))
+      .catch(() => setRoles([]));
 
-      setRoles(payload);
-    })
-    .catch((err) => {
-      console.error('❌ API Error:', err);
-      setRoles([]);
-    });
-}, []);
+    axios.get(baseUrl.teams, { headers })
+      .then((res) => setTeams(res.data?.data ?? []))
+      .catch(() => setTeams([]));
+
+    axios.get(baseUrl.organizations, { headers })
+      .then((res) => setOrganizations(res.data?.data ?? []))
+      .catch(() => setOrganizations([]));
+  }, []);
 
 
   // ✅ UPDATED: handle image change with preview
@@ -153,6 +156,8 @@ console.log("roles", roles);
       payload.append('email', formData.email);
       payload.append('status', formData.status || 'Active');
       payload.append('role', formData.role || '');
+      payload.append('teams', JSON.stringify(formData.teams || []));
+      payload.append('organizations', JSON.stringify(formData.organizations || []));
 
       // Only send password when creating or when it's changed (not empty)
       if (formData.password.trim()) {
@@ -348,43 +353,52 @@ console.log("roles", roles);
             </label>
             <select
               value={formData.role}
-              onChange={(e) =>
-                setFormData({ ...formData, role: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               required
               className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-sky-950 focus:outline-none focus:ring-2 focus:ring-blue-200"
             >
               <option value="">Select role</option>
-
               {roles.map((role) => (
                 <option key={role._id} value={role._id}>
                   {role.roleName}
                 </option>
               ))}
             </select>
-
           </div>
+        </div>
 
-          {/* <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-700">
-              Role <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={formData.role}
-              onChange={(e) =>
-                setFormData({ ...formData, role: e.target.value })
+        {/* Teams + Organizations */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-gray-700">Teams</label>
+            <Select
+              isMulti
+              options={teams.map((t) => ({ value: t._id, label: t.name }))}
+              value={teams
+                .filter((t) => (formData.teams || []).includes(t._id))
+                .map((t) => ({ value: t._id, label: t.name }))}
+              onChange={(selected) =>
+                setFormData({ ...formData, teams: selected.map((s) => s.value) })
               }
-              required
-            >
-              <option value="">Select role</option>
-              {roles.map((role) => (
-                <option key={role._id} value={role._id}>
-                  {role.name}
-                </option>
-              ))}
-            </select>
-
-          </div> */}
+              placeholder="Select teams..."
+              classNamePrefix="react-select"
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-gray-700">Organizations</label>
+            <Select
+              isMulti
+              options={organizations.map((o) => ({ value: o._id, label: o.name }))}
+              value={organizations
+                .filter((o) => (formData.organizations || []).includes(o._id))
+                .map((o) => ({ value: o._id, label: o.name }))}
+              onChange={(selected) =>
+                setFormData({ ...formData, organizations: selected.map((s) => s.value) })
+              }
+              placeholder="Select organizations..."
+              classNamePrefix="react-select"
+            />
+          </div>
         </div>
       </form>
     </Dialog>

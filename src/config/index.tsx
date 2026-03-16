@@ -29,6 +29,8 @@ export const baseUrl = {
   leadLabels: `${API}leadlabel`,
   getWonLeads: `${API}lead/won`,
   getLostLeads: `${API}lead/lost`,
+  teams: `${API}team`,
+  organizations: `${API}organization`,
 };
 
 const TOKEN_COOKIE_NAME = "crm_token";

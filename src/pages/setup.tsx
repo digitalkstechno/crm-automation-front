@@ -9,14 +9,16 @@ import { RolesContent } from './roles';
 import { StaffManagementContent } from './staff-management';
 import { LeadSourcesContent } from './lead-sources';
 import { LeadStatusContent } from './lead-status';
-import { Settings, Users, Link2, Flag, Tag } from 'lucide-react';
+import { Settings, Users, Link2, Flag, Tag, Building2, UsersRound } from 'lucide-react';
 import { LeadLabelsContent } from './lead-labels';
+import { TeamsContent } from './teams';
+import { OrganizationsContent } from './organizations';
 import { useRouter } from 'next/router';
 
 export default function Setup() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<
-    'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels'
+    'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations'
   >(router.query.tab as any || 'Role Management');
   const token = typeof window !== 'undefined' ? getAuthToken() : null;
   const [setupPermissions, setSetupPermissions] = useState<{
@@ -31,7 +33,7 @@ export default function Setup() {
   useEffect(() => {
     if (router.query.tab) {
       const tab = router.query.tab as string;
-      const validTabs = ['Role Management', 'Staff Management', 'Lead Sources', 'Lead Status', 'Kanban Status', 'Lead Labels'];
+      const validTabs = ['Role Management', 'Staff Management', 'Lead Sources', 'Lead Status', 'Kanban Status', 'Lead Labels', 'Teams', 'Organizations'];
       if (validTabs.includes(tab)) {
         setActiveTab(tab as any);
       }
@@ -39,7 +41,7 @@ export default function Setup() {
   }, [router.query.tab]);
 
   // Handle tab change and update URL
-  const handleTabChange = (tab: 'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels') => {
+  const handleTabChange = (tab: 'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations') => {
     setActiveTab(tab);
     router.push({
       pathname: router.pathname,
@@ -390,6 +392,26 @@ export default function Setup() {
                 <Tag className="h-4 w-4" />
                 Lead Labels
               </button>
+              <button
+                onClick={() => handleTabChange('Teams')}
+                className={`mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'Teams'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+              >
+                <UsersRound className="h-4 w-4" />
+                Teams
+              </button>
+              <button
+                onClick={() => handleTabChange('Organizations')}
+                className={`mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'Organizations'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+              >
+                <Building2 className="h-4 w-4" />
+                Organizations
+              </button>
             </div>
           </div>
 
@@ -400,6 +422,8 @@ export default function Setup() {
               {activeTab === 'Lead Sources' && <LeadSourcesContent />}
               {activeTab === 'Lead Status' && <LeadStatusContent />}
               {activeTab === 'Lead Labels' && <LeadLabelsContent />}
+              {activeTab === 'Teams' && <TeamsContent />}
+              {activeTab === 'Organizations' && <OrganizationsContent />}
               {activeTab === 'Kanban Status' && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">

@@ -18,6 +18,8 @@ interface StaffManagement {
   password: string;
   status: string;
   role: string;
+  teams?: string[];
+  organizations?: string[];
 }
 
 // ──────────────────────────────────────────────── Debounce hook
@@ -247,9 +249,11 @@ export function StaffManagementContent() {
         fullName: item.fullName || '',
         number: item.phone || '',
         email: item.email || '',
-        password: '', // IMPORTANT: never pre-fill real password
+        password: '',
         status: item.status || 'Active',
-        role: item.role?._id || '', // send role ID for editing
+        role: item.role?._id || '',
+        teams: (item.teams || []).map((t: any) => typeof t === 'string' ? t : t._id),
+        organizations: (item.organizations || []).map((o: any) => typeof o === 'string' ? o : o._id),
       };
 
       setEditingExecutive(formatted);
