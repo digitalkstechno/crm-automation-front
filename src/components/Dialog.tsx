@@ -9,7 +9,6 @@ interface DialogProps {
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
 export default function Dialog({
@@ -18,7 +17,6 @@ export default function Dialog({
   title,
   children,
   footer,
-  size = 'md',
 }: DialogProps) {
   useEffect(() => {
     if (isOpen) {
@@ -26,25 +24,21 @@ export default function Dialog({
     } else {
       document.body.style.overflow = 'unset';
     }
+
     return () => {
       document.body.style.overflow = 'unset';
     };
   }, [isOpen]);
 
-  const sizeClasses = {
-    sm: 'md:w-1/3',
-    md: 'md:w-1/2',
-    lg: 'md:w-2/3',
-    xl: 'md:w-3/4',
-  };
-
   return (
     <div
-      className={`fixed inset-0 z-50 flex justify-end ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
+      className={`fixed inset-0 z-50 flex justify-end ${
+        isOpen ? 'pointer-events-auto' : 'pointer-events-none'
+      }`}
     >
       {/* Backdrop */}
       <div
-        className={`absolute inset-0 bg-black/50 backdrop-blur- transition-opacity duration-300 ${
+        className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={onClose}
@@ -53,7 +47,7 @@ export default function Dialog({
       {/* Sliding Dialog */}
       <div
         className={`
-          relative h-full w-full ${sizeClasses[size]} bg-white shadow-2xl flex flex-col
+          relative h-full w-full md:w-1/2 max-w-[50vw] bg-white shadow-2xl flex flex-col
           transform transition-transform duration-300
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
@@ -62,6 +56,7 @@ export default function Dialog({
         {/* Header */}
         <div className="flex items-center justify-between bg-secondary px-6 py-4">
           <h2 className="text-lg font-bold text-white">{title}</h2>
+
           <button
             onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
@@ -72,7 +67,7 @@ export default function Dialog({
         </div>
 
         {/* Body */}
-        <div className="px-6 py-6 flex-1 overflow-y-auto">{children}</div>
+        <div className="flex-1 overflow-y-auto px-6 py-6">{children}</div>
 
         {/* Footer */}
         {footer && (

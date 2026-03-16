@@ -6,11 +6,18 @@ import Dialog from '@/components/Dialog';
 import { baseUrl, getAuthToken } from '@/config';
 import { toast } from 'react-toastify';
 import Label from './ui/Label';
+import Select from 'react-select';
 
 interface DropdownItem {
   _id: string;
   name?: string;
   fullName?: string;
+}
+
+interface LeadLabel {
+  _id: string;
+  name: string;
+  color?: string;
 }
 
 interface Lead {
@@ -29,6 +36,7 @@ interface Lead {
   note?: string;
   isActive?: boolean;
   attachments?: { name: string; url?: string }[];
+  labels?: string[]; // Added labels field
   // ... other fields if needed in form
 }
 
@@ -53,6 +61,7 @@ export default function LeadAddDialog({
   const [leadSources, setLeadSources] = useState<DropdownItem[]>([]);
   const [leadStatuses, setLeadStatuses] = useState<DropdownItem[]>([]);
   const [staffList, setStaffList] = useState<DropdownItem[]>([]);
+  const [leadLabels, setLeadLabels] = useState<LeadLabel[]>([]); // Added state for labels
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -68,6 +77,7 @@ export default function LeadAddDialog({
     leadSource: '',
     leadStatus: '',
     assignedTo: '',
+    labels: [] as string[], // Added labels array
     priority: 'medium' as 'high' | 'medium' | 'low',
     nextFollowupDate: '',
     nextFollowupTime: '',
@@ -86,15 +96,17 @@ export default function LeadAddDialog({
         setLoading(true);
         setFormError(null);
 
-        const [sourcesRes, statusRes, staffRes] = await Promise.all([
+        const [sourcesRes, statusRes, staffRes, labelsRes] = await Promise.all([
           axios.get(baseUrl.leadSources, { headers: { Authorization: `Bearer ${token}` } }),
           axios.get(baseUrl.leadStatuses, { headers: { Authorization: `Bearer ${token}` } }),
           axios.get(baseUrl.getAllStaff, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(baseUrl.leadLabels, { headers: { Authorization: `Bearer ${token}` } }), // Fetch labels
         ]);
 
         setLeadSources(sourcesRes.data?.data || []);
         setLeadStatuses(statusRes.data?.data || []);
         setStaffList(staffRes.data?.data || []);
+        setLeadLabels(labelsRes.data?.data || []);
       } catch (err) {
         console.error(err);
         setFormError('Failed to load dropdown options');
@@ -107,6 +119,14 @@ export default function LeadAddDialog({
 
     // Populate form data
     if (mode === 'edit' && initialData) {
+      // Extract label IDs if they exist
+      let labelIds: string[] = [];
+      if (initialData.labels) {
+        labelIds = initialData.labels.map(label => 
+          typeof label === 'string' ? label : (label as any)._id
+        );
+      }
+
       setFormData({
         fullName: initialData.name || '',
         companyName: initialData.companyName || '',
@@ -116,6 +136,7 @@ export default function LeadAddDialog({
         leadSource: initialData.source || '',
         leadStatus: initialData.status || '',
         assignedTo: initialData.staff || '',
+        labels: labelIds,
         priority: (initialData.priority || 'medium').toLowerCase() as 'high' | 'medium' | 'low',
         nextFollowupDate: initialData.nextFollowupDate || '',
         nextFollowupTime: initialData.nextFollowupTime || '',
@@ -136,6 +157,7 @@ export default function LeadAddDialog({
         leadSource: '',
         leadStatus: '',
         assignedTo: '',
+        labels: [],
         priority: 'medium',
         nextFollowupDate: '',
         nextFollowupTime: '',
@@ -158,6 +180,11 @@ export default function LeadAddDialog({
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
     setFormError(null);
+  };
+
+  const handleLabelsChange = (selectedOptions: any) => {
+    const values = selectedOptions ? selectedOptions.map((option: any) => option.value) : [];
+    setFormData((prev) => ({ ...prev, labels: values }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -187,6 +214,7 @@ export default function LeadAddDialog({
         leadSource: formData.leadSource,
         leadStatus: formData.leadStatus,
         assignedTo: formData.assignedTo,
+        labels: formData.labels, // Include labels in payload
         priority: formData.priority,
         nextFollowupDate: formData.nextFollowupDate || null,
         nextFollowupTime: formData.nextFollowupTime || null,
@@ -198,7 +226,16 @@ export default function LeadAddDialog({
       }
       const fd = new FormData();
       Object.entries(payload).forEach(([k, v]) => {
-        if (v !== undefined && v !== null) fd.append(k, String(v));
+        if (v !== undefined && v !== null) {
+          if (k === 'labels' && Array.isArray(v)) {
+            // Handle array fields by appending each value
+            v.forEach((labelId) => {
+              fd.append(`${k}[]`, String(labelId));
+            });
+          } else {
+            fd.append(k, String(v));
+          }
+        }
       });
       attachmentsFiles.forEach((file) => {
         fd.append('attachments', file);
@@ -237,6 +274,17 @@ export default function LeadAddDialog({
   };
 
   const title = mode === 'edit' ? 'Edit Lead' : 'Add New Lead';
+
+  // Prepare options for react-select
+  const labelOptions = leadLabels.map((label) => ({
+    value: label._id,
+    label: label.name,
+    color: label.color,
+  }));
+
+  const selectedLabelOptions = labelOptions.filter((option) =>
+    formData.labels.includes(option.value)
+  );
 
   return (
     <Dialog
@@ -407,6 +455,42 @@ export default function LeadAddDialog({
             </div>
           </div>
 
+          {/* Lead Labels Multi-Select */}
+          <div>
+            <Label>Lead Labels</Label>
+            <Select
+              isMulti
+              options={labelOptions}
+              value={selectedLabelOptions}
+              onChange={handleLabelsChange}
+              className="mt-1"
+              classNamePrefix="react-select"
+              placeholder="Select labels..."
+              styles={{
+                control: (base) => ({
+                  ...base,
+                  borderColor: '#94a3b8',
+                  borderRadius: '0.375rem',
+                  padding: '0.125rem',
+                }),
+                option: (base, { data }) => ({
+                  ...base,
+                  color: data.color || '#000',
+                }),
+                multiValue: (base, { data }) => ({
+                  ...base,
+                  backgroundColor: data.color ? `${data.color}20` : '#e2e8f0',
+                  borderRadius: '0.25rem',
+                }),
+                multiValueLabel: (base, { data }) => ({
+                  ...base,
+                  color: data.color || '#000',
+                  fontWeight: 500,
+                }),
+              }}
+            />
+          </div>
+
           {mode === 'edit' && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -446,32 +530,44 @@ export default function LeadAddDialog({
 
               <div>
                 <Label>Attachments</Label>
-            <input
+                <input
                   type="file"
                   multiple
                   className="w-full border border-slate-400 rounded px-3 py-2 text-black"
-              onChange={(e) =>
-                setAttachmentsFiles(Array.from((e.target as HTMLInputElement).files || []))
-              }
+                  onChange={(e) =>
+                    setAttachmentsFiles(Array.from((e.target as HTMLInputElement).files || []))
+                  }
                 />
-    {existingAttachments.map((a, i) => (
-  <li key={i} className="flex items-center justify-between">
-    <span className="text-slate-800">{a.name}</span>
-    {a.url ? (
-      <a
-        href={a.url}
-        target="_blank"
-        rel="noreferrer"
-        className="text-blue-600 hover:underline"
-      >
-        View
-      </a>
-    ) : (
-      <span className="text-slate-500">No link</span>
-    )}
-  </li>
-))}
-
+                {existingAttachments.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {existingAttachments.map((a, i) => (
+                      <li key={i} className="flex items-center justify-between text-sm">
+                        <span className="text-slate-800">{a.name}</span>
+                        {a.url ? (
+                          <a
+                            href={a.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            View
+                          </a>
+                        ) : (
+                          <span className="text-slate-500">No link</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {attachmentsFiles.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {attachmentsFiles.map((file, i) => (
+                      <li key={i} className="text-sm text-slate-600">
+                        📎 {file.name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               <div className="flex items-center gap-2">

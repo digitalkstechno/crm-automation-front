@@ -11,11 +11,13 @@ import { LeadSourcesContent } from './lead-sources';
 import { LeadStatusContent } from './lead-status';
 import { Settings, Users, Link2, Flag, Tag } from 'lucide-react';
 import { LeadLabelsContent } from './lead-labels';
+import { useRouter } from 'next/router';
 
 export default function Setup() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<
     'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels'
-  >('Role Management');
+  >(router.query.tab as any || 'Role Management');
   const token = typeof window !== 'undefined' ? getAuthToken() : null;
   const [setupPermissions, setSetupPermissions] = useState<{
     create?: boolean;
@@ -24,6 +26,26 @@ export default function Setup() {
     delete?: boolean;
   } | null>(null);
   const [loadingPermissions, setLoadingPermissions] = useState(true);
+
+  // Sync activeTab with URL query parameter
+  useEffect(() => {
+    if (router.query.tab) {
+      const tab = router.query.tab as string;
+      const validTabs = ['Role Management', 'Staff Management', 'Lead Sources', 'Lead Status', 'Kanban Status', 'Lead Labels'];
+      if (validTabs.includes(tab)) {
+        setActiveTab(tab as any);
+      }
+    }
+  }, [router.query.tab]);
+
+  // Handle tab change and update URL
+  const handleTabChange = (tab: 'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels') => {
+    setActiveTab(tab);
+    router.push({
+      pathname: router.pathname,
+      query: { ...router.query, tab },
+    }, undefined, { shallow: true });
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -55,10 +77,10 @@ export default function Setup() {
       isMounted = false;
     };
   }, [token]);
-  
+
   type Item = { name: string; order: number };
   type BackendItem = { name?: string; order?: number | string };
-  
+
   const parseList = (data: unknown): Item[] => {
     if (!Array.isArray(data)) return [];
     return (data as BackendItem[]).map((i) => {
@@ -68,20 +90,20 @@ export default function Setup() {
       return { name, order };
     });
   };
-  
+
   const [leadSources, setLeadSources] = useState<Item[]>([]);
   const [leadStatuses, setLeadStatuses] = useState<Item[]>([]);
   const [kanbanStatusNames, setKanbanStatusNames] = useState<string[]>([]);
-  
+
   useEffect(() => {
     if (!token) return;
     if (!setupPermissions || !setupPermissions.readAll) return;
-    
+
     axios
       .get(baseUrl.leadSources, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
       .then((res) => setLeadSources(parseList(res.data?.data ?? res.data).sort((a, b) => a.order - b.order)))
       .catch(() => setLeadSources([]));
-      
+
     axios
       .get(baseUrl.leadStatuses, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
       .then((res) => setLeadStatuses(parseList(res.data?.data ?? res.data).sort((a, b) => a.order - b.order)))
@@ -91,7 +113,7 @@ export default function Setup() {
   // Load saved kanban statuses from localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     const loadKanbanStatuses = () => {
       const stored = window.localStorage.getItem('kanbanVisibleStatusNames');
       if (stored) {
@@ -105,13 +127,13 @@ export default function Setup() {
           // Invalid stored data, will use default
         }
       }
-      
+
       // If no stored data and we have lead statuses, use all of them as default
       if (leadStatuses.length > 0) {
         setKanbanStatusNames(leadStatuses.map((s) => s.name));
       }
     };
-    
+
     loadKanbanStatuses();
   }, [leadStatuses]); // Re-run when leadStatuses changes
 
@@ -163,7 +185,7 @@ export default function Setup() {
   const [editingStatus, setEditingStatus] = useState<Item | null>(null);
   const [editStatusName, setEditStatusName] = useState('');
   const [editStatusOrder, setEditStatusOrder] = useState<number>(1);
-  
+
   const addLeadSource = (e: React.FormEvent) => {
     e.preventDefault();
     const name = sourceName.trim();
@@ -189,7 +211,7 @@ export default function Setup() {
         setSourceOrder(leadSources.length + 1);
       });
   };
-  
+
   const saveEditSource = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSource) return;
@@ -217,7 +239,7 @@ export default function Setup() {
         setEditingSource(null);
       });
   };
-  
+
   const addLeadStatus = (e: React.FormEvent) => {
     e.preventDefault();
     const name = statusName.trim();
@@ -243,7 +265,7 @@ export default function Setup() {
         setStatusOrder(leadStatuses.length + 1);
       });
   };
-  
+
   const saveEditStatus = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingStatus) return;
@@ -305,71 +327,65 @@ export default function Setup() {
           <div className="col-span-12 md:col-span-3">
             <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
               <button
-                onClick={() => setActiveTab('Role Management')}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
-                  activeTab === 'Role Management'
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
+                onClick={() => handleTabChange('Role Management')}
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'Role Management'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-700 hover:bg-gray-50'
+                  }`}
               >
                 <Settings className="h-4 w-4" />
                 Role Management
               </button>
-              
+
               <button
-                onClick={() => setActiveTab('Staff Management')}
-                className={`mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
-                  activeTab === 'Staff Management'
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
+                onClick={() => handleTabChange('Staff Management')}
+                className={`mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'Staff Management'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-700 hover:bg-gray-50'
+                  }`}
               >
                 <Users className="h-4 w-4" />
                 Staff Management
               </button>
-              
+
               <button
-                onClick={() => setActiveTab('Lead Sources')}
-                className={`mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
-                  activeTab === 'Lead Sources'
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
+                onClick={() => handleTabChange('Lead Sources')}
+                className={`mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'Lead Sources'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-700 hover:bg-gray-50'
+                  }`}
               >
                 <Link2 className="h-4 w-4" />
                 Lead Sources
               </button>
-              
+
               <button
-                onClick={() => setActiveTab('Lead Status')}
-                className={`mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
-                  activeTab === 'Lead Status'
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
+                onClick={() => handleTabChange('Lead Status')}
+                className={`mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'Lead Status'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-700 hover:bg-gray-50'
+                  }`}
               >
                 <Flag className="h-4 w-4" />
                 Lead Status
               </button>
-              
+
               <button
-                onClick={() => setActiveTab('Kanban Status')}
-                className={`mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
-                  activeTab === 'Kanban Status'
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
+                onClick={() => handleTabChange('Kanban Status')}
+                className={`mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'Kanban Status'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-700 hover:bg-gray-50'
+                  }`}
               >
                 <Flag className="h-4 w-4" />
                 Kanban Status
               </button>
-               <button
-                onClick={() => setActiveTab('Lead Labels')}
-                className={`mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
-                  activeTab === 'Lead Labels'
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
+              <button
+                onClick={() => handleTabChange('Lead Labels')}
+                className={`mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'Lead Labels'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-700 hover:bg-gray-50'
+                  }`}
               >
                 <Tag className="h-4 w-4" />
                 Lead Labels
@@ -426,11 +442,10 @@ export default function Setup() {
                           return (
                             <label
                               key={status.name}
-                              className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-sm cursor-pointer transition-colors ${
-                                isChecked 
-                                  ? 'border-blue-200 bg-blue-50' 
-                                  : 'border-gray-200 hover:bg-gray-50'
-                              }`}
+                              className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-sm cursor-pointer transition-colors ${isChecked
+                                ? 'border-blue-200 bg-blue-50'
+                                : 'border-gray-200 hover:bg-gray-50'
+                                }`}
                             >
                               <input
                                 type="checkbox"
@@ -523,7 +538,7 @@ export default function Setup() {
           </div>
         </form>
       </Dialog>
-      
+
       <Dialog
         isOpen={editSourceOpen}
         onClose={() => setEditSourceOpen(false)}
@@ -573,7 +588,7 @@ export default function Setup() {
           </div>
         </form>
       </Dialog>
-      
+
       <Dialog
         isOpen={isStatusOpen}
         onClose={() => setIsStatusOpen(false)}
@@ -623,7 +638,7 @@ export default function Setup() {
           </div>
         </form>
       </Dialog>
-      
+
       <Dialog
         isOpen={editStatusOpen}
         onClose={() => setEditStatusOpen(false)}

@@ -50,7 +50,7 @@ export function LeadLabelsContent() {
         order: number
     }>({
         name: '',
-        color: '#3B82F6', // Default blue color
+        color: '#3B82F6',
         order: 1,
     });
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);

@@ -35,6 +35,11 @@ interface Lead {
   note?: string;
   attachments?: { name: string; url?: string }[];
   isActive?: boolean;
+  leadLabel?: {
+    _id: string;
+    name: string;
+    color: string;
+  };
 }
 
 interface StatusOption {
@@ -45,6 +50,12 @@ interface StatusOption {
 interface SourceOption {
   _id: string;
   name: string;
+}
+
+interface LeadLabel {
+  _id: string;
+  name: string;
+  color: string;
 }
 
 interface StaffOption {
@@ -78,6 +89,7 @@ export default function LeadsPage() {
   const [statuses, setStatuses] = useState<StatusOption[]>([]);
   const [sources, setSources] = useState<SourceOption[]>([]);
   const [staffMembers, setStaffMembers] = useState<StaffOption[]>([]);
+  const [leadLabels, setLeadLabels] = useState<LeadLabel[]>([]);
   const [statusFilter, setStatusFilter] = useState(router.query.status || '');
   const [sourceFilter, setSourceFilter] = useState(router.query.source || '');
   const [staffFilter, setStaffFilter] = useState(router.query.staff || '');
@@ -86,7 +98,7 @@ export default function LeadsPage() {
   const [limit, setLimit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
-  
+
   // Delete confirmation dialog state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
@@ -116,15 +128,17 @@ export default function LeadsPage() {
 
     const fetchOptions = async () => {
       try {
-        const [statusRes, sourceRes, staffRes] = await Promise.all([
+        const [statusRes, sourceRes, staffRes, labelsRes] = await Promise.all([
           axios.get(baseUrl.leadStatuses, { headers }),
           axios.get(baseUrl.leadSources, { headers }),
           axios.get(baseUrl.getAllStaff, { headers }),
+          axios.get(baseUrl.leadLabels, { headers }),
         ]);
 
         setStatuses(statusRes.data.data || []);
         setSources(sourceRes.data.data || []);
         setStaffMembers(staffRes.data.data || []);
+        setLeadLabels(labelsRes.data.data || []);
       } catch (error) {
         console.error('Failed to load filter options:', error);
       }
@@ -146,6 +160,11 @@ export default function LeadsPage() {
       ? new Date(item.updatedAt).toLocaleDateString()
       : '-',
     isActive: item.isActive,
+    leadLabel: item.leadLabel ? {
+      _id: item.leadLabel._id,
+      name: item.leadLabel.name,
+      color: item.leadLabel.color,
+    } : undefined,
   });
 
   const fetchLeads = async () => {
@@ -213,6 +232,22 @@ export default function LeadsPage() {
     },
     { key: 'source', label: 'SOURCE' },
     { key: 'status', label: 'STATUS' },
+    {
+      key: 'leadLabel',
+      label: 'LABEL',
+      render: (_: any, row: Lead) => {
+        const label = row.leadLabel;
+        if (!label) return <span className="text-gray-400">-</span>;
+        return (
+          <span
+            className="px-2 py-1 rounded-full text-xs font-medium text-white"
+            style={{ backgroundColor: label.color }}
+          >
+            {label.name}
+          </span>
+        );
+      }
+    },
     { key: 'staff', label: 'ASSIGNED STAFF' },
     { key: 'priority', label: 'PRIORITY' },
     { key: 'lastFollowUp', label: 'LAST FOLLOW-UP' },
@@ -242,19 +277,19 @@ export default function LeadsPage() {
         note: d.note || '',
         attachments: Array.isArray(d.attachments)
           ? d.attachments.map((a: any) =>
-              typeof a === 'string'
-                ? {
-                    name: a,
-                    url: `${API_BASE}${a.startsWith('/') ? a : a}`,
-                  }
-                : {
-                    name: a?.originalName || a?.filename || a?.name || 'Attachment',
-                    url:
-                      a?.url ||
-                      (a?.path ? `${API_BASE}${a.path}` : undefined) ||
-                      (a?.location ? `${API_BASE}${a.location}` : undefined),
-                  }
-            )
+            typeof a === 'string'
+              ? {
+                name: a,
+                url: `${API_BASE}${a.startsWith('/') ? a : a}`,
+              }
+              : {
+                name: a?.originalName || a?.filename || a?.name || 'Attachment',
+                url:
+                  a?.url ||
+                  (a?.path ? `${API_BASE}${a.path}` : undefined) ||
+                  (a?.location ? `${API_BASE}${a.location}` : undefined),
+              }
+          )
           : [],
         isActive: d.isActive ?? true,
       };
@@ -298,19 +333,19 @@ export default function LeadsPage() {
         note: d.note || '',
         attachments: Array.isArray(d.attachments)
           ? d.attachments.map((a: any) =>
-              typeof a === 'string'
-                ? {
-                    name: a,
-                    url: `${API_BASE}${a.startsWith('/') ? a : a}`,
-                  }
-                : {
-                    name: a?.originalName || a?.filename || a?.name || 'Attachment',
-                    url:
-                      a?.url ||
-                      (a?.path ? `${API_BASE}${a.path}` : undefined) ||
-                      (a?.location ? `${API_BASE}${a.location}` : undefined),
-                  }
-            )
+            typeof a === 'string'
+              ? {
+                name: a,
+                url: `${API_BASE}${a.startsWith('/') ? a : a}`,
+              }
+              : {
+                name: a?.originalName || a?.filename || a?.name || 'Attachment',
+                url:
+                  a?.url ||
+                  (a?.path ? `${API_BASE}${a.path}` : undefined) ||
+                  (a?.location ? `${API_BASE}${a.location}` : undefined),
+              }
+          )
           : [],
         isActive: d.isActive ?? true,
       };
@@ -331,7 +366,7 @@ export default function LeadsPage() {
   // Perform actual delete
   const handleConfirmDelete = async () => {
     if (!leadToDelete) return;
-    
+
     try {
       const token = getAuthToken();
       if (!token) return;
@@ -344,7 +379,7 @@ export default function LeadsPage() {
       setTotalRecords((prev) => prev - 1);
 
       toast.success('Lead deleted successfully');
-      
+
       // Close dialog
       setShowDeleteDialog(false);
       setLeadToDelete(null);
@@ -359,107 +394,106 @@ export default function LeadsPage() {
   return (
     <>
       <div className="space-y-6">
-       <div className="rounded-3xl border border-gray-200 bg-white shadow-sm text-slate-600">
+        <div className="rounded-3xl border border-gray-200 bg-white shadow-sm text-slate-600">
 
-      {/* ================= ACTION BAR ================= */}
-      <div className="flex flex-wrap items-center gap-3 p-5">
+          {/* ================= ACTION BAR ================= */}
+          <div className="flex flex-wrap items-center gap-3 p-5">
 
-        <button
-          onClick={() => setShowFilters(v => !v)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-50 border border-gray-200 hover:bg-blue-50 transition text-sm font-medium"
-        >
-          <Filter className="w-4 h-4 text-blue-600" />
-          Filters
-        </button>
-
-        <button
-          onClick={() => {
-            setEditLead(null);
-            setShowAddLead(true);
-          }}
-          className="ml-auto flex items-center gap-2 px-6 py-2.5 rounded-lg bg-secondary hover:bg-blue-700 text-white text-sm font-semibold shadow"
-        >
-          <Plus className="w-4 h-4" />
-          Add Lead
-        </button>
-
-        <button
-          onClick={() => router.push('/kanban')}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 transition text-sm"
-        >
-          <LayoutDashboard className="w-4 h-4 text-gray-700" />
-          Kanban
-        </button>
-
-      </div>
-
-      {/* ================= FILTER PANEL ================= */}
-      <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          showFilters ? 'max-h-[280px] opacity-100' : 'max-h-0 opacity-0'
-        }`}
-      >
-        <div className="px-6 pt-4 pb-6 bg-gradient-to-br from-blue-50 via-white to-purple-50 border-t border-gray-200">
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-11 rounded-xl border border-gray-300 bg-white px-3 text-sm focus:ring-2"
+            <button
+              onClick={() => setShowFilters(v => !v)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-50 border border-gray-200 hover:bg-blue-50 transition text-sm font-medium"
             >
-              <option value="">All Status</option>
-              {statuses.map(s => (
-                <option key={s._id} value={s._id}>{s.name}</option>
-              ))}
-            </select>
-
-            <select
-              value={sourceFilter}
-              onChange={(e) => setSourceFilter(e.target.value)}
-              className="h-11 rounded-xl border border-gray-300 bg-white px-3 text-sm focus:ring-2"
-            >
-              <option value="">All Sources</option>
-              {sources.map(s => (
-                <option key={s._id} value={s._id}>{s.name}</option>
-              ))}
-            </select>
-
-            <select
-              value={staffFilter}
-              onChange={(e) => setStaffFilter(e.target.value)}
-              className="h-11 rounded-xl border border-gray-300 bg-white px-3 text-sm focus:ring-2"
-            >
-              <option value="">All Staff</option>
-              {staffMembers.map(s => (
-                <option key={s._id} value={s._id}>{s.fullName}</option>
-              ))}
-            </select>
-
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="h-11 rounded-xl border border-gray-300 bg-white px-3 text-sm"
-            />
+              <Filter className="w-4 h-4 text-blue-600" />
+              Filters
+            </button>
 
             <button
               onClick={() => {
-                setStatusFilter('');
-                setSourceFilter('');
-                setStaffFilter('');
-                setDateFilter('');
+                setEditLead(null);
+                setShowAddLead(true);
               }}
-              className="h-11 rounded-xl border border-gray-300 hover:bg-red-50 text-sm font-medium text-red-600 transition"
+              className="ml-auto flex items-center gap-2 px-6 py-2.5 rounded-lg bg-secondary hover:bg-blue-700 text-white text-sm font-semibold shadow"
             >
-              Clear
+              <Plus className="w-4 h-4" />
+              Add Lead
+            </button>
+
+            <button
+              onClick={() => router.push('/kanban')}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 transition text-sm"
+            >
+              <LayoutDashboard className="w-4 h-4 text-gray-700" />
+              Kanban
             </button>
 
           </div>
-        </div>
-      </div>
 
-    </div>
+          {/* ================= FILTER PANEL ================= */}
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${showFilters ? 'max-h-[280px] opacity-100' : 'max-h-0 opacity-0'
+              }`}
+          >
+            <div className="px-6 pt-4 pb-6 bg-gradient-to-br from-blue-50 via-white to-purple-50 border-t border-gray-200">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="h-11 rounded-xl border border-gray-300 bg-white px-3 text-sm focus:ring-2"
+                >
+                  <option value="">All Status</option>
+                  {statuses.map(s => (
+                    <option key={s._id} value={s._id}>{s.name}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={sourceFilter}
+                  onChange={(e) => setSourceFilter(e.target.value)}
+                  className="h-11 rounded-xl border border-gray-300 bg-white px-3 text-sm focus:ring-2"
+                >
+                  <option value="">All Sources</option>
+                  {sources.map(s => (
+                    <option key={s._id} value={s._id}>{s.name}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={staffFilter}
+                  onChange={(e) => setStaffFilter(e.target.value)}
+                  className="h-11 rounded-xl border border-gray-300 bg-white px-3 text-sm focus:ring-2"
+                >
+                  <option value="">All Staff</option>
+                  {staffMembers.map(s => (
+                    <option key={s._id} value={s._id}>{s.fullName}</option>
+                  ))}
+                </select>
+
+                <input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="h-11 rounded-xl border border-gray-300 bg-white px-3 text-sm"
+                />
+
+                <button
+                  onClick={() => {
+                    setStatusFilter('');
+                    setSourceFilter('');
+                    setStaffFilter('');
+                    setDateFilter('');
+                  }}
+                  className="h-11 rounded-xl border border-gray-300 hover:bg-red-50 text-sm font-medium text-red-600 transition"
+                >
+                  Clear
+                </button>
+
+              </div>
+            </div>
+          </div>
+
+        </div>
 
         <DataTable
           data={leads}
@@ -513,7 +547,7 @@ export default function LeadsPage() {
         >
           <div className="py-4">
             <p className="text-gray-700">
-              Are you sure you want to delete the lead "{leadToDelete?.name}"? 
+              Are you sure you want to delete the lead "{leadToDelete?.name}"?
               This action cannot be undone.
             </p>
           </div>
