@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@tiptap/pm": "^3.20.2",
+    "@tiptap/react": "^3.20.2",
+    "@tiptap/starter-kit": "^3.20.2",
     "axios": "^1.13.4",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",

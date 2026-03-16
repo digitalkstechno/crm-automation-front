@@ -155,7 +155,7 @@ export default function DataTable<T extends Record<string, any>>({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto overflow-y-visible">
         <table className="w-full bg-secondary min-w-full divide-y divide-gray-200">
           <thead className="bg-secondary text-white">
             <tr>

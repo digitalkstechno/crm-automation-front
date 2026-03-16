@@ -31,6 +31,16 @@ export const baseUrl = {
   getLostLeads: `${API}lead/lost`,
   teams: `${API}team`,
   organizations: `${API}organization`,
+  myTasks: `${API}task/my`,
+  taskSummary: `${API}task/summary`,
+  myTaskSummary: `${API}task/my-summary`,
+  createTask: `${API}task/create`,
+  getAllTasks: `${API}task`,
+  findTaskById: `${API}task`,
+  updateTask: `${API}task`,
+  deleteTask: `${API}task`,
+  updateTaskStatus: `${API}task`,
+  updateTaskPriority: `${API}task`,
 };
 
 const TOKEN_COOKIE_NAME = "crm_token";

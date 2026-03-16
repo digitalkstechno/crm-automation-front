@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Menu,
+  CheckSquare,
 } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import axios from "axios";
@@ -69,6 +70,8 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   if (canViewLead) {
     menuItems.push({ icon: UserPlus, label: "Lead", path: "/leads" });
   }
+
+  menuItems.push({ icon: CheckSquare, label: "Tasks", path: "/tasks" });
 
   if (canViewSetup) {
     menuItems.push({
