@@ -161,7 +161,7 @@ export function StaffManagementContent() {
         <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-sky-900">
           {value ? (
             <img
-              src={`${process.env.NEXT_PUBLIC_API_URL_FOR_IMAGE}images/StaffProfileImages/${value}`}
+              src={`${process.env.NEXT_PUBLIC_IMAGE_URL}/images/StaffProfileImages/${value}`}
               alt={row.fullName}
               className="h-full w-full object-cover"
             />

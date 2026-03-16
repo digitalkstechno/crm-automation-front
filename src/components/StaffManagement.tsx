@@ -103,7 +103,7 @@ console.log("roles", roles);
 
       if (initialData.image) {
         setPreviewImage(
-          `${process.env.NEXT_PUBLIC_API_URL_FOR_IMAGE}images/StaffProfileImages/${initialData.image}`
+          `${process.env.NEXT_PUBLIC_IMAGE_URL}/images/StaffProfileImages/${initialData.image}`
         );
         setFileName('Current image');
       }

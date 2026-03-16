@@ -518,7 +518,7 @@ export default function TasksPage() {
                     <li key={i} className="flex items-center justify-between">
                       <span className="text-gray-900 text-xs">📎 {a.originalName}</span>
                       <a
-                        href={`${process.env.NEXT_PUBLIC_API_URL}${a.path}`}
+                        href={`${process.env.NEXT_PUBLIC_IMAGE_URL}${a.path}`}
                         target="_blank"
                         rel="noreferrer"
                         className="text-blue-600 hover:underline text-xs"
