@@ -99,6 +99,8 @@ export function StaffManagementContent() {
         password?: string;
         status?: string;
         role?: { roleName?: string } | null;
+        teams?: { _id: string; name: string }[];
+        organizations?: { _id: string; name: string }[];
       }[]) || [];
       const pagination = res.data?.pagination || {};
 
@@ -111,6 +113,8 @@ export function StaffManagementContent() {
         password: item.password ? '******' : '',
         status: item.status || 'Active',
         role: item.role?.roleName || '-',
+        teams: (item.teams || []).map((t) => t.name),
+        organizations: (item.organizations || []).map((o) => o.name),
       }));
 
       setStaffManagementData(formatted);
@@ -203,6 +207,36 @@ export function StaffManagementContent() {
     {
       key: 'role',
       label: 'ROLE',
+    },
+    {
+      key: 'teams',
+      label: 'TEAMS',
+      render: (value: any) => (
+        <div className="flex flex-wrap gap-1">
+          {(value as string[])?.length > 0
+            ? (value as string[]).map((name) => (
+                <span key={name} className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                  {name}
+                </span>
+              ))
+            : <span className="text-gray-400 text-xs">—</span>}
+        </div>
+      ),
+    },
+    {
+      key: 'organizations',
+      label: 'ORGANIZATIONS',
+      render: (value: any) => (
+        <div className="flex flex-wrap gap-1">
+          {(value as string[])?.length > 0
+            ? (value as string[]).map((name) => (
+                <span key={name} className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+                  {name}
+                </span>
+              ))
+            : <span className="text-gray-400 text-xs">—</span>}
+        </div>
+      ),
     },
     {
       key: 'password',
