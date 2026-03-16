@@ -26,6 +26,7 @@ export const baseUrl = {
   updateKanbanStatus: `${API}lead`,
   leadUpcomingFollowups: `${API}lead/followups/upcoming`,
   leadDueFollowups: `${API}lead/followups/due`,
+  leadLabels: `${API}leadlabel`, 
 };
 
 const TOKEN_COOKIE_NAME = "crm_token";

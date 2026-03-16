@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Layout from '@/components/Layout';
 import Dialog from '@/components/Dialog';
 import DataTable, { Column } from '@/components/DataTable';
 import axios from 'axios';
@@ -346,8 +345,8 @@ export function LeadStatusContent() {
 
 export default function LeadStatusPage() {
   return (
-    <Layout label="Lead Status">
+    <>
       <LeadStatusContent />
-    </Layout>
+    </>
   );
 }

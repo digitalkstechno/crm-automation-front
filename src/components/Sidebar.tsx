@@ -105,6 +105,16 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
     router.replace("/login");
   };
 
+  const handleNavigation = (path?: string) => {
+    if (path) {
+      router.push(path);
+      // Close sidebar on mobile after navigation
+      if (window.innerWidth < 768) {
+        toggleSidebar();
+      }
+    }
+  };
+
   return (
     <>
       {/* Overlay for mobile when sidebar is open */}
@@ -192,9 +202,9 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
                               
                               return (
                                 <li key={child.label}>
-                                  <a
-                                    href={child.path}
-                                    className={`flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm transition-all duration-200 group ${
+                                  <button
+                                    onClick={() => handleNavigation(child.path)}
+                                    className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm transition-all duration-200 group ${
                                       isChildActive
                                         ? 'bg-gradient-to-r from-[#0f3c70]/20 to-[#0f2f5a]/20 text-white border border-white/10'
                                         : 'text-white/60 hover:bg-white/5 hover:text-white'
@@ -204,7 +214,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
                                       isChildActive ? 'text-[#9f7cff]' : 'text-white/60'
                                     }`} />
                                     <span className="text-sm">{child.label}</span>
-                                  </a>
+                                  </button>
                                 </li>
                               );
                             })}
@@ -212,9 +222,9 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
                         )}
                       </div>
                     ) : (
-                      <a
-                        href={item.path}
-                        className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 group ${
+                      <button
+                        onClick={() => handleNavigation(item.path)}
+                        className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 group ${
                           isItemActive
                             ? 'bg-gradient-to-r from-[#0f3c70] to-[#0f2f5a] text-white'
                             : 'text-white/70 hover:bg-white/5 hover:text-white'
@@ -226,7 +236,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
                         {isOpen && (
                           <span className="text-sm font-medium">{item.label}</span>
                         )}
-                      </a>
+                      </button>
                     )}
                   </li>
                 );

@@ -1,12 +1,7 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
-
-import Layout from '@/components/Layout';
+import { useEffect, useState } from 'react';
 import {
-  Search,
   Filter,
-  Upload,
-  Download,
   Plus,
   Phone,
   Mail,
@@ -362,7 +357,7 @@ export default function LeadsPage() {
   };
 
   return (
-    <Layout label="Leads">
+    <>
       <div className="space-y-6">
        <div className="rounded-3xl border border-gray-200 bg-white shadow-sm text-slate-600">
 
@@ -644,6 +639,6 @@ export default function LeadsPage() {
           }}
         />
       </div>
-    </Layout>
+    </>
   );
 }

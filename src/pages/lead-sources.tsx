@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Layout from '@/components/Layout';
 import Dialog from '@/components/Dialog';
 import DataTable, { Column } from '@/components/DataTable';
 import axios from 'axios';
@@ -35,19 +34,15 @@ type LeadItem = {
 export function LeadSourcesContent() {
   const [allData, setAllData] = useState<LeadItem[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
-
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 600);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState<{ _id?: string; name: string; order: number }>({
     name: '',
     order: 1,
   });
-
-  // Delete confirmation dialog state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [sourceToDelete, setSourceToDelete] = useState<LeadItem | null>(null);
 
@@ -284,8 +279,8 @@ export function LeadSourcesContent() {
 
 export default function LeadSourcesPage() {
   return (
-    <Layout label="Lead Sources">
+    <>
       <LeadSourcesContent />
-    </Layout>
+    </>
   );
 }

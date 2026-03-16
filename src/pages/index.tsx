@@ -3,27 +3,17 @@
 import { useEffect, useState } from "react";
 import type { ComponentType } from "react";
 import { useRouter } from "next/navigation";
-
-import Layout from "@/components/Layout";
 import {
   PieChart,
   Pie,
   Cell,
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
   Tooltip,
-  Legend,
-  CartesianGrid,
 } from "recharts";
 import {
   Users,
   Calendar,
   Award,
-  ArrowUpRight,
-  ArrowDownRight,
   Phone,
   Mail,
   ChevronLeft,
@@ -32,12 +22,6 @@ import {
   AlertCircle,
   User,
   Calendar as CalendarIcon,
-  TrendingUp,
-  DollarSign,
-  Target,
-  Activity,
-  CheckCircle,
-  XCircle,
 } from "lucide-react";
 import axios from "axios";
 import { baseUrl, getAuthToken } from "@/config";
@@ -555,7 +539,7 @@ export default function Dashboard() {
   };
 
   return (
-    <Layout label="Dashboard">
+    <>
       <div className="flex flex-col h-full bg-gray-50">
 
         <div className="flex-1 overflow-y-auto p-6">
@@ -670,6 +654,6 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-    </Layout>
+    </>
   );
 }

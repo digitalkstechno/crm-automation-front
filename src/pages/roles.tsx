@@ -1,11 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import Layout from '@/components/Layout';
 import DataTable, { Column } from '@/components/DataTable';
 import RoleForm from '@/components/RoleForm';
-import Dialog from '@/components/Dialog'; // Make sure to import Dialog
-import { FiShield } from 'react-icons/fi';
 import axios from 'axios';
 import { baseUrl } from '@/config';
 import { getAuthToken } from '@/config';
@@ -382,8 +379,8 @@ export function RolesContent() {
 
 export default function Roles() {
   return (
-    <Layout label="Roles">
+    <>
       <RolesContent />
-    </Layout>
+    </>
   );
 }

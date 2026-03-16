@@ -1,6 +1,5 @@
 'use client';
 
-import Layout from '@/components/Layout';
 import DataTable, { Column } from '@/components/DataTable';
 import { FiChevronDown } from 'react-icons/fi';
 
@@ -119,7 +118,7 @@ export default function Inquiry() {
   ];
 
   return (
-    <Layout label="Inquery">
+    <>
       <DataTable
         data={inquiryData}
         columns={columns}
@@ -129,6 +128,6 @@ export default function Inquiry() {
         pageSize={10}
         actions={false}
       />
-    </Layout>
+    </>
   );
 }

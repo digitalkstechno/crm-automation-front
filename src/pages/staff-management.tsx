@@ -1,10 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import Layout from '@/components/Layout';
 import DataTable, { Column } from '@/components/DataTable';
 import StaffManagementForm from '@/components/StaffManagement';
-import Dialog from '@/components/Dialog'; // Make sure to import Dialog
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import axios from 'axios';
 import { baseUrl, getAuthToken } from '@/config';
@@ -42,12 +40,8 @@ export function StaffManagementContent() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingExecutive, setEditingExecutive] = useState<StaffManagement | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Delete confirmation dialog state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [staffToDelete, setStaffToDelete] = useState<StaffManagement | null>(null);
-
-  // Pagination + search state
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState('');
@@ -395,8 +389,8 @@ export function StaffManagementContent() {
 
 export default function StaffManagement() {
   return (
-    <Layout label="Staff Management">
+    <>
       <StaffManagementContent />
-    </Layout>
+    </>
   );
 }
