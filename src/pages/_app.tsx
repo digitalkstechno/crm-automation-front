@@ -16,6 +16,8 @@ const poppins = Poppins({
 export default function App({ Component, pageProps }: AppProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathName = usePathname()
+  const isLoginPage = pathName === "/login";
+  
   const getLabel = () => {
     if (pathName === "/") return "Dashboard"
     if (pathName === "/leads") return "Leads"
@@ -26,26 +28,31 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <div className={poppins.className}>
-      <div className="flex min-h-screen bg-[#ffffff]">
-        <Sidebar
-          isOpen={isSidebarOpen}
-          toggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
-        />
+     <div className="flex min-h-screen bg-[#ffffff]">
+        {!isLoginPage && (
+          <Sidebar
+            isOpen={isSidebarOpen}
+            toggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+          />
+        )}
         <div
           className="flex-1 transition-all duration-300 ease-in-out"
-          style={{ marginLeft: isSidebarOpen ? '256px' : '80px' }}
+          style={{ marginLeft: !isLoginPage ? (isSidebarOpen ? '256px' : '80px') : '0' }}
         >
           <main className="animate-in fade-in duration-300">
-            <div className="p-4 border border-gray-200 shadow-lg w-full">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">
-                    {getLabel() || "Default Title"}
-                  </h1>
+            {/* Only show header for non-login pages */}
+            {!isLoginPage && (
+              <div className="p-4 border border-gray-200 shadow-lg w-full">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-3xl font-bold text-gray-900">
+                      {getLabel() || "Default Title"}
+                    </h1>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="p-6">
+            )}
+            <div className={isLoginPage ? "p-0" : "p-6"}>
               <Component {...pageProps} />
             </div>
           </main>
@@ -54,7 +61,7 @@ export default function App({ Component, pageProps }: AppProps) {
       <ToastContainer
         position="top-right"
         autoClose={3000}
-        hideProgressBar={false}
+        hideProgressBar={false} 
         newestOnTop={false}
         closeOnClick
         pauseOnFocusLoss
