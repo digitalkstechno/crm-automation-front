@@ -162,13 +162,13 @@ export default function DataTable<T extends Record<string, any>>({
               {columns.map((column) => (
                 <th
                   key={String(column.key)}
-                  className="px-6 py-4 text-left text-md font-bold uppercase tracking-wider"
+                  className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider"
                 >
                   {column.label}
                 </th>
               ))}
               {actions && (onView || onEdit || onDelete) && (
-                <th className="px-6 py-4 text-left text-md font-bold uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">
                   Actions
                 </th>
               )}

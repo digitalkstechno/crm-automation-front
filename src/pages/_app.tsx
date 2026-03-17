@@ -17,19 +17,20 @@ export default function App({ Component, pageProps }: AppProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathName = usePathname()
   const isLoginPage = pathName === "/login";
-  
+
   const getLabel = () => {
     if (pathName === "/") return "Dashboard"
     if (pathName === "/leads") return "Leads"
+    if (pathName === "/leads/list") return "Leads List"
+    if (pathName === "/leads/kanban") return "Leads Kanban"
     if (pathName === "/setup") return "Setup"
-    if (pathName === "/kanban") return "Kanban Leads"
     if (pathName === "/tasks") return "Tasks"
     return ""
   }
 
   return (
     <div className={poppins.className}>
-     <div className="flex min-h-screen bg-[#ffffff]">
+      <div className="flex min-h-screen bg-[#ffffff]">
         {!isLoginPage && (
           <Sidebar
             isOpen={isSidebarOpen}
@@ -62,7 +63,7 @@ export default function App({ Component, pageProps }: AppProps) {
       <ToastContainer
         position="top-right"
         autoClose={3000}
-        hideProgressBar={false} 
+        hideProgressBar={false}
         newestOnTop={false}
         closeOnClick
         pauseOnFocusLoss
