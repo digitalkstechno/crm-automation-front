@@ -24,6 +24,8 @@ interface DataTableProps<T> {
   onView?: (row: T) => void;
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
+  canEdit?: (row: T) => boolean;
+  canDelete?: (row: T) => boolean;
   loading?: boolean;
   actions?: boolean;
   title?: string;
@@ -49,6 +51,8 @@ export default function DataTable<T extends Record<string, any>>({
   onView,
   onEdit,
   onDelete,
+  canEdit,
+  canDelete,
   loading = false,
   actions = true,
   title,
@@ -232,7 +236,7 @@ export default function DataTable<T extends Record<string, any>>({
                             <FiEye className="w-4 h-4" />
                           </button>
                         )}
-                        {onEdit && (
+                        {onEdit && (!canEdit || canEdit(row)) && (
                           <button
                             onClick={() => onEdit(row)}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-green-500 text-[#ffffff] shadow-sm transition-all hover:bg-green-600 hover:shadow focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 active:scale-95"
@@ -241,7 +245,7 @@ export default function DataTable<T extends Record<string, any>>({
                             <FiEdit className="w-4 h-4" />
                           </button>
                         )}
-                        {onDelete && (
+                        {onDelete && (!canDelete || canDelete(row)) && (
                           <button
                             onClick={() => onDelete(row)}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-[#ffffff] shadow-sm transition-all hover:bg-red-600 hover:shadow focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 active:scale-95"
