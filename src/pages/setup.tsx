@@ -105,6 +105,8 @@ export default function Setup() {
       .catch(() => setLeadStatuses([]));
   }, [token, setupPermissions]);
 
+  console.log(leadStatuses,'jkxdbhjkbh')
+
   // Load saved kanban statuses from localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -197,7 +199,7 @@ export default function Setup() {
     { name: "Staff Management", icon: Users },
     { name: "Lead Sources", icon: Link2 },
     { name: "Lead Status", icon: Flag },
-    { name: "Kanban Settings", icon: Settings2 },
+    { name: "Kanban Status", icon: Settings2 },
     { name: "Lead Labels", icon: Tag },
     { name: "Teams", icon: UsersRound },
     { name: "Organizations", icon: Building2 },

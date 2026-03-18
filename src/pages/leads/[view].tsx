@@ -5,6 +5,8 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { LayoutDashboard, ListCollapse, Plus, Filter } from 'lucide-react';
+import axios from 'axios';
+import { baseUrl, getAuthToken } from '@/config';
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 import LeadsListView from '@/components/leads/LeadsListView';
@@ -39,13 +41,50 @@ export default function LeadsPage() {
   const [editingLead, setEditingLead] = useState<ApiLead | null>(null);
   const [viewingLead, setViewingLead] = useState<ApiLead | null>(null);
 
+  // ── Permissions ──────────────────────────────────────────────────────────
+  const [leadPermissions, setLeadPermissions] = useState<{
+    create?: boolean;
+    readAll?: boolean;
+    update?: boolean;
+    delete?: boolean;
+    assign?: boolean;
+    transfer?: boolean;
+    convert?: boolean;
+  } | null>(null);
+
+  const token = typeof window !== 'undefined' ? getAuthToken() : null;
+
+  // ── Fetch permissions ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!token) return;
+    
+    const fetchPermissions = async () => {
+      try {
+        const res = await axios.get(baseUrl.currentStaff, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        const role = res.data?.data?.role || {};
+        const rawPerms = Array.isArray(role.permissions)
+          ? role.permissions[0]
+          : role.permissions || {};
+        
+        setLeadPermissions(rawPerms.lead || null);
+      } catch (error) {
+        console.error('Failed to fetch permissions:', error);
+        setLeadPermissions(null);
+      }
+    };
+
+    fetchPermissions();
+  }, [token]);
+
   // ── Data ─────────────────────────────────────────────────────────────────
   const {
     leads, lostLeads, wonLeads,
     sources, statuses, staffMembers, leadLabels,
     counts,
     loading,
-    permissions,
     refetchAll,
     findLeadById,
   } = useLeadsData();
@@ -74,11 +113,15 @@ export default function LeadsPage() {
   };
 
   const handleEdit = (lead: ApiLead) => {
+    // Only allow edit if user has update permission
+    if (!leadPermissions?.update) return;
     setEditingLead(lead);
     setShowAddDialog(true);
   };
 
   const handleView = (lead: ApiLead) => {
+    // Only allow view if user has readAll permission
+    if (!leadPermissions?.readAll) return;
     setViewingLead(lead);
   };
 
@@ -86,6 +129,27 @@ export default function LeadsPage() {
     setShowAddDialog(false);
     setEditingLead(null);
   };
+
+  // Check permissions
+  const canCreate = !!leadPermissions?.create;
+  const canRead = !!leadPermissions?.readAll;
+  const canUpdate = !!leadPermissions?.update;
+  const canDelete = !!leadPermissions?.delete;
+  const canAssign = !!leadPermissions?.assign;
+  const canTransfer = !!leadPermissions?.transfer;
+  const canConvert = !!leadPermissions?.convert;
+
+  // If user doesn't have read permission, show access denied
+  if (!canRead && !loading && leadPermissions !== null) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="rounded-lg bg-red-50 p-8 text-center">
+          <h2 className="text-xl font-semibold text-red-800">Access Denied</h2>
+          <p className="mt-2 text-red-600">You don't have permission to view leads.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -134,8 +198,8 @@ export default function LeadsPage() {
           </button>
         </div>
 
-        {/* Add Lead button */}
-        {permissions.create && (
+        {/* Add Lead button - only show if user has create permission */}
+        {canCreate && (
           <button
             onClick={handleOpenAdd}
             className="ml-auto flex items-center gap-2 rounded-lg bg-secondary px-6 py-2.5 text-sm font-semibold text-white shadow hover:bg-blue-700 transition-colors"
@@ -153,10 +217,20 @@ export default function LeadsPage() {
             statuses={statuses}
             sources={sources}
             staffMembers={staffMembers}
-            onEdit={handleEdit}
+            onEdit={canUpdate ? handleEdit : undefined}
             onView={handleView}
             onRefresh={refetchAll}
-            permissions={permissions}
+            canDelete={canDelete}
+           
+            permissions={{
+              create: canCreate,
+              readAll: canRead,
+              update: canUpdate,
+              delete: canDelete,
+              assign: canAssign,
+              transfer: canTransfer,
+              convert: canConvert,
+            }}
           />
         ) : (
           <LeadsKanbanView
@@ -164,11 +238,21 @@ export default function LeadsPage() {
             lostLeads={lostLeads}
             wonLeads={wonLeads}
             statuses={statuses}
+              onRefresh={refetchAll}
+            canDelete={canDelete}
             counts={counts?.statusCounts}
-            onEdit={handleEdit}
+            onEdit={canUpdate ? handleEdit : undefined}
             onView={handleView}
             onRefresh={refetchAll}
-            permissions={permissions}
+            permissions={{
+              create: canCreate,
+              readAll: canRead,
+              update: canUpdate,
+              delete: canDelete,
+              assign: canAssign,
+              transfer: canTransfer,
+              convert: canConvert,
+            }}
           />
         )}
       </div>
