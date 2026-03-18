@@ -210,6 +210,8 @@ export function LeadStatusContent() {
           }
         }}
         onDelete={handleDeleteClick}
+        canEdit={(row) => !(row.name && ['new lead', 'won', 'lost'].includes(row.name.toLowerCase()))}
+        canDelete={(row) => !(row.name && ['new lead', 'won', 'lost'].includes(row.name.toLowerCase()))}
         addButton={{
           label: 'Add Status',
           onClick: () => {
