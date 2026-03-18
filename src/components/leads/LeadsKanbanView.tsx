@@ -1,7 +1,7 @@
 // components/leads/LeadsKanbanView.tsx
 // Kanban board with Board / Lost / Won sub-views + drag-and-drop
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { FiSearch, FiPhone, FiMail, FiEye, FiEdit } from 'react-icons/fi';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -28,6 +28,29 @@ export default function LeadsKanbanView({
     onEdit, onView, onRefresh, counts, permissions
 }: Props) {
     const [subView, setSubView] = useState<SubView>('board');
+    
+    // Fix: Properly parse localStorage item
+    const [kanbanVisibleStatusNames, setKanbanVisibleStatusNames] = useState<string[]>([]);
+    
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('kanbanVisibleStatusNames');
+            if (stored) {
+                // Try to parse as JSON first
+                try {
+                    const parsed = JSON.parse(stored);
+                    setKanbanVisibleStatusNames(Array.isArray(parsed) ? parsed : []);
+                } catch {
+                    // If not JSON, split by comma if it's a string
+                    setKanbanVisibleStatusNames(stored.split(',').map(s => s.trim()));
+                }
+            }
+        } catch (error) {
+            console.error('Error parsing kanbanVisibleStatusNames:', error);
+            setKanbanVisibleStatusNames([]);
+        }
+    }, []);
+    
     const [search, setSearch] = useState('');
     const [lostSearch, setLostSearch] = useState('');
     const [wonSearch, setWonSearch] = useState('');
@@ -69,12 +92,25 @@ export default function LeadsKanbanView({
             l.companyName?.toLowerCase().includes(wonSearch.toLowerCase())
     );
 
-    const statusGroups = statuses.map((s) => ({
-        id: s._id,
-        title: s.name,
-        leads: filteredLeads.filter((l) => l.leadStatus?._id === s._id),
-        count: s.count,
-    }));
+    // Create status groups and filter by visible names
+    const statusGroups = statuses
+        .map((s) => ({
+            id: s._id,
+            title: s.name,
+            leads: filteredLeads.filter((l) => l.leadStatus?._id === s._id),
+            count: s.count,
+        }))
+        .filter(group => {
+            // Only show groups that are in the visible names list
+            // If kanbanVisibleStatusNames is empty, show all (fallback)
+            if (kanbanVisibleStatusNames.length === 0) return true;
+            return kanbanVisibleStatusNames.includes(group.title);
+        });
+
+    // Debug log to see what's happening
+    console.log('Visible Status Names:', kanbanVisibleStatusNames);
+    console.log('All Status Groups:', statuses.map(s => s.name));
+    console.log('Filtered Status Groups:', statusGroups.map(g => g.title));
 
     // ── Load more ─────────────────────────────────────────────────────────
     const loadMore = useCallback(async (statusId: string) => {
