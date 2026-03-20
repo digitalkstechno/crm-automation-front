@@ -59,7 +59,7 @@ export default function Dialog({
 
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
             aria-label="Close"
           >
             <FiX className="h-5 w-5" />
@@ -75,6 +75,61 @@ export default function Dialog({
             {footer}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+
+
+interface CenterDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}
+
+export function CenterDialog({
+  isOpen,
+  onClose,
+  children,
+}: CenterDialogProps) {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  return (
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center ${
+        isOpen ? 'pointer-events-auto' : 'pointer-events-none'
+      }`}
+    >
+      {/* Backdrop */}
+      <div
+        className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0'
+        }`}
+        onClick={onClose}
+      />
+
+      {/* Center Modal */}
+      <div
+        className={`relative bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 transform transition-all duration-300
+          ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}
+        `}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Content Only */}
+        <div className="p-6">
+          {children}
+        </div>
       </div>
     </div>
   );

@@ -254,14 +254,14 @@ export default function Setup() {
                       <button
                         type="button"
                         onClick={handleSelectAll}
-                        className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="px-4 cursor-pointer py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                       >
                         Select All
                       </button>
                       <button
                         type="button"
                         onClick={handleClearAll}
-                        className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="px-4 cursor-pointer py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                       >
                         Clear All
                       </button>
@@ -312,7 +312,7 @@ export default function Setup() {
                       type="button"
                       onClick={handleSaveKanbanStatuses}
                       disabled={leadStatuses.length === 0}
-                      className="px-6 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-6 cursor-pointer py-2.5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Save Changes
                     </button>

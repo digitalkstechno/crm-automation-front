@@ -238,29 +238,6 @@ export function StaffManagementContent() {
         </div>
       ),
     },
-    {
-      key: 'password',
-      label: 'PASSWORD',
-      render: (_, row) => {
-        const visible = visiblePasswords.has(row.id);
-        return (
-          <div className="flex items-center gap-2">
-            <span className="font-mono">
-              {visible ? row.password : '••••••'}
-            </span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                togglePasswordVisibility(row.id);
-              }}
-              type="button"
-            >
-              {visible ? <FiEyeOff /> : <FiEye />}
-            </button>
-          </div>
-        );
-      },
-    },
   ];
 
   const handleAdd = () => {
@@ -391,13 +368,13 @@ export function StaffManagementContent() {
                 setShowDeleteDialog(false);
                 setStaffToDelete(null);
               }}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-lg cursor-pointer border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Cancel
             </button>
             <button
               onClick={handleConfirmDelete}
-              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+              className="rounded-lg cursor-pointer bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
             >
               Delete
             </button>

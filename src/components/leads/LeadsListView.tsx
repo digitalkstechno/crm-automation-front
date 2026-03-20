@@ -50,8 +50,6 @@ interface Props {
   permissions?: { create: boolean; update: boolean; delete: boolean };
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
-
 function mapLead(item: any): TableLead {
   return {
     id: item._id,
@@ -75,26 +73,20 @@ function mapLead(item: any): TableLead {
 
 export default function LeadsListView({ statuses, sources, staffMembers, onEdit, onView, onRefresh, permissions }: Props) {
   const router = useRouter();
-  const [leads, setLeads] = useState<TableLead[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-
-  // Filters (can be seeded from URL query)
-  const [statusFilter, setStatusFilter] = useState((router.query.status as string) || '');
-  const [sourceFilter, setSourceFilter] = useState((router.query.source as string) || '');
-  const [staffFilter, setStaffFilter] = useState((router.query.staff as string) || '');
-  const [dateFilter, setDateFilter] = useState((router.query.date as string) || '');
-
-  // Pagination
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
-
-  // Delete dialog
+  const [leads, setLeads] = useState<TableLead[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TableLead | null>(null);
+  const [dateFilter, setDateFilter] = useState((router.query.date as string) || '');
+  const [staffFilter, setStaffFilter] = useState((router.query.staff as string) || '');
+  const [sourceFilter, setSourceFilter] = useState((router.query.source as string) || '');
+  const [statusFilter, setStatusFilter] = useState((router.query.status as string) || '');
 
   const debouncedSearch = useDebounce(search, 600);
 
@@ -195,33 +187,7 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       const d = res.data.data;
-      // Convert to ApiLead shape for the shared view dialog
-      const apiLead: ApiLead = {
-        _id: d._id,
-        fullName: d.fullName,
-        companyName: d.companyName,
-        address: d.address,
-        contact: d.contact,
-        email: d.email,
-        leadSource: d.leadSource,
-        leadLabel: d.leadLabel,
-        leadStatus: d.leadStatus,
-        assignedTo: d.assignedTo,
-        priority: d.priority,
-        lastFollowUp: d.lastFollowUp,
-        nextFollowupDate: d.nextFollowupDate,
-        nextFollowupTime: d.nextFollowupTime,
-        note: d.note,
-        isActive: d.isActive,
-        attachments: Array.isArray(d.attachments)
-          ? d.attachments.map((a: any) =>
-            typeof a === 'string'
-              ? { name: a, url: `${API_BASE}${a}` }
-              : { name: a?.originalName || a?.name || 'Attachment', url: a?.url || (a?.path ? `${API_BASE}${a.path}` : undefined) }
-          )
-          : [],
-      };
-      onView(apiLead);
+      onView(d);
     } catch {
       // fallback
       const apiLead: ApiLead = {
@@ -295,7 +261,7 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
         <div className="flex items-center gap-3 px-5 py-3">
           <button
             onClick={() => setShowFilters((v) => !v)}
-            className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium hover:bg-blue-50 transition-colors"
+            className="flex items-center cursor-pointer gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium hover:bg-blue-50 transition-colors"
           >
             <Filter className="h-4 w-4 text-blue-600" />
             Filters
@@ -310,7 +276,7 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 rounded-xl border border-gray-300 bg-white px-3 text-sm"
+              className="h-10 cursor-pointer rounded-xl border border-gray-300 bg-white px-3 text-sm"
             >
               <option value="">All Status</option>
               {statuses.map((s) => (
@@ -321,7 +287,7 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
             <select
               value={sourceFilter}
               onChange={(e) => setSourceFilter(e.target.value)}
-              className="h-10 rounded-xl border border-gray-300 bg-white px-3 text-sm"
+              className="h-10 cursor-pointer rounded-xl border border-gray-300 bg-white px-3 text-sm"
             >
               <option value="">All Sources</option>
               {sources.map((s) => (
@@ -332,7 +298,7 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
             <select
               value={staffFilter}
               onChange={(e) => setStaffFilter(e.target.value)}
-              className="h-10 rounded-xl border border-gray-300 bg-white px-3 text-sm"
+              className="h-10 cursor-pointer rounded-xl border border-gray-300 bg-white px-3 text-sm"
             >
               <option value="">All Staff</option>
               {staffMembers.map((s) => (
@@ -344,7 +310,7 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
               type="date"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="h-10 rounded-xl border border-gray-300 bg-white px-3 text-sm"
+              className="h-10 cursor-pointer rounded-xl border border-gray-300 bg-white px-3 text-sm"
             />
 
             <button
@@ -354,7 +320,7 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
                 setStaffFilter('');
                 setDateFilter('');
               }}
-              className="h-10 rounded-xl border border-gray-300 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+              className="h-10 cursor-pointer rounded-xl border border-gray-300 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
             >
               Clear Filters
             </button>
@@ -391,13 +357,13 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
           <>
             <button
               onClick={() => { setShowDelete(false); setDeleteTarget(null); }}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-lg border cursor-pointer border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Cancel
             </button>
             <button
               onClick={handleDelete}
-              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+              className="rounded-lg bg-red-600 cursor-pointer px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
             >
               Delete
             </button>

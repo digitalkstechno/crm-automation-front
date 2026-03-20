@@ -176,7 +176,7 @@ export default function LeadsPage() {
         <div className="flex items-center gap-2 ml-4">
           <button
             onClick={() => switchView('list')}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+            className={`flex items-center cursor-pointer gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
               viewMode === 'list'
                 ? 'bg-secondary text-white shadow'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -187,7 +187,7 @@ export default function LeadsPage() {
           </button>
           <button
             onClick={() => switchView('kanban')}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+            className={`flex items-center cursor-pointer gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
               viewMode === 'kanban'
                 ? 'bg-secondary text-white shadow'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -202,7 +202,7 @@ export default function LeadsPage() {
         {canCreate && (
           <button
             onClick={handleOpenAdd}
-            className="ml-auto flex items-center gap-2 rounded-lg bg-secondary px-6 py-2.5 text-sm font-semibold text-white shadow hover:bg-blue-700 transition-colors"
+            className="ml-auto flex cursor-pointer items-center gap-2 rounded-lg bg-secondary px-6 py-2.5 text-sm font-semibold text-white shadow hover:bg-blue-700 transition-colors"
           >
             <Plus className="h-4 w-4" />
             Add Lead

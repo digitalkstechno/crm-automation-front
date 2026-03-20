@@ -115,8 +115,8 @@ export function TeamsContent() {
         size="md"
         footer={
           <>
-            <button onClick={() => { setShowDeleteDialog(false); setToDelete(null); }} className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">Cancel</button>
-            <button onClick={handleConfirmDelete} className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Delete</button>
+            <button onClick={() => { setShowDeleteDialog(false); setToDelete(null); }} className="px-4 py-2 cursor-pointer rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">Cancel</button>
+            <button onClick={handleConfirmDelete} className="px-4 py-2 cursor-pointer rounded-lg bg-red-600 text-white hover:bg-red-700">Delete</button>
           </>
         }
       >
@@ -129,8 +129,8 @@ export function TeamsContent() {
         title={formData._id ? 'Edit Team' : 'Add Team'}
         footer={
           <>
-            <button type="button" onClick={() => { setIsDialogOpen(false); setFormData({ name: '' }); }} className="px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50">Cancel</button>
-            <button type="submit" form="team-form" className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">{formData._id ? 'Update' : 'Save'}</button>
+            <button type="button" onClick={() => { setIsDialogOpen(false); setFormData({ name: '' }); }} className="px-4 py-2 cursor-pointer rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50">Cancel</button>
+            <button type="submit" form="team-form" className="px-4 py-2 cursor-pointer rounded-lg bg-blue-600 text-white hover:bg-blue-700">{formData._id ? 'Update' : 'Save'}</button>
           </>
         }
       >

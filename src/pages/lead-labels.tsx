@@ -252,14 +252,14 @@ export function LeadLabelsContent() {
                                 setShowDeleteDialog(false);
                                 setLabelToDelete(null);
                             }}
-                            className="px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                            className="px-4 cursor-pointer py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                         >
                             Cancel
                         </button>
                         <button
                             type="button"
                             onClick={handleConfirmDelete}
-                            className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+                            className="px-4 cursor-pointer py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
                         >
                             Delete
                         </button>
@@ -272,12 +272,12 @@ export function LeadLabelsContent() {
                         This action cannot be undone.
                     </p>
 
-                    {labelToDelete?.count && labelToDelete.count > 0 && (
+                    {/* {labelToDelete?.count && labelToDelete.count > 0 && (
                         <p className="mt-2 text-amber-600 bg-amber-50 p-2 rounded">
                             Warning: This label is currently used by {labelToDelete.count} lead(s).
                             Deleting it may affect those leads.
                         </p>
-                    )}
+                    )} */}
                 </div>
             </DeleteDialog>
 

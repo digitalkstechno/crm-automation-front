@@ -61,7 +61,7 @@ export default function DeleteDialog({
           <h2 className="text-lg font-bold text-white">{title}</h2>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
+            className="flex cursor-pointer h-8 w-8 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
             aria-label="Close"
           >
             <FiX className="h-5 w-5" />

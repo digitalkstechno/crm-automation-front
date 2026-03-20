@@ -135,12 +135,15 @@ export default function DataTable<T extends Record<string, any>>({
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 ml-auto">
             {searchable && (
               <div className="relative">
-                {/* <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" /> */}
+                {/* 🔍 Search Icon */}
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+
+                {/* Input */}
                 <input
                   type="search"
                   placeholder="Search..."
                   onChange={(e) => onSearch(e.target.value)}
-                  className="w-full sm:w-64 rounded-lg border border-gray-300 pl-12 pr-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-400 transition-all focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="w-full sm:w-64 rounded-lg border border-gray-300 pl-10 pr-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-400 transition-all focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
                 />
               </div>
             )}
@@ -148,7 +151,7 @@ export default function DataTable<T extends Record<string, any>>({
             {addButton && (
               <button
                 onClick={addButton.onClick}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
               >
                 <span>+</span>
                 {addButton.label}
@@ -166,13 +169,13 @@ export default function DataTable<T extends Record<string, any>>({
               {columns.map((column) => (
                 <th
                   key={String(column.key)}
-                  className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider"
+                  className="px-4 py-2 text-left text-sm font-bold uppercase tracking-wider"
                 >
                   {column.label}
                 </th>
               ))}
               {actions && (onView || onEdit || onDelete) && (
-                <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider">
+                <th className="px-4 py-2 text-left text-sm font-bold uppercase tracking-wider">
                   Actions
                 </th>
               )}
@@ -230,7 +233,7 @@ export default function DataTable<T extends Record<string, any>>({
                         {onView && (
                           <button
                             onClick={() => onView(row)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-[#ffffff] shadow-sm transition-all hover:bg-secondary hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 active:scale-95"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-[#ffffff] shadow-sm transition-all hover:bg-secondary hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 active:scale-95 cursor-pointer"
                             title="View"
                           >
                             <FiEye className="w-4 h-4" />
@@ -239,7 +242,7 @@ export default function DataTable<T extends Record<string, any>>({
                         {onEdit && (!canEdit || canEdit(row)) && (
                           <button
                             onClick={() => onEdit(row)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-green-500 text-[#ffffff] shadow-sm transition-all hover:bg-green-600 hover:shadow focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 active:scale-95"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-green-500 text-[#ffffff] shadow-sm transition-all hover:bg-green-600 hover:shadow focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 active:scale-95 cursor-pointer"
                             title="Edit"
                           >
                             <FiEdit className="w-4 h-4" />
@@ -248,7 +251,7 @@ export default function DataTable<T extends Record<string, any>>({
                         {onDelete && (!canDelete || canDelete(row)) && (
                           <button
                             onClick={() => onDelete(row)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-[#ffffff] shadow-sm transition-all hover:bg-red-600 hover:shadow focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 active:scale-95"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-[#ffffff] shadow-sm transition-all hover:bg-red-600 hover:shadow focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 active:scale-95 cursor-pointer"
                             title="Delete"
                           >
                             <FiTrash2 className="w-4 h-4" />
@@ -273,7 +276,7 @@ export default function DataTable<T extends Record<string, any>>({
               <select
                 value={pageSize}
                 onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                className="rounded-lg cursor-pointer border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
               >
                 {[10, 25, 50, 100].map((s) => (
                   <option key={s} value={s}>{s}</option>
@@ -292,7 +295,7 @@ export default function DataTable<T extends Record<string, any>>({
               <button
                 onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border ${currentPage === 1
+                className={`inline-flex cursor-pointer h-9 w-9 items-center justify-center rounded-lg border ${currentPage === 1
                   ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
                   : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
                   } transition-colors`}
@@ -311,7 +314,7 @@ export default function DataTable<T extends Record<string, any>>({
                     <button
                       key={`page-${page}`}
                       onClick={() => onPageChange(page as number)}
-                      className={`inline-flex min-w-[2.25rem] h-9 items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${currentPage === page
+                      className={`inline-flex cursor-pointer min-w-[2.25rem] h-9 items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${currentPage === page
                         ? 'bg-secondary text-white hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
                         : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
                         }`}
@@ -326,7 +329,7 @@ export default function DataTable<T extends Record<string, any>>({
               <button
                 onClick={() => onPageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border ${currentPage === totalPages
+                className={`inline-flex cursor-pointer h-9 w-9 items-center justify-center rounded-lg border ${currentPage === totalPages
                   ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
                   : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
                   } transition-colors`}

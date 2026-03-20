@@ -29,7 +29,7 @@ export default function LeadAddDialog({
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [attachmentsFiles, setAttachmentsFiles] = useState<File[]>([]);
-  const [existingAttachments, setExistingAttachments] = useState<{ name: string; url?: string }[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<any[]>([]);
 
   const token = getAuthToken;
 
@@ -214,7 +214,7 @@ export default function LeadAddDialog({
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-lg cursor-pointer border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
             Cancel
           </button>
@@ -222,7 +222,7 @@ export default function LeadAddDialog({
             type="submit"
             form="lead-form"
             disabled={submitting || loading}
-            className="min-w-[80px] rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+            className="min-w-[80px] cursor-pointer rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {submitting ? 'Saving...' : mode === 'edit' ? 'Update Lead' : 'Save Lead'}
           </button>
@@ -272,25 +272,25 @@ export default function LeadAddDialog({
           {/* Dropdowns */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormField label="Source" required>
-              <select name="leadSource" value={form.leadSource} onChange={handleChange} className="input-base" required>
+              <select name="leadSource" value={form.leadSource} onChange={handleChange} className="input-base cursor-pointer" required>
                 <option value="">— Select —</option>
                 {sources.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
               </select>
             </FormField>
             <FormField label="Status" required>
-              <select name="leadStatus" value={form.leadStatus} onChange={handleChange} className="input-base" required>
+              <select name="leadStatus" value={form.leadStatus} onChange={handleChange} className="input-base cursor-pointer" required>
                 <option value="">— Select —</option>
                 {statuses.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
               </select>
             </FormField>
             <FormField label="Assigned Staff" required>
-              <select name="assignedTo" value={form.assignedTo} onChange={handleChange} className="input-base" required>
+              <select name="assignedTo" value={form.assignedTo} onChange={handleChange} className="input-base cursor-pointer" required>
                 <option value="">— Select —</option>
                 {staff.map((s) => <option key={s._id} value={s._id}>{s.fullName || s.name}</option>)}
               </select>
             </FormField>
             <FormField label="Priority">
-              <select name="priority" value={form.priority} onChange={handleChange} className="input-base">
+              <select name="priority" value={form.priority} onChange={handleChange} className="input-base cursor-pointer">
                 <option value="high">High</option>
                 <option value="medium">Medium</option>
                 <option value="low">Low</option>
@@ -306,9 +306,10 @@ export default function LeadAddDialog({
               value={selectedLabels}
               onChange={(sel) => setForm((p) => ({ ...p, labels: sel ? sel.map((s) => s.value) : [] }))}
               placeholder="Select labels..."
+              className=' cursor-pointer'
               classNamePrefix="react-select"
               styles={{
-                control: (b) => ({ ...b, borderColor: '#cbd5e1', borderRadius: '0.5rem' }),
+                control: (b) => ({ ...b, borderColor: '#cbd5e1', borderRadius: '0.5rem',cursor:"pointer" }),
                 multiValue: (b, { data }) => ({ ...b, backgroundColor: data.color ? `${data.color}22` : '#e2e8f0' }),
                 multiValueLabel: (b, { data }) => ({ ...b, color: data.color || '#000', fontWeight: 500 }),
               }}
@@ -349,12 +350,23 @@ export default function LeadAddDialog({
             />
             {existingAttachments.length > 0 && (
               <ul className="mt-2 space-y-1">
-                {existingAttachments.map((a, i) => (
-                  <li key={i} className="flex items-center justify-between text-sm">
-                    <span className="text-gray-700">{a.name}</span>
-                    {a.url && <a href={a.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline text-xs">View</a>}
-                  </li>
-                ))}
+                {existingAttachments.map((a, i) => {
+                  const isObject = typeof a === 'object' && a !== null;
+                  const name = isObject ? (a.originalName || a.name) : a;
+                  const path = isObject ? a.path : `/images/LeadAttachment/${a}`;
+                  const fileUrl = `${process.env.NEXT_PUBLIC_IMAGE_URL || ''}${path}`;
+                  return (
+                    <li key={i} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded-lg border border-gray-100">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <span className="text-gray-500 text-xs">📎</span>
+                        <span className="text-gray-700 truncate max-w-[200px]" title={name}>{name || 'File'}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                         <a href={fileUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline text-xs bg-blue-50 px-2 py-1 rounded">View</a>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
             {attachmentsFiles.map((f, i) => (

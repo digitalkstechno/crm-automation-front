@@ -289,7 +289,7 @@ export default function Dashboard() {
           <button
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1 || disabled}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-[#f9fafc] text-gray-700 hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#f9fafc] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="inline-flex cursor-pointer h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-[#f9fafc] text-gray-700 hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#f9fafc] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -305,7 +305,7 @@ export default function Dashboard() {
                   key={`page-${page}`}
                   onClick={() => onPageChange(page as number)}
                   disabled={disabled}
-                  className={`inline-flex min-w-[2.25rem] h-9 items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${currentPage === page
+                  className={`inline-flex cursor-pointer min-w-[2.25rem] h-9 items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${currentPage === page
                     ? 'bg-secondary text-white hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
                     : 'border border-gray-300 bg-[#f9fafc] text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
                     }`}

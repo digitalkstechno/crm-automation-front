@@ -208,14 +208,14 @@ export function LeadSourcesContent() {
                 setShowDeleteDialog(false);
                 setSourceToDelete(null);
               }}
-              className="px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+              className="px-4 cursor-pointer py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleConfirmDelete}
-              className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+              className="px-4 cursor-pointer py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
             >
               Delete
             </button>
