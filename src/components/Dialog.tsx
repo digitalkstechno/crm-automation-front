@@ -9,6 +9,7 @@ interface DialogProps {
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
 export default function Dialog({
@@ -17,7 +18,14 @@ export default function Dialog({
   title,
   children,
   footer,
+  size = 'lg',
 }: DialogProps) {
+  const sizeClasses = {
+    sm: 'md:w-1/4 max-w-[25vw]',
+    md: 'md:w-1/3 max-w-[40vw]',
+    lg: 'md:w-1/2 max-w-[50vw]',
+    xl: 'md:w-2/3 max-w-[75vw]',
+  };
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -47,7 +55,7 @@ export default function Dialog({
       {/* Sliding Dialog */}
       <div
         className={`
-          relative h-full w-full md:w-1/2 max-w-[50vw] bg-white shadow-2xl flex flex-col
+          relative h-full w-full ${sizeClasses[size]} bg-white shadow-2xl flex flex-col
           transform transition-transform duration-300
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
         `}

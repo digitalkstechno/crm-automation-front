@@ -207,6 +207,7 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
       });
       const d = res.data.data;
       const apiLead: ApiLead = {
+        ...d,
         _id: d._id,
         fullName: d.fullName,
         companyName: d.companyName,
@@ -223,13 +224,13 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
         nextFollowupTime: d.nextFollowupTime,
         note: d.note,
         isActive: d.isActive,
-        attachments: Array.isArray(d.attachments)
-          ? d.attachments.map((a: any) =>
-            typeof a === 'string'
-              ? { name: a }
-              : { name: a?.originalName || a?.name || 'Attachment', url: a?.url }
-          )
-          : [],
+        // attachments: Array.isArray(d.attachments)
+        //   ? d.attachments.map((a: any) =>
+        //     typeof a === 'string'
+        //       ? { name: a }
+        //       : { name: a?.originalName || a?.name || 'Attachment', url: a?.url }
+        //   )
+        //   : [],
       };
       onEdit(apiLead);
     } catch {

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, ChevronDown, ClipboardList, Clock, CheckCircle2, XCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { Plus, ChevronDown, ClipboardList, Clock, CheckCircle2, XCircle, Loader2, AlertTriangle, Eye, Download } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { baseUrl, getAuthToken } from '@/config';
@@ -12,6 +12,7 @@ import Dialog from '@/components/Dialog';
 import moment from 'moment';
 
 import { Task, Attachment } from '@/components/TaskDialog';
+import { getFileIcon } from '@/utills/utill';
 
 interface TaskSummary {
   total: number;
@@ -200,10 +201,10 @@ export default function TasksPage() {
   useEffect(() => {
     const token = getAuthToken();
     if (!token) return;
-    
+
     // Only fetch permissions once
     if (permissionsChecked.current) return;
-    
+
     axios.get(baseUrl.currentStaff, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => {
         const role = res.data?.data?.role || {};
@@ -646,7 +647,7 @@ export default function TasksPage() {
                         ) : (
                           <>
                             <div className="flex-shrink-0 w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
-                              <span className="text-lg text-gray-600">📄</span>
+                              <span className="text-lg text-gray-600">{getFileIcon(a.filename)}</span>
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-900 truncate">{a.originalName}</p>
@@ -682,13 +683,10 @@ export default function TasksPage() {
                                 window.open(fileUrl, '_blank');
                               }
                             }}
-                            className="p-2 hover:bg-white rounded-lg transition text-gray-600 hover:text-blue-600"
+                            className="p-2 cursor-pointer hover:bg-white rounded-lg transition text-gray-600 hover:text-blue-600"
                             title="View"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                              <circle cx="12" cy="12" r="3" />
-                            </svg>
+                            <Eye className="h-4 w-4" />
                           </button>
 
                           {/* Download Button with Save As dialog */}
@@ -724,14 +722,10 @@ export default function TasksPage() {
                                 toast.error('Failed to download file');
                               }
                             }}
-                            className="p-2 hover:bg-white rounded-lg transition text-gray-600 hover:text-green-600"
+                            className="p-2 cursor-pointer hover:bg-white rounded-lg transition text-gray-600 hover:text-green-600"
                             title="Download"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                              <polyline points="7 10 12 15 17 10" />
-                              <line x1="12" y1="15" x2="12" y2="3" />
-                            </svg>
+                            <Download className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
