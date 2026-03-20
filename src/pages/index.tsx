@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { baseUrl, getAuthToken } from "@/config";
+import moment from "moment";
 
 interface StatusCount {
   statusId: string;
@@ -228,7 +229,7 @@ export default function Dashboard() {
       fetchLeadSummary();
       fetchUpcomingFollowups(1);
       fetchDueFollowups(1);
-      
+
       // Only fetch staff stats if they have readAll
       if (permissions.readAll) {
         fetchLeadsBySource();
@@ -445,7 +446,7 @@ export default function Dashboard() {
                         {lead.lead?.leadSource?.name || lead.leadSource?.name || "-"}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${getStatusColor(
                           lead.lead?.leadStatus?.name || lead.leadStatus?.name || "",
@@ -466,16 +467,12 @@ export default function Dashboard() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <CalendarIcon className="h-4 w-4 text-gray-400" />
                         <span className="text-sm font-medium text-gray-900">
                           {lead.nextFollowupDate
-                            ? new Date(lead.nextFollowupDate).toLocaleDateString("en-IN", {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric'
-                            })
+                            ? moment(lead.nextFollowupDate).format("DD-MM-YYYY")
                             : "-"}
                         </span>
                       </div>

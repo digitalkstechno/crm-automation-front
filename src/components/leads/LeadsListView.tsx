@@ -161,7 +161,7 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
         }
 
         return (
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1 whitespace-nowrap">
             {row.leadLabel.map((label) => (
               <span
                 key={label._id}
@@ -224,13 +224,6 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
         nextFollowupTime: d.nextFollowupTime,
         note: d.note,
         isActive: d.isActive,
-        // attachments: Array.isArray(d.attachments)
-        //   ? d.attachments.map((a: any) =>
-        //     typeof a === 'string'
-        //       ? { name: a }
-        //       : { name: a?.originalName || a?.name || 'Attachment', url: a?.url }
-        //   )
-        //   : [],
       };
       onEdit(apiLead);
     } catch {

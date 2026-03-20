@@ -251,7 +251,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
                     ) : (
                       <button
                         onClick={() => handleNavigation(item.path)}
-                        className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 group ${
+                        className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 group ${
                           isItemActive
                             ? 'bg-gradient-to-r from-[#0f3c70] to-[#0f2f5a] text-white'
                             : 'text-white/70 hover:bg-white/5 hover:text-white'
