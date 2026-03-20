@@ -35,6 +35,31 @@ export function TeamsContent() {
   const token = typeof window !== 'undefined' ? getAuthToken() : null;
   const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
 
+  const [setupPermissions, setSetupPermissions] = useState<{
+    create?: boolean;
+    readAll?: boolean;
+    update?: boolean;
+    delete?: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    axios
+      .get(baseUrl.currentStaff, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        const role = res.data?.data?.role || {};
+        const rawPerms = Array.isArray(role.teams)
+          ? role.teams[0]
+          : role.teams || {};
+        setSetupPermissions(rawPerms.teams || null);
+      })
+      .catch(() => {
+        setSetupPermissions(null);
+      });
+  }, [token]);
+
   const fetchData = async () => {
     try {
       const res = await axios.get(baseUrl.teams, {
@@ -85,6 +110,10 @@ export function TeamsContent() {
     { key: 'name', label: 'Team Name', render: (v) => <span className="font-semibold text-gray-900">{v}</span> },
   ];
 
+  const canCreate = !!setupPermissions?.create;
+  const canUpdate = !!setupPermissions?.update;
+  const canDelete = !!setupPermissions?.delete;
+
   return (
     <div className="space-y-6">
       <div className="mb-6">
@@ -103,9 +132,9 @@ export function TeamsContent() {
         onSearch={(v) => { setSearch(v); setCurrentPage(1); }}
         onPageChange={setCurrentPage}
         onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
-        onEdit={(row) => { setFormData({ _id: row._id, name: row.name }); setIsDialogOpen(true); }}
-        onDelete={(row) => { setToDelete(row); setShowDeleteDialog(true); }}
-        addButton={{ label: 'Add Team', onClick: () => { setFormData({ name: '' }); setIsDialogOpen(true); } }}
+        onEdit={(row) => { canUpdate && setFormData({ _id: row._id, name: row.name }); setIsDialogOpen(true); }}
+        onDelete={(row) => { canDelete && setToDelete(row); setShowDeleteDialog(true); }}
+        addButton={{ label: 'Add Team', onClick: () => { canCreate && setFormData({ name: '' }); setIsDialogOpen(true); } }}
       />
 
       <DeleteDialog

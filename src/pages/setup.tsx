@@ -19,17 +19,12 @@ export default function Setup() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<
     'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations'
-  >(router.query.tab as any || 'Role Management');
+  >('Role Management');
   const token = typeof window !== 'undefined' ? getAuthToken() : null;
-  const [setupPermissions, setSetupPermissions] = useState<{
-    create?: boolean;
-    readAll?: boolean;
-    update?: boolean;
-    delete?: boolean;
-  } | null>(null);
+  const [permissions, setPermissions] = useState<any>(null);
   const [loadingPermissions, setLoadingPermissions] = useState(true);
 
-  // Sync activeTab with URL query parameter
+  // Sync activeTab with URL query parameter - FIXED: Check if router.query.tab exists
   useEffect(() => {
     if (router.query.tab) {
       const tab = router.query.tab as string;
@@ -49,32 +44,39 @@ export default function Setup() {
     }, undefined, { shallow: true });
   };
 
+  // Fetch permissions - FIXED: Always call useEffect, but check token inside
   useEffect(() => {
     let isMounted = true;
-    if (!token) {
-      return;
-    }
-    axios
-      .get(baseUrl.currentStaff, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
+
+    const fetchPermissions = async () => {
+      if (!token) {
+        if (isMounted) setLoadingPermissions(false);
+        return;
+      }
+
+      try {
+        const res = await axios.get(baseUrl.currentStaff, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
         if (!isMounted) return;
         const role = res.data?.data?.role || {};
         const rawPerms = Array.isArray(role.permissions)
           ? role.permissions[0]
           : role.permissions || {};
-        setSetupPermissions(rawPerms.setup || null);
-      })
-      .catch(() => {
+        setPermissions(rawPerms);
+      } catch {
         if (!isMounted) return;
-        setSetupPermissions(null);
-      })
-      .finally(() => {
+        setPermissions(null);
+      } finally {
         if (isMounted) {
           setLoadingPermissions(false);
         }
-      });
+      }
+    };
+
+    fetchPermissions();
+
     return () => {
       isMounted = false;
     };
@@ -92,26 +94,40 @@ export default function Setup() {
       return { name, order };
     });
   };
+
   const [leadStatuses, setLeadStatuses] = useState<Item[]>([]);
   const [kanbanStatusNames, setKanbanStatusNames] = useState<string[]>([]);
 
+  // Fetch lead statuses - FIXED: Always call useEffect
   useEffect(() => {
-    if (!token) return;
-    if (!setupPermissions || !setupPermissions.readAll) return;
+    let isMounted = true;
 
-    axios
-      .get(baseUrl.leadStatuses, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
-      .then((res) => setLeadStatuses(parseList(res.data?.data ?? res.data).sort((a, b) => a.order - b.order)))
-      .catch(() => setLeadStatuses([]));
-  }, [token, setupPermissions]);
+    const fetchLeadStatuses = async () => {
 
-  console.log(leadStatuses,'jkxdbhjkbh')
+      try {
+        const res = await axios.get(baseUrl.leadStatuses, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined
+        });
+        if (isMounted) {
+          setLeadStatuses(parseList(res.data?.data ?? res.data).sort((a, b) => a.order - b.order));
+        }
+      } catch {
+        if (isMounted) setLeadStatuses([]);
+      }
+    };
 
-  // Load saved kanban statuses from localStorage
+    fetchLeadStatuses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [token]);
+
+  // Load saved kanban statuses from localStorage - FIXED: Always call useEffect
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
     const loadKanbanStatuses = () => {
+      if (typeof window === 'undefined') return;
+
       const stored = window.localStorage.getItem('kanbanVisibleStatusNames');
       if (stored) {
         try {
@@ -132,14 +148,14 @@ export default function Setup() {
     };
 
     loadKanbanStatuses();
-  }, [leadStatuses]); // Re-run when leadStatuses changes
+  }, [leadStatuses]);
 
   // Handle select all
   const handleSelectAll = () => {
     setKanbanStatusNames(leadStatuses.map((s) => s.name));
   };
 
-  // Handle clear all - THIS IS THE FIXED FUNCTION
+  // Handle clear all
   const handleClearAll = () => {
     setKanbanStatusNames([]);
   };
@@ -148,10 +164,8 @@ export default function Setup() {
   const handleCheckboxChange = (statusName: string, isChecked: boolean) => {
     setKanbanStatusNames((prev) => {
       if (isChecked) {
-        // Add if not already present
         return prev.includes(statusName) ? prev : [...prev, statusName];
       } else {
-        // Remove if present
         return prev.filter((n) => n !== statusName);
       }
     });
@@ -168,50 +182,71 @@ export default function Setup() {
     }
   };
 
+  // FIXED: Always define all useMemo hooks, regardless of loading state
+  const canViewRole = useMemo(() => !!(permissions?.role?.readAll || permissions?.setup?.readAll), [permissions]);
+  const canViewStaff = useMemo(() => !!(permissions?.staff?.readAll || permissions?.setup?.readAll), [permissions]);
+  const canViewLeadSource = useMemo(() => !!(permissions?.leadSource?.readAll || permissions?.setup?.readAll), [permissions]);
+  const canViewLeadStatus = useMemo(() => !!(permissions?.leadStatus?.readAll || permissions?.setup?.readAll), [permissions]);
+  const canViewLeadLabel = useMemo(() => !!(permissions?.leadLabel?.readAll || permissions?.setup?.readAll), [permissions]);
+  const canViewTeams = useMemo(() => !!(permissions?.teams?.readAll), [permissions]);
+  const canViewOrgs = useMemo(() => !!(permissions?.organizations?.readAll), [permissions]);
+
+  const menuItems = useMemo(() => {
+    const items = [
+      { name: "Role Management", icon: Settings, visible: canViewRole },
+      { name: "Staff Management", icon: Users, visible: canViewStaff },
+      { name: "Lead Sources", icon: Link2, visible: canViewLeadSource },
+      { name: "Lead Status", icon: Flag, visible: canViewLeadStatus },
+      { name: "Kanban Status", icon: Settings2, visible: true },
+      { name: "Lead Labels", icon: Tag, visible: canViewLeadLabel },
+      { name: "Teams", icon: UsersRound, visible: canViewTeams },
+      { name: "Organizations", icon: Building2, visible: canViewOrgs },
+    ];
+    return items.filter(i => i.visible);
+  }, [canViewRole, canViewStaff, canViewLeadSource, canViewLeadStatus, canViewLeadLabel, canViewTeams, canViewOrgs]);
+
+  // Handle access restriction - FIXED: Check if current tab is valid
+  useEffect(() => {
+    if (!loadingPermissions && permissions) {
+      const currentItem = menuItems.find(i => i.name === activeTab);
+      if (!currentItem && menuItems.length > 0) {
+        handleTabChange(menuItems[0].name as any);
+      }
+    }
+  }, [loadingPermissions, permissions, menuItems, activeTab]);
+
+  // Show loading state
   if (loadingPermissions) {
     return (
-      <>
-        <div className="p-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-            <div className="h-64 bg-gray-200 rounded"></div>
-          </div>
+      <div className="p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
         </div>
-      </>
+      </div>
     );
   }
 
-  if (!setupPermissions || !setupPermissions.readAll) {
+  // Show access denied
+  if (!loadingPermissions && menuItems.length === 0) {
     return (
-      <>
-        <div className="p-6">
-          <h1 className="text-2xl font-bold text-gray-900">Access Denied</h1>
-          <p className="mt-2 text-gray-600">
-            You do not have permission to access the setup page.
-          </p>
-        </div>
-      </>
+      <div className="p-6">
+        <h1 className="text-2xl font-bold text-gray-900">Access Denied</h1>
+        <p className="mt-2 text-gray-600">
+          You do not have permission to access any setup pages.
+        </p>
+      </div>
     );
   }
 
-  const menuItems = [
-    { name: "Role Management", icon: Settings },
-    { name: "Staff Management", icon: Users },
-    { name: "Lead Sources", icon: Link2 },
-    { name: "Lead Status", icon: Flag },
-    { name: "Kanban Status", icon: Settings2 },
-    { name: "Lead Labels", icon: Tag },
-    { name: "Teams", icon: UsersRound },
-    { name: "Organizations", icon: Building2 },
-  ];
-
+  // Main render
   return (
     <>
       <div className="space-y-6">
         <div className="grid grid-cols-12 gap-6">
           <div className="col-span-12 md:col-span-3">
             <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-              {menuItems.map((item:any, index:number) => {
+              {menuItems.map((item: any, index: number) => {
                 const Icon = item.icon;
 
                 return (
@@ -318,7 +353,6 @@ export default function Setup() {
                     </button>
                   </div>
 
-                  {/* Selection summary */}
                   <div className="text-sm text-gray-600">
                     {kanbanStatusNames.length} of {leadStatuses.length} statuses selected
                   </div>

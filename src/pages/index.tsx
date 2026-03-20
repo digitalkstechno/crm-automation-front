@@ -76,8 +76,26 @@ export default function Dashboard() {
   const [dueFollowups, setDueFollowups] = useState<any[]>([]);
   const [dueLoading, setDueLoading] = useState(false);
 
+  const [permissions, setPermissions] = useState<{ readAll: boolean; readOwn: boolean }>({ readAll: false, readOwn: false });
+
   const token =
     typeof window !== "undefined" ? getAuthToken() : null;
+
+  // Fetch permissions
+  useEffect(() => {
+    if (!token) return;
+    axios.get(baseUrl.currentStaff, { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => {
+        const role = res.data?.data?.role || {};
+        const rawPerms = Array.isArray(role.permissions) ? role.permissions[0] : role.permissions || {};
+        const lp = rawPerms.lead || {};
+        setPermissions({
+          readAll: !!lp.readAll,
+          readOwn: !!lp.readOwn,
+        });
+      })
+      .catch(console.error);
+  }, [token]);
 
   // Redirect if no token
   useEffect(() => {
@@ -101,7 +119,9 @@ export default function Dashboard() {
   const fetchLeadSummary = async () => {
     if (!token) return;
     try {
-      const res = await axios.get(baseUrl.leadCountSummary, {
+      const isMyOnly = !permissions.readAll && permissions.readOwn;
+      const url = isMyOnly ? baseUrl.myLeadCountSummary : baseUrl.leadCountSummary;
+      const res = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSummary(res.data.data);
@@ -157,8 +177,10 @@ export default function Dashboard() {
     if (!token) return;
     setUpcomingLoading(true);
     try {
+      const isMyOnly = !permissions.readAll && permissions.readOwn;
+      const url = isMyOnly ? baseUrl.leadUpcomingFollowupsMy : baseUrl.leadUpcomingFollowups;
       const res = await axios.get(
-        `${baseUrl.leadUpcomingFollowups}?page=${page}&limit=${ITEMS_PER_PAGE}`,
+        `${url}?page=${page}&limit=${ITEMS_PER_PAGE}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -180,8 +202,10 @@ export default function Dashboard() {
     if (!token) return;
     setDueLoading(true);
     try {
+      const isMyOnly = !permissions.readAll && permissions.readOwn;
+      const url = isMyOnly ? baseUrl.leadDueFollowupsMy : baseUrl.leadDueFollowups;
       const res = await axios.get(
-        `${baseUrl.leadDueFollowups}?page=${page}&limit=${ITEMS_PER_PAGE}`,
+        `${url}?page=${page}&limit=${ITEMS_PER_PAGE}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -202,12 +226,16 @@ export default function Dashboard() {
   useEffect(() => {
     if (token) {
       fetchLeadSummary();
-      fetchLeadsBySource();
-      fetchStaffPerformance();
       fetchUpcomingFollowups(1);
       fetchDueFollowups(1);
+      
+      // Only fetch staff stats if they have readAll
+      if (permissions.readAll) {
+        fetchLeadsBySource();
+        fetchStaffPerformance();
+      }
     }
-  }, [token]);
+  }, [token, permissions]);
 
 
   useEffect(() => {

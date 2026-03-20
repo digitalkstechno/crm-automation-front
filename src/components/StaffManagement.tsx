@@ -208,13 +208,13 @@ console.log("roles", roles);
       size="lg"
       footer={
         <>
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+          <button onClick={onClose} className="px-4 py-2 cursor-pointer rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50">
             Cancel  
           </button>
           <button
             type="submit"
             form="sales-executive-form"
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+            className="px-4 py-2 cursor-pointer rounded-lg bg-blue-600 text-white hover:bg-blue-700"
           >
             {loading ? 'Saving...' : isUpdate ? 'Update' : 'Add'}
           </button>

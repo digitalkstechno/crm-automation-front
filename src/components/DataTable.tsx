@@ -34,6 +34,12 @@ interface DataTableProps<T> {
     label: string;
     onClick: () => void;
   };
+  extraActions?: {
+    label: string;
+    onClick: (row: T) => void;
+    icon?: React.ReactNode;
+    color?: 'blue' | 'green' | 'red' | 'orange' | 'purple';
+  }[];
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -56,8 +62,9 @@ export default function DataTable<T extends Record<string, any>>({
   loading = false,
   actions = true,
   title,
-  striped = true, // Default to true for striped effect
+  striped = true,
   addButton,
+  extraActions,
 }: DataTableProps<T>) {
   const renderCell = (column: Column<T>, row: T) => {
     const value = row[column.key as string];
@@ -257,6 +264,30 @@ export default function DataTable<T extends Record<string, any>>({
                             <FiTrash2 className="w-4 h-4" />
                           </button>
                         )}
+                        {extraActions?.map((act, idx) => {
+                          const colors = {
+                            blue: 'bg-blue-600 hover:bg-blue-700',
+                            green: 'bg-green-600 hover:bg-green-700',
+                            red: 'bg-red-600 hover:bg-red-700',
+                            orange: 'bg-orange-500 hover:bg-orange-600',
+                            purple: 'bg-purple-600 hover:bg-purple-700',
+                          };
+                          const cls = colors[act.color || 'blue'];
+
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => act.onClick(row)}
+                              className={`inline-flex h-9 min-w-[36px] items-center justify-center rounded-lg text-white px-2 shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-95 cursor-pointer ${cls}`}
+                              title={act.label}
+                            >
+                              {act.icon ? (
+                                <span className={act.label ? 'mr-1.5' : ''}>{act.icon}</span>
+                              ) : null}
+                              {act.label && <span className="text-xs font-semibold">{act.label}</span>}
+                            </button>
+                          );
+                        })}
                       </div>
                     </td>
                   )}

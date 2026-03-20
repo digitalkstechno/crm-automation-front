@@ -71,7 +71,7 @@ export function StaffManagementContent() {
         const rawPerms = Array.isArray(role.permissions)
           ? role.permissions[0]
           : role.permissions || {};
-        setSetupPermissions(rawPerms.setup || null);
+        setSetupPermissions(rawPerms.staff || null);
       })
       .catch(() => {
         setSetupPermissions(null);

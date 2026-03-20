@@ -45,6 +45,7 @@ export default function LeadsPage() {
   const [leadPermissions, setLeadPermissions] = useState<{
     create?: boolean;
     readAll?: boolean;
+    readOwn?: boolean;
     update?: boolean;
     delete?: boolean;
     assign?: boolean;
@@ -120,8 +121,8 @@ export default function LeadsPage() {
   };
 
   const handleView = (lead: ApiLead) => {
-    // Only allow view if user has readAll permission
-    if (!leadPermissions?.readAll) return;
+    // Only allow view if user has permission
+    if (!canRead) return;
     setViewingLead(lead);
   };
 
@@ -132,7 +133,9 @@ export default function LeadsPage() {
 
   // Check permissions
   const canCreate = !!leadPermissions?.create;
-  const canRead = !!leadPermissions?.readAll;
+  const canRead = !!(leadPermissions?.readAll || leadPermissions?.readOwn);
+  const canReadAll = !!leadPermissions?.readAll;
+  const canReadOwn = !!leadPermissions?.readOwn;
   const canUpdate = !!leadPermissions?.update;
   const canDelete = !!leadPermissions?.delete;
   const canAssign = !!leadPermissions?.assign;
@@ -224,7 +227,8 @@ export default function LeadsPage() {
            
             permissions={{
               create: canCreate,
-              readAll: canRead,
+              readAll: canReadAll,
+              readOwn: canReadOwn,
               update: canUpdate,
               delete: canDelete,
               assign: canAssign,
@@ -238,15 +242,14 @@ export default function LeadsPage() {
             lostLeads={lostLeads}
             wonLeads={wonLeads}
             statuses={statuses}
-              onRefresh={refetchAll}
-            canDelete={canDelete}
             counts={counts?.statusCounts}
             onEdit={canUpdate ? handleEdit : undefined}
             onView={handleView}
             onRefresh={refetchAll}
             permissions={{
               create: canCreate,
-              readAll: canRead,
+              readAll: canReadAll,
+              readOwn: canReadOwn,
               update: canUpdate,
               delete: canDelete,
               assign: canAssign,

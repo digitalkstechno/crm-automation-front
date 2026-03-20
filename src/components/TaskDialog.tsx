@@ -406,11 +406,12 @@ import { DefaultEditor } from 'react-simple-wysiwyg';
 import { Eye, Download, Trash2, Paperclip } from 'lucide-react';
 
 // Types
-interface Attachment {
+export interface Attachment {
   _id: string;
   originalName: string;
   filename: string;
   path: string;
+  size?: number;
 }
 
 interface StaffOption {
@@ -425,7 +426,7 @@ interface TeamOption {
   name: string;
 }
 
-interface Task {
+export interface Task {
   _id: string;
   subject: string;
   startDate: string;

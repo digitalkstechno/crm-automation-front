@@ -37,7 +37,12 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   const router = useRouter();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [canViewLead, setCanViewLead] = useState(false);
-  const [canViewSetup, setCanViewSetup] = useState(false);
+  const [canViewTask, setCanViewTask] = useState(false);
+  const [canViewStaff, setCanViewStaff] = useState(false);
+  const [canViewRole, setCanViewRole] = useState(false);
+  const [canViewLeadStatus, setCanViewLeadStatus] = useState(false);
+  const [canViewLeadSource, setCanViewLeadSource] = useState(false);
+  const [canViewLeadLabel, setCanViewLeadLabel] = useState(false);
 
   useEffect(() => {
     const token = getAuthToken();
@@ -52,14 +57,29 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
           ? role.permissions[0]
           : role.permissions || {};
         const leadPerms = rawPerms.lead || {};
-        const setupPerms = rawPerms.setup || {};
-        const leadReadable = !!(leadPerms.readOwn || leadPerms.readAll);
-        setCanViewLead(leadReadable);
-        setCanViewSetup(!!setupPerms.readAll);
+        const taskPerms = rawPerms.task || {};
+        const staffPerms = rawPerms.staff || {};
+        const rolePerms = rawPerms.role || {};
+        const leadStatusPerms = rawPerms.leadStatus || {};
+        const leadSourcePerms = rawPerms.leadSource || {};
+        const leadLabelPerms = rawPerms.leadLabel || {};
+
+        setCanViewLead(!!(leadPerms.readOwn || leadPerms.readAll));
+        setCanViewTask(!!(taskPerms.readOwn || taskPerms.readAll));
+        setCanViewStaff(!!staffPerms.readAll);
+        setCanViewRole(!!rolePerms.readAll);
+        setCanViewLeadStatus(!!leadStatusPerms.readAll);
+        setCanViewLeadSource(!!leadSourcePerms.readAll);
+        setCanViewLeadLabel(!!leadLabelPerms.readAll);
       })
       .catch(() => {
         setCanViewLead(false);
-        setCanViewSetup(false);
+        setCanViewTask(false);
+        setCanViewStaff(false);
+        setCanViewRole(false);
+        setCanViewLeadStatus(false);
+        setCanViewLeadSource(false);
+        setCanViewLeadLabel(false);
       });
   }, []);
 
@@ -71,15 +91,19 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
     menuItems.push({ icon: UserPlus, label: "Lead", path: "/leads" });
   }
 
-  menuItems.push({ icon: CheckSquare, label: "Tasks", path: "/tasks" });
+  if (canViewTask) {
+    menuItems.push({ icon: CheckSquare, label: "Tasks", path: "/tasks" });
+  }
 
-  if (canViewSetup) {
+  const hasAnySetupPerm = canViewStaff || canViewRole || canViewLeadStatus || canViewLeadSource || canViewLeadLabel;
+
+  // if (hasAnySetupPerm) {
     menuItems.push({
       icon: Settings,
       label: "Setup",
       path: "/setup",
     });
-  }
+  // }
 
   const isActive = (path?: string) => {
     if (!path) return false;

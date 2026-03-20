@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, ChevronDown, ClipboardList, Clock, CheckCircle2, XCircle, Loader2, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
@@ -11,18 +11,7 @@ import DeleteDialog from '@/components/DeleteDialog';
 import Dialog from '@/components/Dialog';
 import moment from 'moment';
 
-interface Task {
-  _id: string;
-  subject: string;
-  startDate: string;
-  endDate: string;
-  status: string;
-  priority: string;
-  assignedUsers: { _id: string; fullName: string }[];
-  assignedTeams: { _id: string; name: string }[];
-  description: string;
-  attachments: { originalName: string; filename: string; path: string }[];
-}
+import { Task, Attachment } from '@/components/TaskDialog';
 
 interface TaskSummary {
   total: number;
@@ -53,8 +42,6 @@ const getStatusLabel = (v: string) => STATUS_OPTIONS.find((s) => s.value === v)?
 const getPriorityCls = (v: string) => PRIORITY_OPTIONS.find((p) => p.value === v)?.cls || 'bg-gray-100 text-gray-700';
 const getPriorityLabel = (v: string) => PRIORITY_OPTIONS.find((p) => p.value === v)?.label || v;
 
-// Inline dropdown cell component
-// Inline dropdown cell component - Improved version
 // Inline dropdown cell component - Improved version with portal
 function InlineDropdown({
   value, options, onSelect,
@@ -199,17 +186,52 @@ export default function TasksPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'my'>('all');
   const [summary, setSummary] = useState<TaskSummary | null>(null);
+  const [taskPermissions, setTaskPermissions] = useState<{
+    readAll?: boolean;
+    readOwn?: boolean;
+    create?: boolean;
+    update?: boolean;
+    delete?: boolean;
+  } | null>(null);
+
+  // FIXED: Use useRef to track if initial permissions check is done
+  const permissionsChecked = useRef(false);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (!token) return;
+    
+    // Only fetch permissions once
+    if (permissionsChecked.current) return;
+    
+    axios.get(baseUrl.currentStaff, { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => {
+        const role = res.data?.data?.role || {};
+        const rawPerms = Array.isArray(role.permissions) ? role.permissions[0] : role.permissions || {};
+        const tp = rawPerms.task || {};
+        setTaskPermissions(tp);
+        // If they only have readOwn, force to 'my' tab
+        if (!tp.readAll && tp.readOwn) {
+          setActiveTab('my');
+        }
+        permissionsChecked.current = true;
+      })
+      .catch(console.error);
+  }, []); // Empty dependency array - runs only once
 
   const [showDialog, setShowDialog] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [viewTask, setViewTask] = useState<Task | null>(null);
   const [deleteTask, setDeleteTask] = useState<Task | null>(null);
 
-  const fetchTasks = async () => {
+  // FIXED: Use useCallback to memoize fetch functions
+  const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
       const token = getAuthToken();
-      const url = activeTab === 'my' ? baseUrl.myTasks : baseUrl.getAllTasks;
+      // Enforce 'my' if permission restricted
+      const finalTab = (!taskPermissions?.readAll && taskPermissions?.readOwn) ? 'my' : activeTab;
+      const url = finalTab === 'my' ? baseUrl.myTasks : baseUrl.getAllTasks;
       const res = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
         params: { page, limit, search: searchQuery || undefined },
@@ -222,23 +244,25 @@ export default function TasksPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, limit, searchQuery, activeTab, taskPermissions]); // FIXED: Added proper dependencies
 
-  const fetchSummary = async () => {
+  const fetchSummary = useCallback(async () => {
     try {
       const token = getAuthToken();
-      const url = activeTab === 'my' ? baseUrl.myTaskSummary : baseUrl.taskSummary;
+      const finalTab = (!taskPermissions?.readAll && taskPermissions?.readOwn) ? 'my' : activeTab;
+      const url = finalTab === 'my' ? baseUrl.myTaskSummary : baseUrl.taskSummary;
       const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
       setSummary(res.data.data);
     } catch {
       setSummary(null);
     }
-  };
+  }, [activeTab, taskPermissions]); // FIXED: Added proper dependencies
 
+  // FIXED: Separate useEffect for fetching data
   useEffect(() => {
     fetchTasks();
     fetchSummary();
-  }, [page, limit, searchQuery, activeTab]);
+  }, [fetchTasks, fetchSummary]); // Now depends on memoized functions
 
   const handleStatusChange = async (taskId: string, status: string) => {
     try {
@@ -440,12 +464,14 @@ export default function TasksPage() {
           <div className="flex flex-wrap items-center gap-3 p-5">
             {/* Tabs */}
             <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-              <button
-                onClick={() => { setActiveTab('all'); setPage(1); }}
-                className={`px-4 py-1.5 cursor-pointer rounded-lg text-sm font-medium transition ${activeTab === 'all' ? 'bg-white shadow text-slate-800' : 'text-gray-500 hover:text-slate-700'}`}
-              >
-                All Tasks
-              </button>
+              {taskPermissions?.readAll && (
+                <button
+                  onClick={() => { setActiveTab('all'); setPage(1); }}
+                  className={`px-4 py-1.5 cursor-pointer rounded-lg text-sm font-medium transition ${activeTab === 'all' ? 'bg-white shadow text-slate-800' : 'text-gray-500 hover:text-slate-700'}`}
+                >
+                  All Tasks
+                </button>
+              )}
               <button
                 onClick={() => { setActiveTab('my'); setPage(1); }}
                 className={`px-4 py-1.5 cursor-pointer rounded-lg text-sm font-medium transition ${activeTab === 'my' ? 'bg-white shadow text-slate-800' : 'text-gray-500 hover:text-slate-700'}`}

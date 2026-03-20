@@ -49,8 +49,9 @@ const normalizeCaps = (caps?: CapabilityPartial) => ({
   delete: !!caps?.delete,
 });
 
+// FIXED: Added all 9 features here
 const normalizeRole = (r: BackendRole): Role => {
-  const features = ['lead', 'setup'];
+  const features = ['lead', 'task', 'staff', 'role', 'leadStatus', 'leadSource', 'leadLabel', 'teams', 'organizations'];
   const rawPerms = r?.permissions;
   const srcPerms = Array.isArray(rawPerms) ? rawPerms[0] : rawPerms || {};
 
@@ -80,12 +81,31 @@ const serializeCaps = (caps?: {
   delete: !!caps?.delete,
 });
 
+// FIXED: Added all 9 features here
 const toBackendRole = (r: Role): BackendRole => {
   const lead = serializeCaps(r.permissions?.lead);
-  const setup = serializeCaps(r.permissions?.setup);
+  const task = serializeCaps(r.permissions?.task);
+  const staff = serializeCaps(r.permissions?.staff);
+  const role = serializeCaps(r.permissions?.role);
+  const leadStatus = serializeCaps(r.permissions?.leadStatus);
+  const leadSource = serializeCaps(r.permissions?.leadSource);
+  const leadLabel = serializeCaps(r.permissions?.leadLabel);
+  const teams = serializeCaps(r.permissions?.teams);
+  const organizations = serializeCaps(r.permissions?.organizations);
+  
   return {
     roleName: r.roleName,
-    permissions: [{ lead, setup }],
+    permissions: [{ 
+      lead, 
+      task, 
+      staff, 
+      role, 
+      leadStatus, 
+      leadSource, 
+      leadLabel, 
+      teams, 
+      organizations 
+    }],
   };
 };
 
@@ -143,7 +163,7 @@ export function RolesContent() {
         const rawPerms = Array.isArray(role.permissions)
           ? role.permissions[0]
           : role.permissions || {};
-        setSetupPermissions(rawPerms.setup || null);
+        setSetupPermissions(rawPerms.role || null);
       })
       .catch(() => {
         setSetupPermissions(null);
@@ -168,6 +188,8 @@ export function RolesContent() {
       const pagination = res.data?.pagination ?? {};
 
       const normalized = Array.isArray(payload) ? payload.map(normalizeRole) : [];
+
+      console.log('Fetched roles:', normalized); // Debug log
 
       setRolesData(normalized);
       setTotalRecords(pagination.totalRecords || 0);
@@ -215,6 +237,8 @@ export function RolesContent() {
       const backendRole = res.data?.data ?? res.data;
       const normalized = normalizeRole(backendRole);
 
+      console.log('Editing role:', normalized); // Debug log
+
       setEditingRole(normalized);
       setIsFormOpen(true);
     } catch (err) {
@@ -231,6 +255,8 @@ export function RolesContent() {
   const handleSubmit = async (role: Role) => {
     try {
       const payload = toBackendRole(role);
+      
+      console.log('Submitting payload:', payload); // Debug log
 
       if (editingRole) {
         await axios.put(`${baseUrl.updateRole}/${editingRole.id}`, payload, {
@@ -311,7 +337,7 @@ export function RolesContent() {
             setCurrentPage(1);
           }}
           onEdit={canUpdate ? handleEdit : undefined}
-          onDelete={canDelete ? handleDeleteClick : undefined} // Changed to handleDeleteClick
+          onDelete={canDelete ? handleDeleteClick : undefined}
           actions={true}
           addButton={
             canCreate
@@ -321,8 +347,6 @@ export function RolesContent() {
                 }
               : undefined
           }
-          // You can add isLoading prop if your DataTable supports showing loading state
-          // isLoading={isLoading}
         />
       </div>
 
