@@ -4,7 +4,7 @@
 
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, ListCollapse, Plus, Filter } from 'lucide-react';
+import { LayoutDashboard, ListCollapse, Plus, Filter, KanbanIcon, Kanban } from 'lucide-react';
 import axios from 'axios';
 import { baseUrl, getAuthToken } from '@/config';
 
@@ -58,18 +58,18 @@ export default function LeadsPage() {
   // ── Fetch permissions ────────────────────────────────────────────────────
   useEffect(() => {
     if (!token) return;
-    
+
     const fetchPermissions = async () => {
       try {
         const res = await axios.get(baseUrl.currentStaff, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        
+
         const role = res.data?.data?.role || {};
         const rawPerms = Array.isArray(role.permissions)
           ? role.permissions[0]
           : role.permissions || {};
-        
+
         setLeadPermissions(rawPerms.lead || null);
       } catch (error) {
         console.error('Failed to fetch permissions:', error);
@@ -176,36 +176,41 @@ export default function LeadsPage() {
         </div>
 
         {/* View toggle */}
-        <div className="flex items-center gap-2 ml-4">
+        <div className="relative flex items-center ml-auto bg-gray-100 p-1 rounded-lg w-fit">
+          <div
+            className={`absolute z-0 top-1 bottom-1 w-10 rounded-md bg-secondary transition-all duration-300 ease-in-out ${viewMode === 'list' ? 'left-1' : 'left-[calc(50%)]'
+              }`}
+            title='view'
+          />
+
           <button
             onClick={() => switchView('list')}
-            className={`flex items-center cursor-pointer gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              viewMode === 'list'
-                ? 'bg-secondary text-white shadow'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`relative z-10 cursor-pointer flex items-center justify-center w-10 h-10 rounded-md transition-colors duration-300 ${viewMode === 'list'
+              ? 'text-white delay-150'
+              : 'text-gray-700'
+              }`}
+            title='list'
           >
-            <ListCollapse className="h-4 w-4" />
-            List
+            <ListCollapse className="h-5 w-5 text-current" />
           </button>
+
           <button
             onClick={() => switchView('kanban')}
-            className={`flex items-center cursor-pointer gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              viewMode === 'kanban'
-                ? 'bg-secondary text-white shadow'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`relative z-10 cursor-pointer flex items-center justify-center w-10 h-10 rounded-md transition-colors duration-300 ${viewMode === 'kanban'
+              ? 'text-white delay-150'
+              : 'text-gray-700'
+              }`}
+            title='kanban'
           >
-            <LayoutDashboard className="h-4 w-4" />
-            Kanban
+            <Kanban className="h-5 w-5 text-current" />
           </button>
         </div>
 
-        {/* Add Lead button - only show if user has create permission */}
+        {/* Add Lead button */}
         {canCreate && (
           <button
             onClick={handleOpenAdd}
-            className="ml-auto flex cursor-pointer items-center gap-2 rounded-lg bg-secondary px-6 py-2.5 text-sm font-semibold text-white shadow hover:bg-blue-700 transition-colors"
+            className="flex cursor-pointer items-center gap-2 rounded-lg bg-secondary px-6 py-2.5 text-sm font-semibold text-white shadow hover:bg-blue-700 transition-colors"
           >
             <Plus className="h-4 w-4" />
             Add Lead
@@ -224,7 +229,7 @@ export default function LeadsPage() {
             onView={handleView}
             onRefresh={refetchAll}
             canDelete={canDelete}
-           
+
             permissions={{
               create: canCreate,
               readAll: canReadAll,
