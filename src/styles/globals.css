@@ -217,3 +217,12 @@ body {
     transform: scale(1);
   }
 }
+
+.rsw-editor {
+  min-height: 300px;
+}
+
+.rsw-editor textarea,
+.rsw-editor div[contenteditable="true"] {
+  min-height: 250px;
+}

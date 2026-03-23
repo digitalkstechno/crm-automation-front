@@ -51,7 +51,7 @@ const normalizeCaps = (caps?: CapabilityPartial) => ({
 
 // FIXED: Added all 9 features here
 const normalizeRole = (r: BackendRole): Role => {
-  const features = ['lead', 'task', 'staff', 'role', 'leadStatus', 'leadSource', 'leadLabel', 'teams', 'organizations'];
+  const features = ['lead', 'task', 'taskStatus', 'staff', 'role', 'leadStatus', 'leadSource', 'leadLabel', 'teams', 'organizations'];
   const rawPerms = r?.permissions;
   const srcPerms = Array.isArray(rawPerms) ? rawPerms[0] : rawPerms || {};
 
@@ -85,6 +85,7 @@ const serializeCaps = (caps?: {
 const toBackendRole = (r: Role): BackendRole => {
   const lead = serializeCaps(r.permissions?.lead);
   const task = serializeCaps(r.permissions?.task);
+  const taskStatus = serializeCaps(r.permissions?.taskStatus);
   const staff = serializeCaps(r.permissions?.staff);
   const role = serializeCaps(r.permissions?.role);
   const leadStatus = serializeCaps(r.permissions?.leadStatus);
@@ -98,6 +99,7 @@ const toBackendRole = (r: Role): BackendRole => {
     permissions: [{ 
       lead, 
       task, 
+      taskStatus,
       staff, 
       role, 
       leadStatus, 
@@ -189,8 +191,6 @@ export function RolesContent() {
 
       const normalized = Array.isArray(payload) ? payload.map(normalizeRole) : [];
 
-      console.log('Fetched roles:', normalized); // Debug log
-
       setRolesData(normalized);
       setTotalRecords(pagination.totalRecords || 0);
       setTotalPages(pagination.totalPages || 1);
@@ -237,8 +237,6 @@ export function RolesContent() {
       const backendRole = res.data?.data ?? res.data;
       const normalized = normalizeRole(backendRole);
 
-      console.log('Editing role:', normalized); // Debug log
-
       setEditingRole(normalized);
       setIsFormOpen(true);
     } catch (err) {
@@ -255,8 +253,6 @@ export function RolesContent() {
   const handleSubmit = async (role: Role) => {
     try {
       const payload = toBackendRole(role);
-      
-      console.log('Submitting payload:', payload); // Debug log
 
       if (editingRole) {
         await axios.put(`${baseUrl.updateRole}/${editingRole.id}`, payload, {

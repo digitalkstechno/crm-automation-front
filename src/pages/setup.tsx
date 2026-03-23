@@ -13,12 +13,13 @@ import { Settings, Users, Link2, Flag, Tag, Building2, UsersRound, Settings2 } f
 import { LeadLabelsContent } from './lead-labels';
 import { TeamsContent } from './teams';
 import { OrganizationsContent } from './organizations';
+import { TaskStatusContent } from './task-status';
 import { useRouter } from 'next/router';
 
 export default function Setup() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<
-    'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations'
+    'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations' | 'Task Status'
   >('Role Management');
   const token = typeof window !== 'undefined' ? getAuthToken() : null;
   const [permissions, setPermissions] = useState<any>(null);
@@ -28,7 +29,7 @@ export default function Setup() {
   useEffect(() => {
     if (router.query.tab) {
       const tab = router.query.tab as string;
-      const validTabs = ['Role Management', 'Staff Management', 'Lead Sources', 'Lead Status', 'Kanban Status', 'Lead Labels', 'Teams', 'Organizations'];
+      const validTabs = ['Role Management', 'Staff Management', 'Lead Sources', 'Lead Status', 'Kanban Status', 'Lead Labels', 'Teams', 'Organizations', 'Task Status'];
       if (validTabs.includes(tab)) {
         setActiveTab(tab as any);
       }
@@ -36,7 +37,7 @@ export default function Setup() {
   }, [router.query.tab]);
 
   // Handle tab change and update URL
-  const handleTabChange = (tab: 'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations') => {
+  const handleTabChange = (tab: 'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations' | 'Task Status') => {
     setActiveTab(tab);
     router.push({
       pathname: router.pathname,
@@ -190,6 +191,7 @@ export default function Setup() {
   const canViewLeadLabel = useMemo(() => !!(permissions?.leadLabel?.readAll || permissions?.setup?.readAll), [permissions]);
   const canViewTeams = useMemo(() => !!(permissions?.teams?.readAll), [permissions]);
   const canViewOrgs = useMemo(() => !!(permissions?.organizations?.readAll), [permissions]);
+  const canViewTaskStatus = useMemo(() => !!(permissions?.taskStatus?.readAll || permissions?.setup?.readAll), [permissions]);
 
   const menuItems = useMemo(() => {
     const items = [
@@ -199,11 +201,12 @@ export default function Setup() {
       { name: "Lead Status", icon: Flag, visible: canViewLeadStatus },
       { name: "Kanban Status", icon: Settings2, visible: true },
       { name: "Lead Labels", icon: Tag, visible: canViewLeadLabel },
+      { name: "Task Status", icon: Settings, visible: canViewTaskStatus },
       { name: "Teams", icon: UsersRound, visible: canViewTeams },
       { name: "Organizations", icon: Building2, visible: canViewOrgs },
     ];
     return items.filter(i => i.visible);
-  }, [canViewRole, canViewStaff, canViewLeadSource, canViewLeadStatus, canViewLeadLabel, canViewTeams, canViewOrgs]);
+  }, [canViewRole, canViewStaff, canViewLeadSource, canViewLeadStatus, canViewLeadLabel, canViewTeams, canViewOrgs, canViewTaskStatus]);
 
   // Handle access restriction - FIXED: Check if current tab is valid
   useEffect(() => {
@@ -276,6 +279,7 @@ export default function Setup() {
               {activeTab === 'Lead Labels' && <LeadLabelsContent />}
               {activeTab === 'Teams' && <TeamsContent />}
               {activeTab === 'Organizations' && <OrganizationsContent />}
+              {activeTab === 'Task Status' && <TaskStatusContent />}
               {activeTab === 'Kanban Status' && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">

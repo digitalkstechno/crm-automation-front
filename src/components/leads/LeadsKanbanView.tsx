@@ -110,11 +110,6 @@ export default function LeadsKanbanView({
             return kanbanVisibleStatusNames.includes(group.title);
         });
 
-    // Debug log to see what's happening
-    console.log('Visible Status Names:', kanbanVisibleStatusNames);
-    console.log('All Status Groups:', statuses.map(s => s.name));
-    console.log('Filtered Status Groups:', statusGroups.map(g => g.title));
-
     // ── Load more ─────────────────────────────────────────────────────────
     const loadMore = useCallback(async (statusId: string) => {
         if (loadingMoreMap[statusId] || hasMoreMap[statusId] === false) return;

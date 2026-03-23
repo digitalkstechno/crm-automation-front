@@ -38,6 +38,8 @@ export const baseUrl = {
   myTasks: `${API}task/my`,
   taskSummary: `${API}task/summary`,
   myTaskSummary: `${API}task/my-summary`,
+  taskKanban: `${API}task/kanban`,
+  taskStatuses: `${API}taskstatus`,
   createTask: `${API}task/create`,
   getAllTasks: `${API}task`,
   findTaskById: `${API}task`,

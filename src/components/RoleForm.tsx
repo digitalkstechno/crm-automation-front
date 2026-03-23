@@ -25,12 +25,13 @@ export default function RoleForm({
   initialData,
 }: RoleFormProps) {
   // FIXED: Use lowercase for feature keys to match backend expectations
-  type Feature = 'lead' | 'task' | 'staff' | 'role' | 'leadStatus' | 'leadSource' | 'leadLabel' | 'teams' | 'organizations';
-  const features: Feature[] = ['lead', 'task', 'staff', 'role', 'leadStatus', 'leadSource', 'leadLabel', 'teams', 'organizations'];
+  type Feature = 'lead' | 'task' | 'taskStatus' | 'staff' | 'role' | 'leadStatus' | 'leadSource' | 'leadLabel' | 'teams' | 'organizations';
+  const features: Feature[] = ['lead', 'task', 'taskStatus', 'staff', 'role', 'leadStatus', 'leadSource', 'leadLabel', 'teams', 'organizations'];
 
   const featureLabels: Record<Feature, string> = {
     lead: 'Leads',
     task: 'Tasks',
+    taskStatus: 'Task Statuses',
     staff: 'Staff Management',
     role: 'Role Management',
     leadStatus: 'Lead Statuses',
@@ -101,10 +102,6 @@ export default function RoleForm({
       ? (rawPerms[0] as Record<string, Partial<CapabilitySet>>)
       : (rawPerms as Record<string, Partial<CapabilitySet>>);
 
-    console.log('RoleForm: initialData received', initialData);
-    console.log('RoleForm: rawPerms parsed', rawPerms);
-    console.log('RoleForm: perms object used', perms);
-
     setFormData({
       roleName: initialData.roleName || '',
       permissions: features.reduce((acc, f) => {
@@ -116,9 +113,6 @@ export default function RoleForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Log the form data to see what's being submitted
-    console.log('Submitting role:', formData);
 
     onSubmit(formData);
     onClose();
@@ -138,14 +132,10 @@ export default function RoleForm({
         nextCaps = { ...nextCaps, readAll: false };
       }
 
-      console.log('RoleForm: toggle', { feature, capability, nextCaps });
-
       const newPermissions = {
         ...prev.permissions,
         [feature]: nextCaps,
       };
-
-      console.log('Updated permissions:', newPermissions);
 
       return {
         ...prev,
@@ -154,17 +144,6 @@ export default function RoleForm({
     });
   };
 
-  useEffect(() => {
-    if (!initialData) return;
-
-    setFormData({
-      roleName: initialData.roleName || '',
-      permissions: features.reduce((acc, f) => {
-        acc[f] = sanitizeCaps(initialData.permissions?.[f]);
-        return acc;
-      }, {} as Record<string, CapabilitySet>),
-    });
-  }, [initialData, isOpen]);
 
   return (
     <Dialog

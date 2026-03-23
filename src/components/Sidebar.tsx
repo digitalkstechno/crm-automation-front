@@ -19,6 +19,7 @@ import {
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { baseUrl, clearAuthToken, getAuthToken } from "@/config";
+import Swal from 'sweetalert2';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -124,12 +125,53 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   };
 
   const handleLogout = () => {
-    clearAuthToken();
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("token");
-      localStorage.removeItem("auth");
-    }
-    router.replace("/login");
+    Swal.fire({
+      title: 'Are you sure?',
+      text: "You will be logged out of your account",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, logout',
+      cancelButtonText: 'Cancel',
+      background: '#fff',
+      backdrop: true,
+      allowOutsideClick: false,
+      allowEscapeKey: true,
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Show loading state
+        Swal.fire({
+          title: 'Logging out...',
+          text: 'Please wait',
+          icon: 'info',
+          showConfirmButton: false,
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+        
+        // Perform logout
+        clearAuthToken();
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("token");
+          localStorage.removeItem("auth");
+        }
+        
+        // Show success message
+        Swal.fire({
+          title: 'Logged Out!',
+          text: 'You have been successfully logged out',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false,
+        }).then(() => {
+          router.replace("/login");
+        });
+      }
+    });
   };
 
   const handleNavigation = (path?: string) => {

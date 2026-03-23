@@ -58,8 +58,7 @@ export default function SalesExecutiveForm({
   const [teams, setTeams] = useState<{ _id: string; name: string }[]>([]);
   const [organizations, setOrganizations] = useState<{ _id: string; name: string }[]>([]);
   const statusOptions = ['Active', 'Inactive', 'Pending'];
-const [token, setToken] = useState<string | null>(null);
-console.log("roles", roles);
+  const [token, setToken] = useState<string | null>(null);
   // Only run on client
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -170,11 +169,11 @@ console.log("roles", roles);
 
       const response = isUpdate
         ? await axios.put(`${baseUrl.updateStaff}/${formData.id}`, payload, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
+          headers: { Authorization: `Bearer ${token}` },
+        })
         : await axios.post(baseUrl.addStaff, payload, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
       parentOnSubmit?.(response.data);
 
@@ -209,7 +208,7 @@ console.log("roles", roles);
       footer={
         <>
           <button onClick={onClose} className="px-4 py-2 cursor-pointer rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50">
-            Cancel  
+            Cancel
           </button>
           <button
             type="submit"

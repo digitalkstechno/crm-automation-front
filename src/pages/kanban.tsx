@@ -261,7 +261,6 @@ export default function LeadsPage() {
       const res = await axios.get(baseUrl.leadLabels, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log("lead labels", res.data);
       const data = res.data?.data;
       setLeadLabels(Array.isArray(data) ? data : []);
     } catch (error) {

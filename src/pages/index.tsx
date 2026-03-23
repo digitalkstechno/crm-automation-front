@@ -186,7 +186,6 @@ export default function Dashboard() {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
-      console.log("Upcoming followups response:", res);
       const { data, pagination } = res.data;
       setUpcomingFollowups(data || []);
       setUpcomingTotalPages(pagination?.totalPages || 1);
@@ -211,7 +210,6 @@ export default function Dashboard() {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
-      console.log("Due followups response:", res);
       const { data, pagination } = res.data;
       setDueFollowups(data || []);
       setDueTotalPages(pagination?.totalPages || 1);

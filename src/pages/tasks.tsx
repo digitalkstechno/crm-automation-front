@@ -1,183 +1,19 @@
 'use client';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { createPortal } from 'react-dom';
-import { Plus, ChevronDown, ClipboardList, Clock, CheckCircle2, XCircle, Loader2, AlertTriangle, Eye, Download } from 'lucide-react';
+import { Plus, List, LayoutGrid } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { baseUrl, getAuthToken } from '@/config';
-import DataTable, { Column } from '@/components/DataTable';
-import TaskDialog from '@/components/TaskDialog';
+import TaskDialog, { Task } from '@/components/TaskDialog';
 import DeleteDialog from '@/components/DeleteDialog';
-import Dialog from '@/components/Dialog';
-import moment from 'moment';
-
-import { Task, Attachment } from '@/components/TaskDialog';
-import { getFileIcon } from '@/utills/utill';
-
-interface TaskSummary {
-  total: number;
-  todo: number;
-  inProgress: number;
-  completed: number;
-  cancelled: number;
-  low?: number;
-  medium?: number;
-  high?: number;
-}
-
-const STATUS_OPTIONS = [
-  { value: 'todo', label: 'To Do', cls: 'bg-gray-100 text-gray-700' },
-  { value: 'in_progress', label: 'In Progress', cls: 'bg-blue-100 text-blue-700' },
-  { value: 'completed', label: 'Completed', cls: 'bg-green-100 text-green-700' },
-  { value: 'cancelled', label: 'Cancelled', cls: 'bg-red-100 text-red-700' },
-];
-
-const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Low', cls: 'bg-green-100 text-green-700' },
-  { value: 'medium', label: 'Medium', cls: 'bg-yellow-100 text-yellow-700' },
-  { value: 'high', label: 'High', cls: 'bg-red-100 text-red-700' },
-];
-
-const getStatusCls = (v: string) => STATUS_OPTIONS.find((s) => s.value === v)?.cls || 'bg-gray-100 text-gray-700';
-const getStatusLabel = (v: string) => STATUS_OPTIONS.find((s) => s.value === v)?.label || v;
-const getPriorityCls = (v: string) => PRIORITY_OPTIONS.find((p) => p.value === v)?.cls || 'bg-gray-100 text-gray-700';
-const getPriorityLabel = (v: string) => PRIORITY_OPTIONS.find((p) => p.value === v)?.label || v;
-
-// Inline dropdown cell component - Improved version with portal
-function InlineDropdown({
-  value, options, onSelect,
-}: {
-  value: string;
-  options: { value: string; label: string; cls: string }[];
-  onSelect: (val: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const current = options.find((o) => o.value === value);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false);
-      }
-    };
-
-    const handleScroll = () => {
-      if (open) {
-        updatePosition();
-      }
-    };
-
-    if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleEscape);
-      window.addEventListener('scroll', handleScroll, true);
-      window.addEventListener('resize', handleScroll);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-      window.removeEventListener('scroll', handleScroll, true);
-      window.removeEventListener('resize', handleScroll);
-    };
-  }, [open]);
-
-  const updatePosition = () => {
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setPosition({
-        top: rect.bottom + 4,
-        left: rect.left,
-      });
-    }
-  };
-
-  const handleToggle = () => {
-    if (!open) {
-      updatePosition();
-      setOpen(true);
-    } else {
-      setOpen(false);
-    }
-  };
-
-  return (
-    <div className="relative inline-block">
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={handleToggle}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer hover:opacity-80 transition-all border border-transparent hover:border-gray-200 ${current?.cls || 'bg-gray-100 text-gray-700'}`}
-      >
-        {current?.label || value}
-        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
-      </button>
-
-      {open && typeof window !== 'undefined' && createPortal(
-        <div
-          ref={dropdownRef}
-          style={{
-            position: 'fixed',
-            top: position.top,
-            left: position.left,
-            zIndex: 99999,
-          }}
-          className="bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px]"
-        >
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                onSelect(opt.value);
-                setOpen(false);
-              }}
-              className={`w-full flex items-center justify-between px-2 py-1.5 text-xs font-medium rounded-md transition-all
-      ${value === opt.value
-                  ? 'bg-gray-100'
-                  : 'hover:bg-gray-50'
-                }`}
-            >
-              {/* Label Badge */}
-              <span className={`px-2 py-1 rounded-md text-xs cursor-pointer`}>
-                {opt.label}
-              </span>
-
-              {/* Check Icon */}
-              {value === opt.value && (
-                <svg
-                  className="w-4 h-4 text-gray-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              )}
-            </button>
-          ))}
-        </div>,
-        document.body
-      )}
-    </div>
-  );
-}
+import { TaskStatus, TaskSummary } from '@/components/tasks/taskConstants';
+import TaskListView from '@/components/tasks/taskListView';
+import TaskKanbanView from '@/components/tasks/taskKanbanView';
+import TaskViewDialog from '@/components/tasks/taskViewDialog';
+import TaskStatsCards from '@/components/tasks/taskStatsCard';
 
 export default function TasksPage() {
+  // ── State ──────────────────────────────────────────────────────────────────
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -187,6 +23,11 @@ export default function TasksPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'my'>('all');
   const [summary, setSummary] = useState<TaskSummary | null>(null);
+  const [taskStatuses, setTaskStatuses] = useState<TaskStatus[]>([]);
+  const [kanbanData, setKanbanData] = useState<any[]>([]);
+  const [kanbanLoading, setKanbanLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+
   const [taskPermissions, setTaskPermissions] = useState<{
     readAll?: boolean;
     readOwn?: boolean;
@@ -195,15 +36,21 @@ export default function TasksPage() {
     delete?: boolean;
   } | null>(null);
 
-  // FIXED: Use useRef to track if initial permissions check is done
+  const [showDialog, setShowDialog] = useState(false);
+  const [editTask, setEditTask] = useState<Task | null>(null);
+  const [viewTask, setViewTask] = useState<Task | null>(null);
+  const [deleteTask, setDeleteTask] = useState<Task | null>(null);
+
   const permissionsChecked = useRef(false);
 
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const effectiveTab = (!taskPermissions?.readAll && taskPermissions?.readOwn) ? 'my' : activeTab;
+
+  // ── Permissions ────────────────────────────────────────────────────────────
   useEffect(() => {
+    if (permissionsChecked.current) return;
     const token = getAuthToken();
     if (!token) return;
-
-    // Only fetch permissions once
-    if (permissionsChecked.current) return;
 
     axios.get(baseUrl.currentStaff, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => {
@@ -211,28 +58,18 @@ export default function TasksPage() {
         const rawPerms = Array.isArray(role.permissions) ? role.permissions[0] : role.permissions || {};
         const tp = rawPerms.task || {};
         setTaskPermissions(tp);
-        // If they only have readOwn, force to 'my' tab
-        if (!tp.readAll && tp.readOwn) {
-          setActiveTab('my');
-        }
+        if (!tp.readAll && tp.readOwn) setActiveTab('my');
         permissionsChecked.current = true;
       })
       .catch(console.error);
-  }, []); // Empty dependency array - runs only once
+  }, []);
 
-  const [showDialog, setShowDialog] = useState(false);
-  const [editTask, setEditTask] = useState<Task | null>(null);
-  const [viewTask, setViewTask] = useState<Task | null>(null);
-  const [deleteTask, setDeleteTask] = useState<Task | null>(null);
-
-  // FIXED: Use useCallback to memoize fetch functions
+  // ── Data Fetchers ──────────────────────────────────────────────────────────
   const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
       const token = getAuthToken();
-      // Enforce 'my' if permission restricted
-      const finalTab = (!taskPermissions?.readAll && taskPermissions?.readOwn) ? 'my' : activeTab;
-      const url = finalTab === 'my' ? baseUrl.myTasks : baseUrl.getAllTasks;
+      const url = effectiveTab === 'my' ? baseUrl.myTasks : baseUrl.getAllTasks;
       const res = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
         params: { page, limit, search: searchQuery || undefined },
@@ -245,33 +82,66 @@ export default function TasksPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, searchQuery, activeTab, taskPermissions]); // FIXED: Added proper dependencies
+  }, [page, limit, searchQuery, effectiveTab]);
 
   const fetchSummary = useCallback(async () => {
     try {
       const token = getAuthToken();
-      const finalTab = (!taskPermissions?.readAll && taskPermissions?.readOwn) ? 'my' : activeTab;
-      const url = finalTab === 'my' ? baseUrl.myTaskSummary : baseUrl.taskSummary;
+      const url = effectiveTab === 'my' ? baseUrl.myTaskSummary : baseUrl.taskSummary;
       const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
       setSummary(res.data.data);
+      if (res.data.data?.taskStatuses) setTaskStatuses(res.data.data.taskStatuses);
     } catch {
       setSummary(null);
     }
-  }, [activeTab, taskPermissions]); // FIXED: Added proper dependencies
+  }, [effectiveTab]);
 
-  // FIXED: Separate useEffect for fetching data
+  const fetchTaskStatuses = useCallback(async () => {
+    try {
+      const token = getAuthToken();
+      const res = await axios.get(baseUrl.taskStatuses, { headers: { Authorization: `Bearer ${token}` } });
+      setTaskStatuses(res.data.data || []);
+    } catch {
+      setTaskStatuses([]);
+    }
+  }, []);
+
+  const fetchKanbanData = useCallback(async () => {
+    try {
+      setKanbanLoading(true);
+      const token = getAuthToken();
+      const res = await axios.get(`${baseUrl.taskKanban}?my=${effectiveTab === 'my'}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setKanbanData(res.data.data?.tasksByStatus || []);
+    } catch {
+      setKanbanData([]);
+    } finally {
+      setKanbanLoading(false);
+    }
+  }, [effectiveTab]);
+
   useEffect(() => {
     fetchTasks();
-    fetchSummary();
-  }, [fetchTasks, fetchSummary]); // Now depends on memoized functions
+  }, [fetchTasks]);
 
+  useEffect(() => {
+    // fetchSummary();
+    fetchTaskStatuses();
+  }, []);
+
+  useEffect(() => {
+    if (viewMode === 'kanban') fetchKanbanData();
+  }, [viewMode, fetchKanbanData]);
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
   const handleStatusChange = async (taskId: string, status: string) => {
     try {
       const token = getAuthToken();
-      await axios.patch(`${baseUrl.updateTaskStatus}/${taskId}/status`, { status }, {
+      const res = await axios.patch(`${baseUrl.updateTaskStatus}/${taskId}/status`, { status }, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setTasks((prev) => prev.map((t) => t._id === taskId ? { ...t, status } : t));
+      setTasks((prev) => prev.map((t) => t._id === taskId ? { ...t, status: res.data.data.status } : t));
     } catch {
       toast.error('Failed to update status');
     }
@@ -299,168 +169,20 @@ export default function TasksPage() {
       toast.success('Task deleted successfully');
       setDeleteTask(null);
       fetchTasks();
-      fetchSummary();
+      // fetchSummary();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Failed to delete task');
     }
   };
 
-  const columns: Column<Task>[] = [
-    {
-      key: 'subject',
-      label: 'SUBJECT',
-      render: (v) => <span className="font-semibold">{v}</span>,
-    },
-    {
-      key: 'status',
-      label: 'STATUS',
-      render: (v, row) => (
-        <InlineDropdown
-          value={v}
-          options={STATUS_OPTIONS}
-          onSelect={(val) => handleStatusChange(row._id, val)}
-        />
-      ),
-    },
-    {
-      key: 'priority',
-      label: 'PRIORITY',
-      render: (v, row) => (
-        <InlineDropdown
-          value={v}
-          options={PRIORITY_OPTIONS}
-          onSelect={(val) => handlePriorityChange(row._id, val)}
-        />
-      ),
-    },
-    {
-      key: 'startDate',
-      label: 'START DATE',
-      render: (v) => v ? moment(v).format('DD-MM-YYYY') : '-',
-    },
-    {
-      key: 'endDate',
-      label: 'END DATE',
-      render: (v) => v ? moment(v).format('DD-MM-YYYY') : '-',
-    },
-    {
-      key: 'assignedUsers',
-      label: 'ASSIGNED TO',
-      render: (v: Task['assignedUsers']) => (
-        <div className="flex flex-wrap gap-1">
-          {v?.length ? v.map((u) => (
-            <span key={u._id} className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs">{u.fullName}</span>
-          )) : <span className="text-gray-400">-</span>}
-        </div>
-      ),
-    },
-    {
-      key: 'assignedTeams',
-      label: 'TEAMS',
-      render: (v: Task['assignedTeams']) => (
-        <div className="flex flex-wrap gap-1">
-          {v?.length ? v.map((t) => (
-            <span key={t._id} className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full text-xs">{t.name}</span>
-          )) : <span className="text-gray-400">-</span>}
-        </div>
-      ),
-    },
-  ];
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
       <div className="space-y-6">
+        {/* Stats */}
+        {/* <TaskStatsCards summary={summary} activeTab={activeTab} /> */}
 
-        {/* ── STATS CARDS ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {[
-            {
-              label: 'Total Tasks',
-              value: summary?.total ?? '-',
-              icon: ClipboardList,
-              bg: 'bg-blue-50',
-              iconColor: 'text-blue-600',
-              border: 'border-blue-100',
-              valueCls: 'text-blue-700',
-            },
-            {
-              label: 'To Do',
-              value: summary?.todo ?? '-',
-              icon: Clock,
-              bg: 'bg-gray-50',
-              iconColor: 'text-gray-500',
-              border: 'border-gray-200',
-              valueCls: 'text-gray-700',
-            },
-            {
-              label: 'In Progress',
-              value: summary?.inProgress ?? '-',
-              icon: Loader2,
-              bg: 'bg-blue-50',
-              iconColor: 'text-blue-500',
-              border: 'border-blue-100',
-              valueCls: 'text-blue-700',
-            },
-            {
-              label: 'Completed',
-              value: summary?.completed ?? '-',
-              icon: CheckCircle2,
-              bg: 'bg-green-50',
-              iconColor: 'text-green-600',
-              border: 'border-green-100',
-              valueCls: 'text-green-700',
-            },
-            {
-              label: 'Cancelled',
-              value: summary?.cancelled ?? '-',
-              icon: XCircle,
-              bg: 'bg-red-50',
-              iconColor: 'text-red-500',
-              border: 'border-red-100',
-              valueCls: 'text-red-700',
-            },
-          ].map((card) => (
-            <div
-              key={card.label}
-              className={`rounded-2xl border ${card.border} ${card.bg} p-4 flex items-center gap-4 shadow-sm`}
-            >
-              <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white shadow-sm`}>
-                <card.icon className={`w-5 h-5 ${card.iconColor}`} />
-              </div>
-              <div>
-                <div className={`text-2xl font-bold ${card.valueCls}`}>{card.value}</div>
-                <div className="text-xs text-gray-500 font-medium mt-0.5">{card.label}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Priority breakdown — only on All Tasks tab */}
-        {activeTab === 'all' && summary && (
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { label: 'Low Priority', value: summary.low ?? 0, bg: 'bg-green-50', border: 'border-green-100', valueCls: 'text-green-700', barCls: 'bg-green-400' },
-              { label: 'Medium Priority', value: summary.medium ?? 0, bg: 'bg-yellow-50', border: 'border-yellow-100', valueCls: 'text-yellow-700', barCls: 'bg-yellow-400' },
-              { label: 'High Priority', value: summary.high ?? 0, bg: 'bg-red-50', border: 'border-red-100', valueCls: 'text-red-700', barCls: 'bg-red-400' },
-            ].map((p) => {
-              const total = (summary.low ?? 0) + (summary.medium ?? 0) + (summary.high ?? 0);
-              const pct = total > 0 ? Math.round((p.value / total) * 100) : 0;
-              return (
-                <div key={p.label} className={`rounded-2xl border ${p.border} ${p.bg} p-4 shadow-sm`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-gray-500">{p.label}</span>
-                    <span className={`text-lg font-bold ${p.valueCls}`}>{p.value}</span>
-                  </div>
-                  <div className="w-full bg-white rounded-full h-2">
-                    <div className={`${p.barCls} h-2 rounded-full transition-all`} style={{ width: `${pct}%` }} />
-                  </div>
-                  <div className="text-xs text-gray-400 mt-1">{pct}% of total</div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
+        {/* Toolbar */}
         <div className="rounded-3xl border border-gray-200 bg-white shadow-sm text-slate-600">
           <div className="flex flex-wrap items-center gap-3 p-5">
             {/* Tabs */}
@@ -481,6 +203,22 @@ export default function TasksPage() {
               </button>
             </div>
 
+            {/* View Toggle */}
+            <div className="flex gap-1 bg-gray-100 rounded-xl p-1 ml-4">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-1.5 cursor-pointer rounded-lg text-sm font-medium transition flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-white shadow text-slate-800' : 'text-gray-500 hover:text-slate-700'}`}
+              >
+                <List className="w-4 h-4" /> List
+              </button>
+              <button
+                onClick={() => setViewMode('kanban')}
+                className={`px-3 py-1.5 cursor-pointer rounded-lg text-sm font-medium transition flex items-center gap-1.5 ${viewMode === 'kanban' ? 'bg-white shadow text-slate-800' : 'text-gray-500 hover:text-slate-700'}`}
+              >
+                <LayoutGrid className="w-4 h-4" /> Kanban
+              </button>
+            </div>
+
             <button
               onClick={() => { setEditTask(null); setShowDialog(true); }}
               className="ml-auto cursor-pointer flex items-center gap-2 px-6 py-2.5 rounded-lg bg-secondary hover:bg-blue-700 text-white text-sm font-semibold shadow"
@@ -491,23 +229,36 @@ export default function TasksPage() {
           </div>
         </div>
 
-        <DataTable
-          data={tasks}
-          columns={columns}
-          loading={loading}
-          pagination
-          currentPage={page}
-          totalPages={totalPages}
-          totalRecords={totalRecords}
-          pageSize={limit}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => { setLimit(size); setPage(1); }}
-          onSearch={(val) => { setSearchQuery(val); setPage(1); }}
-          actions
-          onView={(row) => setViewTask(row)}
-          onEdit={(row) => { setEditTask(row); setShowDialog(true); }}
-          onDelete={(row) => setDeleteTask(row)}
-        />
+        {/* List View */}
+        {viewMode === 'list' && (
+          <TaskListView
+            tasks={tasks}
+            loading={loading}
+            page={page}
+            totalPages={totalPages}
+            totalRecords={totalRecords}
+            limit={limit}
+            taskStatuses={taskStatuses}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => { setLimit(size); setPage(1); }}
+            onSearch={(val) => { setSearchQuery(val); setPage(1); }}
+            onStatusChange={handleStatusChange}
+            onPriorityChange={handlePriorityChange}
+            onView={(row) => setViewTask(row)}
+            onEdit={(row) => { setEditTask(row); setShowDialog(true); }}
+            onDelete={(row) => setDeleteTask(row)}
+          />
+        )}
+
+        {/* Kanban View */}
+        {viewMode === 'kanban' && (
+          <TaskKanbanView
+            kanbanData={kanbanData}
+            taskStatuses={taskStatuses}
+            onTaskClick={(task) => setViewTask(task)}
+            onRefresh={fetchKanbanData}
+          />
+        )}
       </div>
 
       {/* Add / Edit Dialog */}
@@ -517,6 +268,7 @@ export default function TasksPage() {
         mode={editTask ? 'edit' : 'add'}
         initialData={editTask}
         onSuccess={() => { fetchTasks(); fetchSummary(); }}
+        taskStatuses={taskStatuses}
       />
 
       {/* Delete Confirmation */}
@@ -548,197 +300,11 @@ export default function TasksPage() {
       </DeleteDialog>
 
       {/* View Dialog */}
-      <Dialog isOpen={!!viewTask} onClose={() => setViewTask(null)} title="Task Details">
-        {viewTask && (
-          <div className="space-y-4 text-sm text-slate-700">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="rounded-lg border border-gray-200 p-3 col-span-2">
-                <div className="text-xs text-gray-500">Subject</div>
-                <div className="font-semibold text-gray-900">{viewTask.subject}</div>
-              </div>
-              <div className="rounded-lg border border-gray-200 p-3">
-                <div className="text-xs text-gray-500">Status</div>
-                <span className={`mt-1 inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusCls(viewTask.status)}`}>
-                  {getStatusLabel(viewTask.status)}
-                </span>
-              </div>
-              <div className="rounded-lg border border-gray-200 p-3">
-                <div className="text-xs text-gray-500">Priority</div>
-                <span className={`mt-1 inline-block px-2 py-1 rounded-full text-xs font-medium capitalize ${getPriorityCls(viewTask.priority)}`}>
-                  {getPriorityLabel(viewTask.priority)}
-                </span>
-              </div>
-              <div className="rounded-lg border border-gray-200 p-3">
-                <div className="text-xs text-gray-500">Start Date</div>
-                <div className="font-semibold text-gray-900">{viewTask.startDate ? moment(viewTask.startDate).format('DD-MM-YYYY') : '-'}</div>
-              </div>
-              <div className="rounded-lg border border-gray-200 p-3">
-                <div className="text-xs text-gray-500">End Date</div>
-                <div className="font-semibold text-gray-900">{viewTask.endDate ? moment(viewTask.endDate).format('DD-MM-YYYY') : '-'}</div>
-              </div>
-              <div className="rounded-lg border border-gray-200 p-3">
-                <div className="text-xs text-gray-500">Assigned Users</div>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {viewTask.assignedUsers?.length ? viewTask.assignedUsers.map((u) => (
-                    <span key={u._id} className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs">{u.fullName}</span>
-                  )) : <span className="text-gray-400">-</span>}
-                </div>
-              </div>
-              <div className="rounded-lg border border-gray-200 p-3">
-                <div className="text-xs text-gray-500">Assigned Teams</div>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {viewTask.assignedTeams?.length ? viewTask.assignedTeams.map((t) => (
-                    <span key={t._id} className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full text-xs">{t.name}</span>
-                  )) : <span className="text-gray-400">-</span>}
-                </div>
-              </div>
-            </div>
-            <div className="rounded-lg border border-gray-200 p-3">
-              <div className="text-xs text-gray-500 mb-1">Description</div>
-              {viewTask.description
-                ? <div className="prose prose-sm max-w-none text-gray-900" dangerouslySetInnerHTML={{ __html: viewTask.description }} />
-                : <span className="text-gray-400">-</span>}
-            </div>
-            <div className="rounded-lg border border-gray-200 p-3">
-              <div className="text-xs text-gray-500 mb-1">Attachments</div>
-              {viewTask.attachments?.length ? (
-                <div className="space-y-2">
-                  {viewTask.attachments.map((a, i) => {
-                    const fileUrl = `${process.env.NEXT_PUBLIC_IMAGE_URL}${a.path}`;
-                    const isImage = /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(a.filename);
-
-                    return (
-                      <div key={i} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-                        {isImage ? (
-                          <>
-                            <button
-                              onClick={() => {
-                                const modal = document.createElement('dialog');
-                                modal.className = 'fixed inset-0 w-full h-full bg-black/80 flex items-center justify-center p-4 z-[10000]';
-                                modal.innerHTML = `
-                      <div class="relative max-w-4xl max-h-[90vh]">
-                        <img src="${fileUrl}" alt="${a.originalName}" class="max-w-full max-h-[90vh] object-contain" />
-                        <button class="absolute top-4 right-4 bg-white rounded-full p-2 hover:bg-gray-100 shadow-lg" onclick="this.closest('dialog').close()">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                        </button>
-                      </div>
-                    `;
-                                document.body.appendChild(modal);
-                                modal.showModal();
-                                modal.addEventListener('close', () => {
-                                  document.body.removeChild(modal);
-                                });
-                              }}
-                              className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden hover:opacity-80 transition border border-gray-200"
-                            >
-                              <img
-                                src={fileUrl}
-                                alt={a.originalName}
-                                className="w-full h-full object-cover"
-                              />
-                            </button>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">{a.originalName}</p>
-                              <p className="text-xs text-gray-500">
-                                {a.size ? Math.round(a.size / 1024) : 0} KB • Image
-                              </p>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="flex-shrink-0 w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
-                              <span className="text-lg text-gray-600">{getFileIcon(a.filename)}</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">{a.originalName}</p>
-                              <p className="text-xs text-gray-500">
-                                {a.size ? Math.round(a.size / 1024) : 0} KB • {a.filename.split('.').pop()?.toUpperCase()}
-                              </p>
-                            </div>
-                          </>
-                        )}
-
-                        {/* Action Buttons */}
-                        <div className="flex items-center gap-1">
-                          {/* View Button */}
-                          <button
-                            onClick={() => {
-                              if (isImage) {
-                                const modal = document.createElement('dialog');
-                                modal.className = 'fixed inset-0 w-full h-full bg-black/80 flex items-center justify-center p-4 z-[10000]';
-                                modal.innerHTML = `
-                      <div class="relative max-w-4xl max-h-[90vh]">
-                        <img src="${fileUrl}" alt="${a.originalName}" class="max-w-full max-h-[90vh] object-contain" />
-                        <button class="absolute top-4 right-4 bg-white rounded-full p-2 hover:bg-gray-100 shadow-lg" onclick="this.closest('dialog').close()">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                        </button>
-                      </div>
-                    `;
-                                document.body.appendChild(modal);
-                                modal.showModal();
-                                modal.addEventListener('close', () => {
-                                  document.body.removeChild(modal);
-                                });
-                              } else {
-                                window.open(fileUrl, '_blank');
-                              }
-                            }}
-                            className="p-2 cursor-pointer hover:bg-white rounded-lg transition text-gray-600 hover:text-blue-600"
-                            title="View"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-
-                          {/* Download Button with Save As dialog */}
-                          <button
-                            onClick={async () => {
-                              try {
-                                // Fetch the file with authentication if needed
-                                const response = await fetch(fileUrl, {
-                                  headers: {
-                                    'Authorization': `Bearer ${getAuthToken()}` // Agar authentication chahiye to
-                                  }
-                                });
-
-                                if (!response.ok) throw new Error('Download failed');
-
-                                const blob = await response.blob();
-
-                                // Create blob URL and trigger download
-                                const blobUrl = window.URL.createObjectURL(blob);
-                                const link = document.createElement('a');
-                                link.href = blobUrl;
-                                link.download = a.originalName; // This triggers Save As dialog
-
-                                // Append to body, click and remove
-                                document.body.appendChild(link);
-                                link.click();
-
-                                // Cleanup
-                                document.body.removeChild(link);
-                                window.URL.revokeObjectURL(blobUrl);
-                              } catch (error) {
-                                console.error('Download error:', error);
-                                toast.error('Failed to download file');
-                              }
-                            }}
-                            className="p-2 cursor-pointer hover:bg-white rounded-lg transition text-gray-600 hover:text-green-600"
-                            title="Download"
-                          >
-                            <Download className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <span className="text-gray-400">-</span>
-              )}
-            </div>
-          </div>
-        )}
-      </Dialog>
+      <TaskViewDialog
+        task={viewTask}
+        taskStatuses={taskStatuses}
+        onClose={() => setViewTask(null)}
+      />
     </>
   );
 }

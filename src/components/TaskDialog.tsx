@@ -707,7 +707,9 @@ export interface Task {
   subject: string;
   startDate: string;
   endDate: string;
-  status: string;
+  status: { _id: string; name: string; color: string };
+  taskStatus?: { _id: string; name: string; color: string };
+  legacyStatus?: string;
   priority: string;
   assignedUsers: { _id: string; fullName: string }[];
   assignedTeams: { _id: string; name: string }[];
@@ -721,6 +723,7 @@ interface TaskDialogProps {
   mode: 'add' | 'edit';
   initialData: Task | null;
   onSuccess: () => void;
+  taskStatuses?: { _id: string; name: string; color: string }[];
 }
 
 interface TaskFormData {
@@ -759,8 +762,7 @@ const TaskValidationSchema = Yup.object().shape({
     .typeError('Invalid date format')
     .min(Yup.ref('startDate'), 'End date must be after start date'),
   status: Yup.string()
-    .required('Status is required')
-    .oneOf(['todo', 'in_progress', 'completed', 'cancelled'], 'Invalid status'),
+    .required('Status is required'),
   priority: Yup.string()
     .required('Priority is required')
     .oneOf(['low', 'medium', 'high'], 'Invalid priority'),
@@ -780,9 +782,10 @@ const getFileUrl = (path: string) => {
   return `${base}${path}`;
 };
 
-export default function TaskDialog({ isOpen, onClose, mode, initialData, onSuccess }: TaskDialogProps) {
+export default function TaskDialog({ isOpen, onClose, mode, initialData, onSuccess, taskStatuses = [] }: TaskDialogProps) {
   const [staffList, setStaffList] = useState<StaffOption[]>([]);
   const [teamList, setTeamList] = useState<TeamOption[]>([]);
+  const [localTaskStatuses, setLocalTaskStatuses] = useState<{ _id: string; name: string; color: string }[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -877,7 +880,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
     } else {
       teamMembers.forEach((uid) => { if (!updatedUsers.includes(uid)) updatedUsers.push(uid); });
     }
-    
+
     updateField('assignedTeams', updatedTeams);
     updateField('assignedUsers', updatedUsers);
   };
@@ -958,10 +961,12 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
     Promise.all([
       axios.get(`${baseUrl.getAllStaff}?limit=1000`, { headers }),
       axios.get(baseUrl.teams, { headers }),
+      axios.get(baseUrl.taskStatuses, { headers }),
     ])
-      .then(([staffRes, teamRes]) => {
+      .then(([staffRes, teamRes, statusRes]) => {
         setStaffList(staffRes.data?.data || []);
         setTeamList(teamRes.data?.data || []);
+        setLocalTaskStatuses(statusRes.data?.data || []);
       })
       .catch(() => { })
       .finally(() => setLoadingOptions(false));
@@ -980,7 +985,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
         assignedTeams: (initialData.assignedTeams || []).map((t: any) => t._id || t),
         description: initialData.description || '',
       };
-      formik.setValues(formData);
+      formik.setValues(formData as any);
       setExistingAttachments(initialData.attachments || []);
     } else {
       formik.resetForm();
@@ -1001,22 +1006,46 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
           {/* Subject */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Subject <span className="text-red-500">*</span>
+              Name <span className="text-red-500">*</span>
             </label>
             <input
               name="subject"
               value={formik.values.subject}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
-              className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                formik.touched.subject && formik.errors.subject
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-gray-300'
-              }`}
+              className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formik.touched.subject && formik.errors.subject
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300'
+                }`}
               placeholder="Enter task subject"
             />
             {formik.touched.subject && formik.errors.subject && (
               <p className="mt-1 text-xs text-red-500">{formik.errors.subject}</p>
+            )}
+          </div>
+
+            {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <div className={`rounded-xl border overflow-hidden ${formik.touched.description && formik.errors.description
+              ? 'border-red-500'
+              : 'border-gray-300'
+              }`}>
+              <DefaultEditor
+                value={formik.values.description}
+                style={{minHeight:"200px"}}
+                onChange={(e) => {
+                  formik.setFieldValue('description', e.target.value);
+                  if (formik.errors.description) {
+                    formik.setFieldError('description', undefined);
+                  }
+                }}
+                onBlur={() => formik.setFieldTouched('description', true)}
+                placeholder="Enter task description..."
+              />
+            </div>
+            {formik.touched.description && formik.errors.description && (
+              <p className="mt-1 text-xs text-red-500">{formik.errors.description}</p>
             )}
           </div>
 
@@ -1030,11 +1059,10 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
                 value={formik.values.startDate}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  formik.touched.startDate && formik.errors.startDate
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-gray-300'
-                }`}
+                className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formik.touched.startDate && formik.errors.startDate
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300'
+                  }`}
               />
               {formik.touched.startDate && formik.errors.startDate && (
                 <p className="mt-1 text-xs text-red-500">{formik.errors.startDate}</p>
@@ -1049,11 +1077,10 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 min={formik.values.startDate || undefined}
-                className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  formik.touched.endDate && formik.errors.endDate
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-gray-300'
-                }`}
+                className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formik.touched.endDate && formik.errors.endDate
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300'
+                  }`}
               />
               {formik.touched.endDate && formik.errors.endDate && (
                 <p className="mt-1 text-xs text-red-500">{formik.errors.endDate}</p>
@@ -1070,16 +1097,32 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
                 value={formik.values.status}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  formik.touched.status && formik.errors.status
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-gray-300'
-                }`}
+                className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formik.touched.status && formik.errors.status
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300'
+                  }`}
               >
-                <option value="todo">To Do</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
+                {(localTaskStatuses.length > 0 ? localTaskStatuses : taskStatuses).length > 0 ? (
+                  <>
+                    {(localTaskStatuses.length > 0 ? localTaskStatuses : taskStatuses).map((status) => (
+                      <option key={status._id} value={status._id}>
+                        {status.name}
+                      </option>
+                    ))}
+                    {/* Legacy options for backward compatibility */}
+                    <option value="todo">To Do (Legacy)</option>
+                    <option value="in_progress">In Progress (Legacy)</option>
+                    <option value="completed">Completed (Legacy)</option>
+                    <option value="cancelled">Cancelled (Legacy)</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="todo">To Do</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </>
+                )}
               </select>
               {formik.touched.status && formik.errors.status && (
                 <p className="mt-1 text-xs text-red-500">{formik.errors.status}</p>
@@ -1092,11 +1135,10 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
                 value={formik.values.priority}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  formik.touched.priority && formik.errors.priority
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-gray-300'
-                }`}
+                className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formik.touched.priority && formik.errors.priority
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300'
+                  }`}
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -1180,30 +1222,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
             )}
           </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <div className={`rounded-xl border overflow-hidden ${
-              formik.touched.description && formik.errors.description
-                ? 'border-red-500'
-                : 'border-gray-300'
-            }`}>
-              <DefaultEditor
-                value={formik.values.description}
-                onChange={(e) => {
-                  formik.setFieldValue('description', e.target.value);
-                  if (formik.errors.description) {
-                    formik.setFieldError('description', undefined);
-                  }
-                }}
-                onBlur={() => formik.setFieldTouched('description', true)}
-                placeholder="Enter task description..."
-              />
-            </div>
-            {formik.touched.description && formik.errors.description && (
-              <p className="mt-1 text-xs text-red-500">{formik.errors.description}</p>
-            )}
-          </div>
+        
 
           {/* Existing Attachments (edit mode) */}
           {mode === 'edit' && existingAttachments.length > 0 && (
@@ -1217,75 +1236,74 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
                   const fileUrl = getFileUrl(att.path);
                   const img = isImage(att.filename);
                   return (
-                      <div
-                        key={att._id}
-                        className={`flex items-center gap-3 rounded-xl border transition-colors px-3 py-2 ${
-                          deletingAttachmentIds.has(att._id)
-                            ? 'bg-red-50 border-red-200 opacity-60'
-                            : 'bg-gray-50 border-gray-200'
+                    <div
+                      key={att._id}
+                      className={`flex items-center gap-3 rounded-xl border transition-colors px-3 py-2 ${deletingAttachmentIds.has(att._id)
+                        ? 'bg-red-50 border-red-200 opacity-60'
+                        : 'bg-gray-50 border-gray-200'
                         }`}
-                      >
-                        {/* Thumbnail or file icon */}
-                        <div className="flex-shrink-0">
-                          {deletingAttachmentIds.has(att._id) ? (
-                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-red-400 border-t-transparent" />
-                          ) : img ? (
-                            <img
-                              src={fileUrl}
-                              alt={att.originalName}
-                              className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-200"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                              {getFileIcon(att.originalName)}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* File name */}
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm text-gray-700 truncate" title={att.originalName}>
-                            {att.originalName}
-                          </p>
-                          {deletingAttachmentIds.has(att._id) && (
-                            <p className="text-xs text-red-500 mt-0.5">Deleting...</p>
-                          )}
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          {/* View */}
-                          <button
-                            type="button"
-                            title="View"
-                            disabled={deletingAttachmentIds.has(att._id)}
-                            onClick={() => setPreviewUrl(fileUrl)}
-                            className="p-1.5 cursor-pointer rounded-lg hover:bg-blue-100 text-blue-500 transition disabled:opacity-40"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          {/* Download */}
-                          <button
-                            type="button"
-                            title="Download"
-                            disabled={deletingAttachmentIds.has(att._id)}
-                            onClick={() => handleDownload(att)}
-                            className="p-1.5 cursor-pointer rounded-lg hover:bg-green-100 text-green-600 transition disabled:opacity-40"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-                          {/* Delete */}
-                          <button
-                            type="button"
-                            title="Delete"
-                            disabled={deletingAttachmentIds.has(att._id)}
-                            onClick={() => handleDeleteExistingAttachment(att)}
-                            className="p-1.5 cursor-pointer rounded-lg hover:bg-red-100 text-red-500 transition disabled:opacity-40"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                    >
+                      {/* Thumbnail or file icon */}
+                      <div className="flex-shrink-0">
+                        {deletingAttachmentIds.has(att._id) ? (
+                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-red-400 border-t-transparent" />
+                        ) : img ? (
+                          <img
+                            src={fileUrl}
+                            alt={att.originalName}
+                            className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-200"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                            {getFileIcon(att.originalName)}
+                          </div>
+                        )}
                       </div>
+
+                      {/* File name */}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-gray-700 truncate" title={att.originalName}>
+                          {att.originalName}
+                        </p>
+                        {deletingAttachmentIds.has(att._id) && (
+                          <p className="text-xs text-red-500 mt-0.5">Deleting...</p>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {/* View */}
+                        <button
+                          type="button"
+                          title="View"
+                          disabled={deletingAttachmentIds.has(att._id)}
+                          onClick={() => setPreviewUrl(fileUrl)}
+                          className="p-1.5 cursor-pointer rounded-lg hover:bg-blue-100 text-blue-500 transition disabled:opacity-40"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        {/* Download */}
+                        <button
+                          type="button"
+                          title="Download"
+                          disabled={deletingAttachmentIds.has(att._id)}
+                          onClick={() => handleDownload(att)}
+                          className="p-1.5 cursor-pointer rounded-lg hover:bg-green-100 text-green-600 transition disabled:opacity-40"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                        {/* Delete */}
+                        <button
+                          type="button"
+                          title="Delete"
+                          disabled={deletingAttachmentIds.has(att._id)}
+                          onClick={() => handleDeleteExistingAttachment(att)}
+                          className="p-1.5 cursor-pointer rounded-lg hover:bg-red-100 text-red-500 transition disabled:opacity-40"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -1321,14 +1339,14 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+              className="px-6 py-2.5 cursor-pointer rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !formik.isValid || (formik.dirty === false && mode === 'edit')}
-              className="px-6 py-2.5 rounded-xl bg-secondary text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-60 flex items-center gap-2 transition"
+              className="px-6 py-2.5 cursor-pointer rounded-xl bg-secondary text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-60 flex items-center gap-2 transition"
             >
               {loading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
               {mode === 'add' ? 'Create Task' : 'Update Task'}
