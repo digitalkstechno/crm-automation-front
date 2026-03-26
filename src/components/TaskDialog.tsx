@@ -680,6 +680,9 @@ import Dialog, { CenterDialog } from './Dialog';
 import { DefaultEditor } from 'react-simple-wysiwyg';
 import { Eye, Download, Trash2, Paperclip } from 'lucide-react';
 import { getFileIcon } from '@/utills/utill';
+import FormInput from './ui/Input';
+import FormSelect from './ui/FormSelect';
+import Label from './ui/Label';
 
 // Types
 export interface Attachment {
@@ -995,6 +998,11 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
     setPreviewUrl(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, initialData, isOpen]);
+  const PRIORITY_OPTIONS = [
+    { value: 'low', label: 'Low', cls: 'bg-green-100 text-green-700' },
+    { value: 'medium', label: 'Medium', cls: 'bg-yellow-100 text-yellow-700' },
+    { value: 'high', label: 'High', cls: 'bg-red-100 text-red-700' },
+  ]
 
   if (!isOpen) return null;
 
@@ -1002,29 +1010,19 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
     <>
       <Dialog isOpen={isOpen} onClose={onClose} title={mode === 'add' ? 'Add Task' : 'Edit Task'} size="lg">
         <form onSubmit={formik.handleSubmit} className="space-y-4">
-
-          {/* Subject */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              name="subject"
-              value={formik.values.subject}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formik.touched.subject && formik.errors.subject
-                ? 'border-red-500 focus:ring-red-500'
-                : 'border-gray-300'
-                }`}
-              placeholder="Enter task subject"
-            />
-            {formik.touched.subject && formik.errors.subject && (
-              <p className="mt-1 text-xs text-red-500">{formik.errors.subject}</p>
-            )}
-          </div>
-
-            {/* Description */}
+          <FormInput
+            label="Name"
+            name="subject"
+            type="text"
+            value={formik.values.subject}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.touched.subject && formik.errors.subject}
+            placeholder=""
+            as="input"
+            required
+          />
+          {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
             <div className={`rounded-xl border overflow-hidden ${formik.touched.description && formik.errors.description
@@ -1033,7 +1031,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
               }`}>
               <DefaultEditor
                 value={formik.values.description}
-                style={{minHeight:"200px"}}
+                style={{ minHeight: "200px" }}
                 onChange={(e) => {
                   formik.setFieldValue('description', e.target.value);
                   if (formik.errors.description) {
@@ -1051,144 +1049,106 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-              <input
-                type="date"
-                name="startDate"
-                value={formik.values.startDate}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formik.touched.startDate && formik.errors.startDate
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-gray-300'
-                  }`}
-              />
-              {formik.touched.startDate && formik.errors.startDate && (
-                <p className="mt-1 text-xs text-red-500">{formik.errors.startDate}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-              <input
-                type="date"
-                name="endDate"
-                value={formik.values.endDate}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                min={formik.values.startDate || undefined}
-                className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formik.touched.endDate && formik.errors.endDate
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-gray-300'
-                  }`}
-              />
-              {formik.touched.endDate && formik.errors.endDate && (
-                <p className="mt-1 text-xs text-red-500">{formik.errors.endDate}</p>
-              )}
-            </div>
+            <FormInput
+              label="Start Date"
+              name="startDate"
+              type="date"
+              value={formik.values.startDate}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.startDate && formik.errors.startDate}
+              placeholder=""
+              as="input"
+              required
+            />
+            <FormInput
+              label="End Date"
+              name="endDate"
+              type="date"
+              value={formik.values.endDate}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.endDate && formik.errors.endDate}
+              placeholder=""
+              as="input"
+              required
+            />
           </div>
 
           {/* Status & Priority */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select
-                name="status"
-                value={formik.values.status}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formik.touched.status && formik.errors.status
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-gray-300'
-                  }`}
-              >
-                {(localTaskStatuses.length > 0 ? localTaskStatuses : taskStatuses).length > 0 ? (
-                  <>
-                    {(localTaskStatuses.length > 0 ? localTaskStatuses : taskStatuses).map((status) => (
-                      <option key={status._id} value={status._id}>
-                        {status.name}
-                      </option>
-                    ))}
-                    {/* Legacy options for backward compatibility */}
-                    <option value="todo">To Do (Legacy)</option>
-                    <option value="in_progress">In Progress (Legacy)</option>
-                    <option value="completed">Completed (Legacy)</option>
-                    <option value="cancelled">Cancelled (Legacy)</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="todo">To Do</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </>
-                )}
-              </select>
-              {formik.touched.status && formik.errors.status && (
-                <p className="mt-1 text-xs text-red-500">{formik.errors.status}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-              <select
-                name="priority"
-                value={formik.values.priority}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formik.touched.priority && formik.errors.priority
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-gray-300'
-                  }`}
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-              {formik.touched.priority && formik.errors.priority && (
-                <p className="mt-1 text-xs text-red-500">{formik.errors.priority}</p>
-              )}
-            </div>
+            <FormSelect
+              label="Status"
+              name="status"
+              value={formik.values.status}
+              onChange={(val) => formik.setFieldValue('status', val)}
+              onBlur={() => formik.setFieldTouched('status')}
+              options={taskStatuses.map((s) => ({ value: s._id, label: s.name! }))}
+              error={formik.touched.status && formik.errors.status}
+              placeholder="— Select Status —"
+              required
+            />
+            <FormSelect
+              label="Priority"
+              name="priority"
+              value={formik.values.priority}
+              onChange={(val) => formik.setFieldValue('priority', val)}
+              onBlur={() => formik.setFieldTouched('priority')}
+              options={PRIORITY_OPTIONS.map((p) => ({ value: p.value, label: p.label }))}
+              error={formik.touched.priority && formik.errors.priority}
+              placeholder="— Select Priority —"
+              required
+            />
           </div>
 
           {/* Assign Teams */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Assign Teams</label>
+            <Label>Assign Teams</Label>
             {loadingOptions ? (
               <div className="text-sm text-gray-400">Loading...</div>
             ) : (
-              <div className="max-h-32 overflow-y-auto rounded-xl border border-gray-300 p-2 space-y-1">
-                {teamList.length === 0 ? (
-                  <p className="text-xs text-gray-400 px-2">No teams available</p>
-                ) : (
-                  teamList.map((t) => {
-                    const memberCount = staffList.filter(
-                      (s) => Array.isArray(s.teams) && s.teams.some((tm: any) => (tm._id || tm) === t._id)
-                    ).length;
-                    return (
-                      <label key={t._id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded px-2 py-1">
-                        <input
-                          type="checkbox"
+              <div className="max-h-32 overflow-y-auto align-center rounded-xl border border-gray-300 p-2">
+                <div className="space-y-1">
+
+                  {teamList.length === 0 ? (
+                    <p className="text-xs text-gray-400 px-2">No teams available</p>
+                  ) : (
+                    teamList.map((t) => {
+                      const memberCount = staffList.filter(
+                        (s) => Array.isArray(s.teams) && s.teams.some((tm: any) => (tm._id || tm) === t._id)
+                      ).length;
+                      return (
+                        <FormInput
+                          key={t._id}
+                          as="checkbox"
+                          name={`team_${t._id}`}
                           checked={formik.values.assignedTeams.includes(t._id)}
                           onChange={() => toggleTeam(t._id)}
-                          className="rounded border-gray-300"
+                          label={
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-sm text-gray-700">{t.name}</span>
+                              {memberCount > 0 && (
+                                <span className="text-xs ml-2 text-gray-400">
+                                  {memberCount} member{memberCount > 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                          }
+                          className="hover:bg-gray-50 rounded px-2 py-2 mt-2"
+                          labelClassName="w-full"
+                          compact
                         />
-                        <span className="text-sm text-gray-700">{t.name}</span>
-                        {memberCount > 0 && (
-                          <span className="ml-auto text-xs text-gray-400">
-                            {memberCount} member{memberCount > 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </label>
-                    );
-                  })
-                )}
+                      );
+                    })
+                  )}
+                </div>
               </div>
             )}
           </div>
 
           {/* Assign Users */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Assign Users</label>
+            <Label>Assign Users</Label>
             {loadingOptions ? (
               <div className="text-sm text-gray-400">Loading...</div>
             ) : (
@@ -1201,20 +1161,26 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
                       Array.isArray(s.teams) &&
                       s.teams.some((t: any) => formik.values.assignedTeams.includes(t._id || t));
                     return (
-                      <label key={s._id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded px-2 py-1">
-                        <input
-                          type="checkbox"
-                          checked={formik.values.assignedUsers.includes(s._id)}
-                          onChange={() => toggleUser(s._id)}
-                          className="rounded border-gray-300"
-                        />
-                        <span className="text-sm text-gray-700">{s.fullName}</span>
-                        {isViaTeam && (
-                          <span className="ml-auto text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full">
-                            via team
-                          </span>
-                        )}
-                      </label>
+
+                      <FormInput
+                        key={s._id}
+                        as="checkbox"
+                        name={`user_${s._id}`}
+                        label={
+                          <div className="flex items-center justify-between w-full">
+                            <span className="text-sm text-gray-700">{s.fullName}</span>
+                            {isViaTeam && (
+                              <span className="text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full">
+                                via team
+                              </span>
+                            )}
+                          </div>
+                        }
+                        checked={formik.values.assignedUsers.includes(s._id)}
+                        onChange={() => toggleUser(s._id)}
+                        className="hover:bg-gray-50 rounded px-2 py-1"
+                        labelClassName="w-full"
+                      />
                     );
                   })
                 )}
@@ -1222,15 +1188,10 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
             )}
           </div>
 
-        
-
           {/* Existing Attachments (edit mode) */}
           {mode === 'edit' && existingAttachments.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Paperclip className="inline w-4 h-4 mr-1" />
-                Existing Attachments
-              </label>
+              <Label>Existing Attachments</Label>
               <div className="space-y-2">
                 {existingAttachments.map((att) => {
                   const fileUrl = getFileUrl(att.path);
@@ -1312,9 +1273,8 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
 
           {/* New Attachments Upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {mode === 'edit' ? 'Add New Attachments' : 'Attachments'}
-            </label>
+
+            <Label>{mode === 'edit' ? 'Add New Attachments' : 'Attachments'}</Label>
             <input
               type="file"
               multiple

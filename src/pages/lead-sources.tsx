@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import Dialog from '@/components/Dialog';
 import DataTable, { Column } from '@/components/DataTable';
 import axios from 'axios';
 import { baseUrl, getAuthToken } from '@/config';
 import DeleteDialog from '@/components/DeleteDialog';
+import FormInput from '@/components/ui/Input';
 
 function useDebounce<T>(value: T, delay: number = 500): T {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -29,6 +32,21 @@ type LeadItem = {
   order: number;
 };
 
+// Validation schema
+const validationSchema = Yup.object({
+  name: Yup.string()
+    .required('Name is required')
+    .min(2, 'Name must be at least 2 characters')
+    .max(100, 'Name must be at most 100 characters')
+    .matches(/^[a-zA-Z0-9\s&-]+$/, 'Name can only contain letters, numbers, spaces, &, and -'),
+  
+  order: Yup.number()
+    .required('Order is required')
+    .integer('Order must be a whole number')
+    .min(1, 'Order must be at least 1')
+    .max(9999, 'Order must be at most 9999'),
+});
+
 /* ================= CONTENT ================= */
 
 export function LeadSourcesContent() {
@@ -39,15 +57,28 @@ export function LeadSourcesContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<{ _id?: string; name: string; order: number }>({
-    name: '',
-    order: 1,
-  });
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [sourceToDelete, setSourceToDelete] = useState<LeadItem | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const token = typeof window !== 'undefined' ? getAuthToken() : null;
   const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+
+  // Initialize formik
+  const formik = useFormik({
+    initialValues: {
+      _id: '',
+      name: '',
+      order: 1,
+    },
+    validationSchema,
+    validateOnChange: true,
+    validateOnBlur: true,
+    onSubmit: async (values) => {
+      await saveLeadSource(values);
+    },
+    enableReinitialize: true,
+  });
 
   /* ================= LOAD DATA ================= */
 
@@ -85,15 +116,15 @@ export function LeadSourcesContent() {
 
   /* ================= SAVE (ADD / EDIT) ================= */
 
-  const saveLeadSource = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const payload = { name: formData.name.trim(), order: formData.order };
+  const saveLeadSource = async (values: { _id?: string; name: string; order: number }) => {
+    setIsSubmitting(true);
+    
+    const payload = { name: values.name.trim(), order: values.order };
 
     try {
-      if (formData._id) {
+      if (values._id) {
         // EDIT: call getById before updating
-        const existing = await axios.get(`${baseUrl.leadSources}/${formData._id}`, { headers });
+        const existing = await axios.get(`${baseUrl.leadSources}/${values._id}`, { headers });
         const id = existing.data.data._id;
 
         await axios.put(`${baseUrl.leadSources}/${id}`, payload, { headers });
@@ -103,13 +134,16 @@ export function LeadSourcesContent() {
       }
 
       // refresh data after add/edit
-      fetchData();
+      await fetchData();
+      
+      // Close dialog and reset form
+      setIsDialogOpen(false);
+      formik.resetForm();
     } catch (err) {
       console.error('Failed to save lead source', err);
       alert('Operation failed');
     } finally {
-      setIsDialogOpen(false);
-      setFormData({ name: '', order: allData.length + 1 });
+      setIsSubmitting(false);
     }
   };
 
@@ -127,7 +161,7 @@ export function LeadSourcesContent() {
 
     try {
       await axios.delete(`${baseUrl.leadSources}/${sourceToDelete._id}`, { headers });
-      fetchData();
+      await fetchData();
       setShowDeleteDialog(false);
       setSourceToDelete(null);
     } catch (err) {
@@ -147,12 +181,11 @@ export function LeadSourcesContent() {
 
   return (
     <div className="space-y-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Lead Sources</h1>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Lead Sources</h1>
+      </div>
 
       <DataTable
-        // title="Lead Source List"
         data={allData}
         columns={columns}
         searchable
@@ -174,18 +207,23 @@ export function LeadSourcesContent() {
           try {
             const res = await axios.get(`${baseUrl.leadSources}/${row._id}`, { headers });
             const data = res.data.data;
-            setFormData({ _id: data._id, name: data.name, order: data.order });
+            formik.setValues({
+              _id: data._id,
+              name: data.name,
+              order: data.order,
+            });
             setIsDialogOpen(true);
           } catch (err) {
             console.error('Failed to fetch by id', err);
             alert('Failed to fetch data');
           }
         }}
-        onDelete={handleDeleteClick} // Changed to handleDeleteClick
+        onDelete={handleDeleteClick}
         addButton={{
           label: 'Add Source',
           onClick: () => {
-            setFormData({ name: '', order: allData.length + 1 });
+            formik.resetForm();
+            formik.setFieldValue('order', allData.length + 1);
             setIsDialogOpen(true);
           },
         }}
@@ -233,41 +271,61 @@ export function LeadSourcesContent() {
       {/* ADD / EDIT DIALOG */}
       <Dialog
         isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        title={formData._id ? 'Edit Lead Source' : 'Add Lead Source'}
+        onClose={() => {
+          setIsDialogOpen(false);
+          formik.resetForm();
+        }}
+        title={formik.values._id ? 'Edit Lead Source' : 'Add Lead Source'}
         footer={
           <>
             <button
               type="button"
-              onClick={() => setIsDialogOpen(false)}
+              onClick={() => {
+                setIsDialogOpen(false);
+                formik.resetForm();
+              }}
               className="px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+              disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
               form="lead-source-form"
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSubmitting || !formik.isValid}
             >
-              {formData._id ? 'Update' : 'Save'}
+              {isSubmitting 
+                ? 'Saving...' 
+                : formik.values._id 
+                  ? 'Update' 
+                  : 'Save'
+              }
             </button>
           </>
         }
       >
-        <form id="lead-source-form" onSubmit={saveLeadSource} className="space-y-4 text-slate-700">
-          <input
-            className="w-full border rounded px-3 py-2 border-slate-400"
-            placeholder="Name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+        <form id="lead-source-form" onSubmit={formik.handleSubmit} className="space-y-4">
+          <FormInput
+            label="Name"
+            name="name"
+            value={formik.values.name}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.touched.name && formik.errors.name ? formik.errors.name : undefined}
             required
+            placeholder="Lead Source"
           />
-          <input
+          <FormInput
+            label="Order"
+            name="order"
             type="number"
-            className="w-full border rounded px-3 py-2 border-slate-400"
-            value={formData.order}
-            onChange={(e) => setFormData({ ...formData, order: +e.target.value })}
+            value={formik.values.order}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.touched.order && formik.errors.order ? formik.errors.order : undefined}
             required
+            placeholder="Enter display order"
           />
         </form>
       </Dialog>

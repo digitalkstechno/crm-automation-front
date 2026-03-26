@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import Dialog from '@/components/Dialog';
 import DataTable, { Column } from '@/components/DataTable';
 import axios from 'axios';
 import { baseUrl, getAuthToken } from '@/config';
 import { toast } from 'react-toastify';
 import DeleteDialog from '@/components/DeleteDialog';
+import FormInput from '@/components/ui/Input';
 
 function useDebounce<T>(value: T, delay: number = 500): T {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -28,6 +31,30 @@ type LeadItem = {
   order: number;
 };
 
+// Validation schema
+const validationSchema = Yup.object({
+  name: Yup.string()
+    .required('Status name is required')
+    .min(2, 'Status name must be at least 2 characters')
+    .max(100, 'Status name must be at most 100 characters')
+    .matches(/^[a-zA-Z0-9\s&-]+$/, 'Status name can only contain letters, numbers, spaces, &, and -')
+    .test('not-reserved', 'This is a reserved status name and cannot be modified', function(value) {
+      const reservedNames = ['new lead', 'won', 'lost'];
+      // Only validate for edit mode if the original name wasn't reserved
+      const originalName = this.parent.originalName;
+      if (originalName && reservedNames.includes(originalName.toLowerCase())) {
+        return true; // Skip validation for reserved names being edited
+      }
+      return !reservedNames.includes(value?.toLowerCase());
+    }),
+  
+  order: Yup.number()
+    .required('Order is required')
+    .integer('Order must be a whole number')
+    .min(1, 'Order must be at least 1')
+    .max(9999, 'Order must be at most 9999'),
+});
+
 export function LeadStatusContent() {
   const [allData, setAllData] = useState<LeadItem[]>([]);
   const [search, setSearch] = useState('');
@@ -48,14 +75,25 @@ export function LeadStatusContent() {
   const [statusToDelete, setStatusToDelete] = useState<LeadItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // form state
-  const [formData, setFormData] = useState<{ _id?: string; name: string; order: number }>({
-    name: '',
-    order: 1,
-  });
-
   const token = typeof window !== 'undefined' ? getAuthToken() : null;
   const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+
+  // Initialize formik
+  const formik = useFormik({
+    initialValues: {
+      _id: '',
+      name: '',
+      order: 1,
+      originalName: '', // Store original name for reserved check
+    },
+    validationSchema,
+    validateOnChange: true,
+    validateOnBlur: true,
+    onSubmit: async (values) => {
+      await saveStatus(values);
+    },
+    enableReinitialize: true,
+  });
 
   /* ================= LOAD DATA (search + pagination) ================= */
 
@@ -96,28 +134,15 @@ export function LeadStatusContent() {
 
   /* ================= SAVE (add or edit) ================= */
 
-  const saveStatus = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validation
-    if (!formData.name.trim()) {
-      toast.warning('Please enter a status name');
-      return;
-    }
-
-    if (formData.order < 1) {
-      toast.warning('Order must be at least 1');
-      return;
-    }
-
+  const saveStatus = async (values: { _id?: string; name: string; order: number; originalName?: string }) => {
     setIsSubmitting(true);
 
     try {
-      const payload = { name: formData.name.trim(), order: formData.order };
+      const payload = { name: values.name.trim(), order: values.order };
 
-      if (formData._id) {
+      if (values._id) {
         // EDIT: fetch by ID first
-        const existing = await axios.get(`${baseUrl.leadStatuses}/${formData._id}`, { headers });
+        const existing = await axios.get(`${baseUrl.leadStatuses}/${values._id}`, { headers });
         const id = existing.data.data._id;
 
         await axios.put(`${baseUrl.leadStatuses}/${id}`, payload, { headers });
@@ -128,9 +153,9 @@ export function LeadStatusContent() {
         toast.success('Lead status created successfully');
       }
 
-      fetchData();
+      await fetchData();
       setIsDialogOpen(false);
-      setFormData({ name: '', order: allData.length + 1 });
+      formik.resetForm();
     } catch (err: any) {
       console.error('Failed to save', err);
       toast.error(err?.response?.data?.message || 'Operation failed');
@@ -155,7 +180,7 @@ export function LeadStatusContent() {
 
     try {
       await axios.delete(`${baseUrl.leadStatuses}/${statusToDelete._id}`, { headers });
-      fetchData();
+      await fetchData();
       toast.success(`Lead status "${statusToDelete.name}" deleted successfully`);
       setShowDeleteDialog(false);
       setStatusToDelete(null);
@@ -174,10 +199,16 @@ export function LeadStatusContent() {
     { key: 'order', label: 'Order' },
   ];
 
+  // Check if a status is reserved (cannot be edited or deleted)
+  const isReserved = (name: string) => {
+    return ['new lead', 'won', 'lost'].includes(name?.toLowerCase());
+  };
+
   return (
     <div className="space-y-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Lead Status</h1>
+        <p className="text-sm text-gray-500">Manage lead statuses. "New Lead", "Won", and "Lost" are system reserved statuses.</p>
       </div>
       <DataTable
         data={allData}
@@ -202,7 +233,12 @@ export function LeadStatusContent() {
           try {
             const res = await axios.get(`${baseUrl.leadStatuses}/${row._id}`, { headers });
             const data = res.data.data;
-            setFormData({ _id: data._id, name: data.name, order: data.order });
+            formik.setValues({
+              _id: data._id,
+              name: data.name,
+              order: data.order,
+              originalName: data.name, // Store original name for validation
+            });
             setIsDialogOpen(true);
           } catch (err: any) {
             console.error('Failed to fetch by ID', err);
@@ -210,12 +246,13 @@ export function LeadStatusContent() {
           }
         }}
         onDelete={handleDeleteClick}
-        canEdit={(row) => !(row.name && ['new lead', 'won', 'lost'].includes(row.name.toLowerCase()))}
-        canDelete={(row) => !(row.name && ['new lead', 'won', 'lost'].includes(row.name.toLowerCase()))}
+        canEdit={(row) => !isReserved(row.name)}
+        canDelete={(row) => !isReserved(row.name)}
         addButton={{
           label: 'Add Status',
           onClick: () => {
-            setFormData({ name: '', order: allData.length + 1 });
+            formik.resetForm();
+            formik.setFieldValue('order', allData.length + 1);
             setIsDialogOpen(true);
           },
         }}
@@ -266,6 +303,11 @@ export function LeadStatusContent() {
             Are you sure you want to delete the lead status "{statusToDelete?.name}"?
             This action cannot be undone.
           </p>
+          {statusToDelete && isReserved(statusToDelete.name) && (
+            <p className="mt-2 text-sm text-red-600">
+              Warning: This is a system reserved status. Deleting it may cause unexpected behavior.
+            </p>
+          )}
         </div>
       </DeleteDialog>
 
@@ -274,9 +316,9 @@ export function LeadStatusContent() {
         isOpen={isDialogOpen}
         onClose={() => {
           setIsDialogOpen(false);
-          setFormData({ name: '', order: allData.length + 1 });
+          formik.resetForm();
         }}
-        title={formData._id ? 'Edit Lead Status' : 'Add Lead Status'}
+        title={formik.values._id ? 'Edit Lead Status' : 'Add Lead Status'}
         size="md"
         footer={
           <>
@@ -284,7 +326,7 @@ export function LeadStatusContent() {
               type="button"
               onClick={() => {
                 setIsDialogOpen(false);
-                setFormData({ name: '', order: allData.length + 1 });
+                formik.resetForm();
               }}
               disabled={isSubmitting}
               className="px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -294,49 +336,54 @@ export function LeadStatusContent() {
             <button
               type="submit"
               form="lead-status-form"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !formik.isValid}
               className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>
                   <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></span>
-                  {formData._id ? 'Updating...' : 'Saving...'}
+                  {formik.values._id ? 'Updating...' : 'Saving...'}
                 </>
               ) : (
-                formData._id ? 'Update' : 'Save'
+                formik.values._id ? 'Update' : 'Save'
               )}
             </button>
           </>
         }
       >
-        <form id="lead-status-form" onSubmit={saveStatus} className="space-y-4 text-black">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Status Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              className="w-full border border-slate-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter status name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-              disabled={isSubmitting}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Order <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              min="1"
-              className="w-full border border-slate-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={formData.order}
-              onChange={(e) => setFormData({ ...formData, order: +e.target.value })}
-              required
-              disabled={isSubmitting}
-            />
-          </div>
+        <form id="lead-status-form" onSubmit={formik.handleSubmit} className="space-y-4">
+          <FormInput
+            label="Status Name"
+            name="name"
+            type="text"
+            value={formik.values.name}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.touched.name && formik.errors.name ? formik.errors.name : undefined}
+            required
+            placeholder="Enter status name"
+            disabled={isSubmitting || (formik.values._id && isReserved(formik.values.originalName))}
+          />
+          
+          <FormInput
+            label="Order"
+            name="order"
+            type="number"
+            value={formik.values.order}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.touched.order && formik.errors.order ? formik.errors.order : undefined}
+            required
+            placeholder="Enter display order"
+            disabled={isSubmitting}
+          />
+
+          {formik.values._id && isReserved(formik.values.originalName) && (
+            <div className="rounded-md bg-yellow-50 p-3 text-sm text-yellow-800">
+              <p className="font-medium">⚠️ System Reserved Status</p>
+              <p className="mt-1 text-xs">This is a system reserved status. Some modifications may be limited.</p>
+            </div>
+          )}
         </form>
       </Dialog>
     </div>

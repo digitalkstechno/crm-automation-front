@@ -5,10 +5,11 @@ import axios from 'axios';
 import Dialog, { CenterDialog } from '@/components/Dialog';
 import { baseUrl, getAuthToken } from '@/config';
 import { toast } from 'react-toastify';
-import Select from 'react-select';
 import { ApiLead, LeadLabel } from './types';
 import { getFileIcon } from '@/utills/utill';
 import { Download, Eye, Trash } from 'lucide-react';
+import FormInput from '../ui/Input';
+import { FormSelect, FormMultiSelect } from '../ui/FormSelect';
 
 interface DropdownItem { _id: string; name?: string; fullName?: string; }
 
@@ -75,21 +76,15 @@ export default function LeadAddDialog({
   const [loading, setLoading] = useState(false);
   const [attachmentsFiles, setAttachmentsFiles] = useState<File[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
-  // Track which attachment IDs are currently being deleted (for per-item loading state)
   const [deletingAttachmentIds, setDeletingAttachmentIds] = useState<Set<string>>(new Set());
 
-  // State for delete confirmation dialog
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
     attachment: Attachment | null;
-  }>({
-    isOpen: false,
-    attachment: null,
-  });
+  }>({ isOpen: false, attachment: null });
 
   const token = getAuthToken;
 
-  // Formik setup
   const formik = useFormik({
     initialValues: {
       fullName: '',
@@ -175,7 +170,6 @@ export default function LeadAddDialog({
     },
   });
 
-  // ── Fetch dropdown data ───────────────────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
     const fetchDropdowns = async () => {
@@ -200,7 +194,6 @@ export default function LeadAddDialog({
     };
     fetchDropdowns();
 
-    // Populate form for edit
     if (mode === 'edit' && initialData) {
       const labelIds = (initialData.leadLabel || []).map((l: any) =>
         typeof l === 'string' ? l : l._id
@@ -237,7 +230,6 @@ export default function LeadAddDialog({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setAttachmentsFiles(prev => [...prev, ...files]);
-    // Reset input so same file can be re-added if needed
     e.target.value = '';
   };
 
@@ -245,19 +237,10 @@ export default function LeadAddDialog({
     setAttachmentsFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  /**
-   * Opens the custom delete confirmation dialog
-   */
   const handleDeleteExistingAttachment = (attachment: Attachment) => {
-    setDeleteConfirmation({
-      isOpen: true,
-      attachment,
-    });
+    setDeleteConfirmation({ isOpen: true, attachment });
   };
 
-  /**
-   * Actually performs the deletion after confirmation
-   */
   const confirmDeleteAttachment = async () => {
     const attachment = deleteConfirmation.attachment;
     if (!attachment || !initialData?._id) {
@@ -266,8 +249,6 @@ export default function LeadAddDialog({
     }
 
     const attachmentId = attachment._id || attachment.path;
-
-    // Mark as deleting → shows spinner on this item
     setDeletingAttachmentIds(prev => new Set(prev).add(attachmentId));
 
     try {
@@ -275,11 +256,7 @@ export default function LeadAddDialog({
         `${baseUrl.updateLead}/${initialData._id}/attachments/${attachmentId}`,
         { headers: { Authorization: `Bearer ${token()}` } }
       );
-
-      // Remove from local list — UI updates immediately
-      setExistingAttachments(prev =>
-        prev.filter(a => (a._id || a.path) !== attachmentId)
-      );
+      setExistingAttachments(prev => prev.filter(a => (a._id || a.path) !== attachmentId));
       toast.success('Attachment deleted successfully');
     } catch (error: any) {
       const msg = error.response?.data?.message || 'Failed to delete attachment';
@@ -290,7 +267,6 @@ export default function LeadAddDialog({
         next.delete(attachmentId);
         return next;
       });
-      // Close the confirmation dialog
       setDeleteConfirmation({ isOpen: false, attachment: null });
     }
   };
@@ -327,12 +303,11 @@ export default function LeadAddDialog({
   };
 
   const labelOptions = labels.map((l) => ({ value: l._id, label: l.name, color: l.color }));
-  const selectedLabels = labelOptions.filter((o) => formik.values.labels.includes(o.value));
 
   const getFieldError = (fieldName: string) => {
     const isTouched = formik.touched[fieldName as keyof typeof formik.touched];
     const error = formik.errors[fieldName as keyof typeof formik.errors];
-    return isTouched && error ? error : null;
+    return isTouched && error ? (error as string) : undefined;
   };
 
   return (
@@ -374,189 +349,181 @@ export default function LeadAddDialog({
               </div>
             )}
 
-            {/* Basic info */}
+            {/* Basic Info */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField label="Full Name" required error={getFieldError('fullName')}>
-                <input
-                  name="fullName"
-                  value={formik.values.fullName}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  placeholder="Full Name"
-                  className={`input-base ${getFieldError('fullName') ? 'border-red-500' : ''}`}
-                />
-              </FormField>
-              <FormField label="Company Name" required error={getFieldError('companyName')}>
-                <input
-                  name="companyName"
-                  value={formik.values.companyName}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  placeholder="Company"
-                  className={`input-base ${getFieldError('companyName') ? 'border-red-500' : ''}`}
-                />
-              </FormField>
-            </div>
-
-            <FormField label="Address" required error={getFieldError('address')}>
-              <textarea
-                name="address"
-                value={formik.values.address}
+              <FormInput
+                label="Full Name"
+                name="fullName"
+                type="text"
+                value={formik.values.fullName}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                rows={2}
-                placeholder="Address"
-                className={`input-base resize-none ${getFieldError('address') ? 'border-red-500' : ''}`}
+                error={getFieldError('fullName')}
+                placeholder="Full Name"
+                required
               />
-            </FormField>
+              <FormInput
+                label="Company Name"
+                name="companyName"
+                type="text"
+                value={formik.values.companyName}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={getFieldError('companyName')}
+                placeholder="Company"
+                required
+              />
+            </div>
 
+            {/* Address */}
+            <FormInput
+              label="Address"
+              name="address"
+              value={formik.values.address}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={getFieldError('address')}
+              placeholder="Address"
+              required
+              as="textarea"
+            />
+
+            {/* Contact & Email */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField label="Phone" required error={getFieldError('contact')}>
-                <input
-                  name="contact"
-                  value={formik.values.contact}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  placeholder="Phone"
-                  className={`input-base ${getFieldError('contact') ? 'border-red-500' : ''}`}
-                />
-              </FormField>
-              <FormField label="Email" required error={getFieldError('email')}>
-                <input
-                  type="email"
-                  name="email"
-                  value={formik.values.email}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  placeholder="Email"
-                  className={`input-base ${getFieldError('email') ? 'border-red-500' : ''}`}
-                />
-              </FormField>
+              <FormInput
+                label="Phone"
+                name="contact"
+                type="text"
+                value={formik.values.contact}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={getFieldError('contact')}
+                placeholder="Phone"
+                required
+              />
+              <FormInput
+                label="Email"
+                name="email"
+                type="email"
+                value={formik.values.email}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={getFieldError('email')}
+                placeholder="Email"
+                required
+              />
             </div>
 
             {/* Dropdowns */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField label="Source" required error={getFieldError('leadSource')}>
-                <select
-                  name="leadSource"
-                  value={formik.values.leadSource}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  className={`input-base cursor-pointer ${getFieldError('leadSource') ? 'border-red-500' : ''}`}
-                >
-                  <option value="">— Select —</option>
-                  {sources.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
-                </select>
-              </FormField>
-              <FormField label="Status" required error={getFieldError('leadStatus')}>
-                <select
-                  name="leadStatus"
-                  value={formik.values.leadStatus}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  className={`input-base cursor-pointer ${getFieldError('leadStatus') ? 'border-red-500' : ''}`}
-                >
-                  <option value="">— Select —</option>
-                  {statuses.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
-                </select>
-              </FormField>
-              <FormField label="Assigned Staff" required error={getFieldError('assignedTo')}>
-                <select
-                  name="assignedTo"
-                  value={formik.values.assignedTo}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  className={`input-base cursor-pointer ${getFieldError('assignedTo') ? 'border-red-500' : ''}`}
-                >
-                  <option value="">— Select —</option>
-                  {staff.map((s) => <option key={s._id} value={s._id}>{s.fullName || s.name}</option>)}
-                </select>
-              </FormField>
-              <FormField label="Priority" error={getFieldError('priority')}>
-                <select
-                  name="priority"
-                  value={formik.values.priority}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  className="input-base cursor-pointer"
-                >
-                  <option value="high">High</option>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
-                </select>
-              </FormField>
+              <FormSelect
+                label="Source"
+                name="leadSource"
+                value={formik.values.leadSource}
+                onChange={(val) => formik.setFieldValue('leadSource', val)}
+                onBlur={() => formik.setFieldTouched('leadSource')}
+                options={sources.map((s) => ({ value: s._id, label: s.name! }))}
+                error={getFieldError('leadSource')}
+                placeholder="— Select Source —"
+                required
+              />
+              <FormSelect
+                label="Status"
+                name="leadStatus"
+                value={formik.values.leadStatus}
+                onChange={(val) => formik.setFieldValue('leadStatus', val)}
+                onBlur={() => formik.setFieldTouched('leadStatus')}
+                options={statuses.map((s) => ({ value: s._id, label: s.name! }))}
+                error={getFieldError('leadStatus')}
+                placeholder="— Select Status —"
+                required
+              />
+              <FormSelect
+                label="Assigned Staff"
+                name="assignedTo"
+                value={formik.values.assignedTo}
+                onChange={(val) => formik.setFieldValue('assignedTo', val)}
+                onBlur={() => formik.setFieldTouched('assignedTo')}
+                options={staff.map((s) => ({ value: s._id, label: s.fullName || s.name! }))}
+                error={getFieldError('assignedTo')}
+                placeholder="— Select Staff —"
+                required
+              />
+              <FormSelect
+                label="Priority"
+                name="priority"
+                value={formik.values.priority}
+                onChange={(val) => formik.setFieldValue('priority', val)}
+                onBlur={() => formik.setFieldTouched('priority')}
+                options={[
+                  { value: 'high', label: 'High' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'low', label: 'Low' },
+                ]}
+                error={getFieldError('priority')}
+              />
             </div>
 
-            {/* Labels */}
-            <FormField label="Lead Labels">
-              <Select
-                isMulti
-                options={labelOptions}
-                value={selectedLabels}
-                onChange={(sel) => formik.setFieldValue('labels', sel ? sel.map((s) => s.value) : [])}
-                onBlur={() => formik.setFieldTouched('labels')}
-                placeholder="Select labels..."
-                className="cursor-pointer"
-                classNamePrefix="react-select"
-                styles={{
-                  control: (b) => ({ ...b, borderColor: '#cbd5e1', borderRadius: '0.5rem', cursor: 'pointer' }),
-                  multiValue: (b, { data }) => ({ ...b, backgroundColor: data.color ? `${data.color}22` : '#e2e8f0' }),
-                  multiValueLabel: (b, { data }) => ({ ...b, color: data.color || '#000', fontWeight: 500 }),
-                }}
-              />
-            </FormField>
+            {/* Labels — MultiSelect */}
+            <FormMultiSelect
+              label="Lead Labels"
+              name="labels"
+              value={formik.values.labels}
+              onChange={(vals) => formik.setFieldValue('labels', vals)}
+              onBlur={() => formik.setFieldTouched('labels')}
+              options={labelOptions}
+              error={getFieldError('labels')}
+              placeholder="Select labels..."
+            />
 
             {/* Last Follow-Up */}
-            <FormField label="Last Follow-Up" error={getFieldError('lastFollowUp')}>
-              <input
-                type="date"
-                name="lastFollowUp"
-                value={formik.values.lastFollowUp}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                className={`input-base ${getFieldError('lastFollowUp') ? 'border-red-500' : ''}`}
-              />
-            </FormField>
+            <FormInput
+              label="Last Follow-Up"
+              name="lastFollowUp"
+              type="date"
+              value={formik.values.lastFollowUp}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={getFieldError('lastFollowUp')}
+            />
 
             {/* Next Follow-Up */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField label="Next Follow-Up Date" error={getFieldError('nextFollowupDate')}>
-                <input
-                  type="date"
-                  name="nextFollowupDate"
-                  value={formik.values.nextFollowupDate}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  className={`input-base ${getFieldError('nextFollowupDate') ? 'border-red-500' : ''}`}
-                />
-              </FormField>
-              <FormField label="Next Follow-Up Time" error={getFieldError('nextFollowupTime')}>
-                <input
-                  type="time"
-                  name="nextFollowupTime"
-                  value={formik.values.nextFollowupTime}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  className={`input-base ${getFieldError('nextFollowupTime') ? 'border-red-500' : ''}`}
-                />
-              </FormField>
+              <FormInput
+                label="Next Follow-Up Date"
+                name="nextFollowupDate"
+                type="date"
+                value={formik.values.nextFollowupDate}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={getFieldError('nextFollowupDate')}
+              />
+              <FormInput
+                label="Next Follow-Up Time"
+                name="nextFollowupTime"
+                type="time"
+                value={formik.values.nextFollowupTime}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={getFieldError('nextFollowupTime')}
+              />
             </div>
 
             {/* Note */}
-            <FormField label="Note" error={getFieldError('note')}>
-              <textarea
-                name="note"
-                value={formik.values.note}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                rows={3}
-                placeholder="Add notes..."
-                className={`input-base resize-none ${getFieldError('note') ? 'border-red-500' : ''}`}
-              />
-            </FormField>
+            <FormInput
+              label="Note"
+              name="note"
+              value={formik.values.note}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={getFieldError('note')}
+              placeholder="Add notes..."
+              as="textarea"
+            />
 
             {/* Attachments */}
-            <FormField label="Attachments">
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-gray-700">Attachments</label>
               <input
                 type="file"
                 multiple
@@ -573,14 +540,12 @@ export default function LeadAddDialog({
                       const attachmentId = attachment._id || attachment.path;
                       const isDeleting = deletingAttachmentIds.has(attachmentId);
                       const name = attachment.originalName || attachment.name || 'File';
-
                       return (
                         <li
                           key={i}
                           className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${isDeleting
                             ? 'bg-red-50 border-red-200 opacity-60'
-                            : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                            }`}
+                            : 'bg-gray-50 border-gray-200 hover:bg-gray-100'}`}
                         >
                           <div className="flex items-center gap-3 overflow-hidden flex-1">
                             <div className="flex-shrink-0">
@@ -591,48 +556,24 @@ export default function LeadAddDialog({
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-gray-900 truncate" title={name}>
-                                {name}
-                              </p>
+                              <p className="text-sm font-medium text-gray-900 truncate" title={name}>{name}</p>
                               {attachment.size && (
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                  {formatFileSize(attachment.size)}
-                                </p>
+                                <p className="text-xs text-gray-500 mt-0.5">{formatFileSize(attachment.size)}</p>
                               )}
-                              {isDeleting && (
-                                <p className="text-xs text-red-500 mt-0.5">Deleting...</p>
-                              )}
+                              {isDeleting && <p className="text-xs text-red-500 mt-0.5">Deleting...</p>}
                             </div>
                           </div>
                           <div className="flex items-center gap-2 ml-4">
-                            {/* View */}
-                            <button
-                              type="button"
-                              onClick={() => handleViewAttachment(attachment)}
-                              disabled={isDeleting}
-                              className="p-1.5 cursor-pointer text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                              title="View"
-                            >
+                            <button type="button" onClick={() => handleViewAttachment(attachment)} disabled={isDeleting}
+                              className="p-1.5 cursor-pointer text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed" title="View">
                               <Eye className="h-4 w-4" />
                             </button>
-                            {/* Download */}
-                            <button
-                              type="button"
-                              onClick={() => handleDownloadAttachment(attachment)}
-                              disabled={isDeleting}
-                              className="p-1.5 cursor-pointer text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                              title="Download"
-                            >
+                            <button type="button" onClick={() => handleDownloadAttachment(attachment)} disabled={isDeleting}
+                              className="p-1.5 cursor-pointer text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed" title="Download">
                               <Download className="h-4 w-4" />
                             </button>
-                            {/* Delete — opens custom confirmation dialog */}
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteExistingAttachment(attachment)}
-                              disabled={isDeleting}
-                              className="p-1.5 cursor-pointer text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                              title="Delete"
-                            >
+                            <button type="button" onClick={() => handleDeleteExistingAttachment(attachment)} disabled={isDeleting}
+                              className="p-1.5 cursor-pointer text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed" title="Delete">
                               {isDeleting ? (
                                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
                               ) : (
@@ -657,18 +598,12 @@ export default function LeadAddDialog({
                         <div className="flex items-center gap-3 overflow-hidden flex-1">
                           <span className="text-gray-500 text-lg flex-shrink-0">📎</span>
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900 truncate" title={file.name}>
-                              {file.name}
-                            </p>
+                            <p className="text-sm font-medium text-gray-900 truncate" title={file.name}>{file.name}</p>
                             <p className="text-xs text-gray-500 mt-0.5">{formatFileSize(file.size)}</p>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveNewFile(i)}
-                          className="p-1.5 cursor-pointer text-red-600 hover:text-red-800 hover:bg-red-100 rounded-lg transition-colors ml-4"
-                          title="Remove"
-                        >
+                        <button type="button" onClick={() => handleRemoveNewFile(i)}
+                          className="p-1.5 cursor-pointer text-red-600 hover:text-red-800 hover:bg-red-100 rounded-lg transition-colors ml-4" title="Remove">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
@@ -678,7 +613,7 @@ export default function LeadAddDialog({
                   </ul>
                 </div>
               )}
-            </FormField>
+            </div>
 
             {/* Active */}
             <label className="flex items-center gap-2 cursor-pointer">
@@ -693,31 +628,6 @@ export default function LeadAddDialog({
             </label>
           </form>
         )}
-
-        <style jsx global>{`
-          .input-base {
-            width: 100%;
-            border: 1px solid #cbd5e1;
-            border-radius: 0.5rem;
-            padding: 0.5rem 0.75rem;
-            font-size: 0.875rem;
-            color: #1e293b;
-            background: white;
-            outline: none;
-            transition: border-color 0.15s, box-shadow 0.15s;
-          }
-          .input-base:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-          }
-          .input-base.border-red-500 {
-            border-color: #ef4444;
-          }
-          .input-base.border-red-500:focus {
-            border-color: #ef4444;
-            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
-          }
-        `}</style>
       </Dialog>
 
       {/* Custom Delete Confirmation Dialog */}
@@ -735,48 +645,20 @@ export default function LeadAddDialog({
                   'this file'}
               </span>"?
             </p>
-            <p className="text-sm text-gray-500 mt-2">
-              This action cannot be undone.
-            </p>
+            <p className="text-sm text-gray-500 mt-2">This action cannot be undone.</p>
           </div>
           <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setDeleteConfirmation({ isOpen: false, attachment: null })}
-              className="rounded-lg cursor-pointer border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
+            <button type="button" onClick={() => setDeleteConfirmation({ isOpen: false, attachment: null })}
+              className="rounded-lg cursor-pointer border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
               Cancel
             </button>
-            <button
-              type="button"
-              onClick={confirmDeleteAttachment}
-              className="rounded-lg cursor-pointer bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
-            >
+            <button type="button" onClick={confirmDeleteAttachment}
+              className="rounded-lg cursor-pointer bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">
               Delete
             </button>
           </div>
         </>
-      </CenterDialog >
+      </CenterDialog>
     </>
-  );
-}
-
-function FormField({
-  label, required, children, error,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-  error?: string | false | null;
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-sm font-medium text-gray-700">
-        {label}
-        {required && <span className="ml-0.5 text-red-500">*</span>}
-      </label>
-      {children}
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-    </div>
   );
 }

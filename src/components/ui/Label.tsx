@@ -7,10 +7,12 @@ interface LabelProps extends LabelHTMLAttributes<HTMLLabelElement> {
 
 const Label = ({ children,required, ...props }: LabelProps) => {
     return (
-        <label className="block text-sm font-medium text-slate-700 mb-1" {...props}>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-semibold text-gray-700">
             {children}
-            <span className="text-red-500 ml-1">{required ? "*" : ""}</span>
-        </label>
+            {required && <span className="text-red-700 ml-1">*</span>}
+          </label>
+        </div>
     );
 };
 
