@@ -13,6 +13,7 @@ import LeadsListView from '@/components/leads/LeadsListView';
 import LeadsKanbanView from '@/components/leads/LeadsKanbanView';
 import LeadAddDialog from '@/components/leads/LeadAddDialog';
 import LeadViewDialog from '@/components/leads/LeadViewDialog';
+import { PageSkeleton, KanbanColumnSkeleton } from '@/components/ui/Skeleton';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 import {
@@ -51,9 +52,9 @@ export default function LeadsPage() {
 
   // ── Search & Filters ─────────────────────────────────────────────────────
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [sourceFilter, setSourceFilter] = useState('');
-  const [staffFilter, setStaffFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [sourceFilter, setSourceFilter] = useState<string[]>([]);
+  const [staffFilter, setStaffFilter] = useState<string[]>([]);
   const [dateFilter, setDateFilter] = useState('');
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
 
@@ -107,9 +108,9 @@ export default function LeadsPage() {
 
   const filters = useMemo(() => ({
     search: debouncedSearch,
-    status: statusFilter,
-    source: sourceFilter,
-    staff: staffFilter,
+    status: statusFilter.length > 0 ? statusFilter.join(',') : '',
+    source: sourceFilter.length > 0 ? sourceFilter.join(',') : '',
+    staff: staffFilter.length > 0 ? staffFilter.join(',') : '',
     date: dateFilter
   }), [debouncedSearch, statusFilter, sourceFilter, staffFilter, dateFilter]);
 
@@ -189,24 +190,47 @@ export default function LeadsPage() {
 
   if (loading && leads.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-transparent" />
-          <span className="text-gray-500 text-sm">Loading leads...</span>
+      <div className="flex h-full flex-col gap-4 relative overflow-hidden">
+        {/* Page Header & Unified Toolbar */}
+        <div className="rounded-3xl border border-gray-200 bg-white px-6 py-4 shadow-sm transition-all duration-300">
+          <div className="flex flex-wrap items-center gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
+            </div>
+            <div className="flex items-center gap-3 ml-auto">
+              <div className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse" />
+              <div className="h-10 w-20 bg-gray-200 rounded-lg animate-pulse" />
+              <div className="h-10 w-32 bg-gray-200 rounded-xl animate-pulse" />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-hidden">
+          {viewMode === 'list' ? (
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <PageSkeleton />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 h-full">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <KanbanColumnSkeleton key={i} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
   const clearFilters = () => {
-    setStatusFilter('');
-    setSourceFilter('');
-    setStaffFilter('');
+    setStatusFilter([]);
+    setSourceFilter([]);
+    setStaffFilter([]);
     setDateFilter('');
     setSearch('');
   };
 
-  const hasActiveFilters = !!(statusFilter || sourceFilter || staffFilter || dateFilter || search);
+  const hasActiveFilters = !!(statusFilter.length > 0 || sourceFilter.length > 0 || staffFilter.length > 0 || dateFilter || search);
 
   return (
     <div className="flex h-full flex-col gap-4 relative overflow-hidden">
@@ -272,7 +296,7 @@ export default function LeadsPage() {
           <div className="overflow-hidden">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
-                <FormSelect
+                <FormMultiSelect
                   label="Lead Status"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e)}
@@ -284,7 +308,7 @@ export default function LeadsPage() {
               </div>
 
               <div className="space-y-2">
-                <FormSelect
+                <FormMultiSelect
                   label="Lead Source"
                   value={sourceFilter}
                   onChange={(e) => setSourceFilter(e)}
@@ -296,7 +320,7 @@ export default function LeadsPage() {
               </div>
 
               <div className="space-y-2">
-                <FormSelect
+                <FormMultiSelect
                   label="Assigned Staff"
                   value={staffFilter}
                   onChange={(e) => setStaffFilter(e)}

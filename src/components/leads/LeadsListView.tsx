@@ -105,7 +105,7 @@ export default function LeadsListView({
   const [showDelete, setShowDelete] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TableLead | null>(null);
 
-  // Use external leads if provided, otherwise fetch internally
+  // Use external leads if provided, otherwise fetch from API
   useEffect(() => {
     if (externalLeads && externalLeads.length > 0) {
       // Apply pagination to external leads
@@ -119,7 +119,7 @@ export default function LeadsListView({
     } else {
       fetchLeads();
     }
-  }, [externalLeads, page, limit]);
+  }, [externalLeads, page, limit, filters]);
 
   const fetchLeads = async () => {
     setLoading(true);
@@ -147,10 +147,6 @@ export default function LeadsListView({
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchLeads();
-  }, [page, limit, scope, filters]);
 
   // ── Columns ──────────────────────────────────────────────────────────────
   const columns: Column<TableLead>[] = [
