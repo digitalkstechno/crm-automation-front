@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Plus, List, LayoutGrid } from 'lucide-react';
+import { Plus, ListCollapse, Kanban } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { baseUrl, getAuthToken } from '@/config';
@@ -110,7 +110,7 @@ export default function TasksPage() {
     try {
       setKanbanLoading(true);
       const token = getAuthToken();
-      const res = await axios.get(`${baseUrl.taskKanban}?my=${effectiveTab === 'my'}`, {
+      const res = await axios.get(`${baseUrl.taskKanban}?my=${effectiveTab === 'my'}&t=${Date.now()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setKanbanData(res.data.data?.tasksByStatus || []);
@@ -159,6 +159,13 @@ export default function TasksPage() {
     }
   };
 
+  const refreshData = useCallback(async () => {
+    await Promise.all([
+      fetchTasks(),
+      fetchKanbanData()
+    ]);
+  }, [fetchTasks, fetchKanbanData]);
+
   const handleConfirmDelete = async () => {
     if (!deleteTask) return;
     try {
@@ -168,8 +175,7 @@ export default function TasksPage() {
       });
       toast.success('Task deleted successfully');
       setDeleteTask(null);
-      fetchTasks();
-      // fetchSummary();
+      refreshData();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Failed to delete task');
     }
@@ -182,83 +188,91 @@ export default function TasksPage() {
         {/* Stats */}
         {/* <TaskStatsCards summary={summary} activeTab={activeTab} /> */}
 
-        {/* Toolbar */}
-        <div className="rounded-3xl border border-gray-200 bg-white shadow-sm text-slate-600">
-          <div className="flex flex-wrap items-center gap-3 p-5">
-            {/* Tabs */}
-            <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-              {taskPermissions?.readAll && (
+        {/* Page Header (Matching Leads) */}
+        <div className="rounded-3xl border border-gray-200 bg-white px-6 py-4 shadow-sm transition-all duration-300">
+          <div className="flex flex-wrap items-center gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>
+            </div>
+
+            <div className="flex items-center gap-3 ml-auto">
+              {/* View Toggle */}
+              <div className="relative flex items-center bg-gray-100 p-1 rounded-lg w-fit">
+                <div
+                  className={`absolute z-0 top-1 bottom-1 w-10 rounded-md bg-secondary transition-all duration-300 ease-in-out ${viewMode === 'list' ? 'left-1' : 'left-[calc(50%)]'
+                    }`}
+                  title='view'
+                />
+
                 <button
-                  onClick={() => { setActiveTab('all'); setPage(1); }}
-                  className={`px-4 py-1.5 cursor-pointer rounded-lg text-sm font-medium transition ${activeTab === 'all' ? 'bg-white shadow text-slate-800' : 'text-gray-500 hover:text-slate-700'}`}
+                  onClick={() => setViewMode('list')}
+                  className={`relative z-10 cursor-pointer flex items-center justify-center w-10 h-10 rounded-md transition-colors duration-300 ${viewMode === 'list'
+                    ? 'text-white'
+                    : 'text-gray-700'
+                    }`}
+                  title='list'
                 >
-                  All Tasks
+                  <ListCollapse className="h-5 w-5 text-current" />
                 </button>
-              )}
+
+                <button
+                  onClick={() => setViewMode('kanban')}
+                  className={`relative z-10 cursor-pointer flex items-center justify-center w-10 h-10 rounded-md transition-colors duration-300 ${viewMode === 'kanban'
+                    ? 'text-white'
+                    : 'text-gray-700'
+                    }`}
+                  title='kanban'
+                >
+                  <Kanban className="h-5 w-5 text-current" />
+                </button>
+              </div>
+
               <button
-                onClick={() => { setActiveTab('my'); setPage(1); }}
-                className={`px-4 py-1.5 cursor-pointer rounded-lg text-sm font-medium transition ${activeTab === 'my' ? 'bg-white shadow text-slate-800' : 'text-gray-500 hover:text-slate-700'}`}
+                onClick={() => { setEditTask(null); setShowDialog(true); }}
+                className="cursor-pointer flex items-center gap-2 px-6 py-2.5 rounded-xl bg-secondary hover:bg-blue-700 text-white text-sm font-semibold shadow-md active:scale-95 transition-all"
               >
-                Your Tasks
+                <Plus className="w-4 h-4" />
+                Add Task
               </button>
             </div>
-
-            {/* View Toggle */}
-            <div className="flex gap-1 bg-gray-100 rounded-xl p-1 ml-4">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`px-3 py-1.5 cursor-pointer rounded-lg text-sm font-medium transition flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-white shadow text-slate-800' : 'text-gray-500 hover:text-slate-700'}`}
-              >
-                <List className="w-4 h-4" /> List
-              </button>
-              <button
-                onClick={() => setViewMode('kanban')}
-                className={`px-3 py-1.5 cursor-pointer rounded-lg text-sm font-medium transition flex items-center gap-1.5 ${viewMode === 'kanban' ? 'bg-white shadow text-slate-800' : 'text-gray-500 hover:text-slate-700'}`}
-              >
-                <LayoutGrid className="w-4 h-4" /> Kanban
-              </button>
-            </div>
-
-            <button
-              onClick={() => { setEditTask(null); setShowDialog(true); }}
-              className="ml-auto cursor-pointer flex items-center gap-2 px-6 py-2.5 rounded-lg bg-secondary hover:bg-blue-700 text-white text-sm font-semibold shadow"
-            >
-              <Plus className="w-4 h-4" />
-              Add Task
-            </button>
           </div>
         </div>
 
-        {/* List View */}
-        {viewMode === 'list' && (
-          <TaskListView
-            tasks={tasks}
-            loading={loading}
-            page={page}
-            totalPages={totalPages}
-            totalRecords={totalRecords}
-            limit={limit}
-            taskStatuses={taskStatuses}
-            onPageChange={setPage}
-            onPageSizeChange={(size) => { setLimit(size); setPage(1); }}
-            onSearch={(val) => { setSearchQuery(val); setPage(1); }}
-            onStatusChange={handleStatusChange}
-            onPriorityChange={handlePriorityChange}
-            onView={(row) => setViewTask(row)}
-            onEdit={(row) => { setEditTask(row); setShowDialog(true); }}
-            onDelete={(row) => setDeleteTask(row)}
-          />
-        )}
+        {/* View Content Wrapper */}
+        <div className="flex-1 overflow-hidden">
+          {/* List View */}
+          {viewMode === 'list' && (
+            <TaskListView
+              tasks={tasks}
+              loading={loading}
+              page={page}
+              totalPages={totalPages}
+              totalRecords={totalRecords}
+              limit={limit}
+              taskStatuses={taskStatuses}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => { setLimit(size); setPage(1); }}
+              onSearch={(val) => { setSearchQuery(val); setPage(1); }}
+              onStatusChange={handleStatusChange}
+              onPriorityChange={handlePriorityChange}
+              onView={(row) => setViewTask(row)}
+              onEdit={(row) => { setEditTask(row); setShowDialog(true); }}
+              onDelete={(row) => setDeleteTask(row)}
+            />
+          )}
 
-        {/* Kanban View */}
-        {viewMode === 'kanban' && (
-          <TaskKanbanView
-            kanbanData={kanbanData}
-            taskStatuses={taskStatuses}
-            onTaskClick={(task) => setViewTask(task)}
-            onRefresh={fetchKanbanData}
-          />
-        )}
+          {/* Kanban View */}
+          {viewMode === 'kanban' && (
+            <TaskKanbanView
+              kanbanData={kanbanData}
+              taskStatuses={taskStatuses}
+              onTaskClick={(task) => setViewTask(task)}
+              onEdit={(task) => { setEditTask(task); setShowDialog(true); }}
+              onDelete={(task) => setDeleteTask(task)}
+              onRefresh={fetchKanbanData}
+            />
+          )}
+        </div>
       </div>
 
       {/* Add / Edit Dialog */}
@@ -267,7 +281,7 @@ export default function TasksPage() {
         onClose={() => { setShowDialog(false); setEditTask(null); }}
         mode={editTask ? 'edit' : 'add'}
         initialData={editTask}
-        onSuccess={() => { fetchTasks(); fetchSummary(); }}
+        onSuccess={() => { refreshData(); }}
         taskStatuses={taskStatuses}
       />
 

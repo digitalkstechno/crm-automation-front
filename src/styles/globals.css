@@ -206,6 +206,10 @@ body {
   font-family: Arial, "Poppins", sans-serif !important;
 }
 
+button {
+  cursor: pointer;
+}
+
 @keyframes fadeInScale {
   from {
     opacity: 0;

@@ -7,7 +7,16 @@ import toast from 'react-hot-toast';
 import { baseUrl, getAuthToken } from '@/config';
 import { ApiLead, ApiSource, ApiStatus, ApiUser, LeadLabel, LeadCountSummary } from './types';
 
-export function useLeadsData() {
+export function useLeadsData(
+  activeTab: 'all' | 'my' = 'all',
+  filters: {
+    search?: string;
+    status?: string;
+    source?: string;
+    staff?: string;
+    date?: string;
+  } = {}
+) {
   const [leads, setLeads] = useState<ApiLead[]>([]);
   const [lostLeads, setLostLeads] = useState<ApiLead[]>([]);
   const [wonLeads, setWonLeads] = useState<ApiLead[]>([]);
@@ -17,50 +26,90 @@ export function useLeadsData() {
   const [leadLabels, setLeadLabels] = useState<LeadLabel[]>([]);
   const [counts, setCounts] = useState<LeadCountSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [permissions, setPermissions] = useState({ create: false, update: false, delete: false });
+  const [permissions, setPermissions] = useState({ create: false, update: false, delete: false, readAll: false, readOwn: false });
 
   const token = () => getAuthToken();
   const headers = () => ({ Authorization: `Bearer ${token()}` });
 
   const fetchKanbanLeads = useCallback(async () => {
     try {
-      const kanbanUrl = baseUrl.getAllLeads.replace(/\/?$/, '') + '/kanban';
-      const res = await axios.get(kanbanUrl, { headers: headers() });
+      const kanbanUrl = baseUrl.getKanbanData;
+      const res = await axios.get(kanbanUrl, { 
+        headers: headers(),
+        params: { 
+          my: activeTab === 'my',
+          search: filters.search || undefined,
+          status: filters.status || undefined,
+          source: filters.source || undefined,
+          staff: filters.staff || undefined,
+          date: filters.date || undefined,
+        }
+      });
       const data: any[] = res.data?.data || [];
       setLeads(data.flatMap((g) => g.leads || []));
     } catch (e) {
       console.error('Failed to fetch kanban leads', e);
     }
-  }, []);
+  }, [activeTab, filters]);
 
   const fetchLostLeads = useCallback(async () => {
     try {
-      const res = await axios.get(baseUrl.getLostLeads, { headers: headers() });
+      const res = await axios.get(baseUrl.getLostLeads, { 
+        headers: headers(),
+        params: {
+          my: activeTab === 'my',
+          search: filters.search || undefined,
+          status: filters.status || undefined,
+          source: filters.source || undefined,
+          staff: filters.staff || undefined,
+          date: filters.date || undefined,
+        }
+      });
       setLostLeads(res.data?.data || []);
     } catch (e) {
       console.error('Failed to fetch lost leads', e);
       setLostLeads([]);
     }
-  }, []);
+  }, [activeTab, filters]);
 
   const fetchWonLeads = useCallback(async () => {
     try {
-      const res = await axios.get(baseUrl.getWonLeads, { headers: headers() });
+      const res = await axios.get(baseUrl.getWonLeads, { 
+        headers: headers(),
+        params: {
+          my: activeTab === 'my',
+          search: filters.search || undefined,
+          status: filters.status || undefined,
+          source: filters.source || undefined,
+          staff: filters.staff || undefined,
+          date: filters.date || undefined,
+        }
+      });
       setWonLeads(res.data?.data || []);
     } catch (e) {
       console.error('Failed to fetch won leads', e);
       setWonLeads([]);
     }
-  }, []);
+  }, [activeTab, filters]);
 
   const fetchCounts = useCallback(async () => {
     try {
-      const res = await axios.get(baseUrl.leadCountSummary, { headers: headers() });
+      const url = activeTab === 'my' ? baseUrl.myLeadCountSummary : baseUrl.leadCountSummary;
+      const res = await axios.get(url, { 
+        headers: headers(),
+        params: {
+          search: filters.search || undefined,
+          status: filters.status || undefined,
+          source: filters.source || undefined,
+          staff: filters.staff || undefined,
+          date: filters.date || undefined,
+        }
+      });
       setCounts(res.data?.data || null);
     } catch (e) {
       console.error('Failed to fetch lead counts', e);
     }
-  }, []);
+  }, [activeTab, filters]);
 
   const fetchMeta = useCallback(async () => {
     try {
@@ -83,6 +132,8 @@ export function useLeadsData() {
         create: !!leadPerms.create,
         update: !!leadPerms.update,
         delete: !!leadPerms.delete,
+        readAll: !!leadPerms.readAll,
+        readOwn: !!leadPerms.readOwn,
       });
     } catch (e) {
       console.error('Failed to fetch meta data', e);
@@ -135,4 +186,4 @@ export function useLeadsData() {
     findLeadById,
 
   };
-}
+}

@@ -16,11 +16,28 @@ interface Props {
     lostLeads: ApiLead[];
     wonLeads: ApiLead[];
     statuses: any[];
-    onEdit: (lead: ApiLead) => void;
-    onView: (lead: ApiLead) => void;
+    onEdit?: (lead: ApiLead) => void;
+    onView?: (lead: ApiLead) => void;
     onRefresh: () => void;
     counts?: Record<string, number>;
-    permissions?: { create: boolean; update: boolean; delete: boolean };
+    permissions?: {
+        create: boolean;
+        update: boolean;
+        delete: boolean;
+        readAll?: boolean;
+        readOwn?: boolean;
+        assign?: boolean;
+        transfer?: boolean;
+        convert?: boolean;
+    };
+    scope?: 'all' | 'my';
+    filters: {
+        search?: string;
+        status?: string;
+        source?: string;
+        staff?: string;
+        date?: string;
+    };
 }
 
 type SubView = 'board' | 'lost' | 'won';
@@ -28,13 +45,13 @@ type SubView = 'board' | 'lost' | 'won';
 export default function LeadsKanbanView({
     leads, lostLeads, wonLeads,
     statuses,
-    onEdit, onView, onRefresh, counts, permissions
+    onEdit, onView, onRefresh, counts, permissions, scope = 'all'
 }: Props) {
     const [subView, setSubView] = useState<SubView>('board');
-    
+
     // Fix: Properly parse localStorage item
     const [kanbanVisibleStatusNames, setKanbanVisibleStatusNames] = useState<string[]>([]);
-    
+
     useEffect(() => {
         try {
             const stored = localStorage.getItem('kanbanVisibleStatusNames');
@@ -53,7 +70,7 @@ export default function LeadsKanbanView({
             setKanbanVisibleStatusNames([]);
         }
     }, []);
-    
+
     const [search, setSearch] = useState('');
     const [lostSearch, setLostSearch] = useState('');
     const [wonSearch, setWonSearch] = useState('');
@@ -117,7 +134,7 @@ export default function LeadsKanbanView({
         try {
             const nextPage = (pageMap[statusId] || 1) + 1;
             const res = await axios.get(
-                `${baseUrl.getAllLeads}?status=${statusId}&page=${nextPage}&limit=10`,
+                `${baseUrl.getAllLeads}?status=${statusId}&page=${nextPage}&limit=10${scope === 'my' ? '&my=true' : ''}`,
                 { headers: { Authorization: `Bearer ${token()}` } }
             );
             const data: ApiLead[] = res.data?.data || [];
@@ -136,7 +153,7 @@ export default function LeadsKanbanView({
         } finally {
             setLoadingMoreMap((p) => ({ ...p, [statusId]: false }));
         }
-    }, [loadingMoreMap, hasMoreMap, pageMap]);
+    }, [loadingMoreMap, hasMoreMap, pageMap, scope]);
 
     // ── Drag & drop ───────────────────────────────────────────────────────
     const handleDrop = async (statusId: string) => {
@@ -317,7 +334,7 @@ export default function LeadsKanbanView({
             {/* ── Board View ─────────────────────────────────────────────────── */}
             {subView === 'board' && (
                 <div className="overflow-x-auto">
-                    <div className="flex gap-4 h-[calc(100vh-288px)] w-100">
+                    <div className="flex gap-4 h-[calc(100vh-280px)] w-100">
                         {statusGroups.map((group) => (
                             <div key={group.id} className="w-80 flex-shrink-0 flex flex-col">
                                 {/* Column header */}
@@ -354,8 +371,8 @@ export default function LeadsKanbanView({
                                                 onDragStart={() => {
                                                     if (permissions?.update) setDraggingId(lead._id);
                                                 }}
-                                                onView={() => onView(lead)}
-                                                onEdit={permissions?.update ? () => onEdit(lead) : undefined}
+                                                onView={() => onView?.(lead)}
+                                                onEdit={permissions?.update ? () => onEdit?.(lead) : undefined}
                                                 onMarkLost={permissions?.update ? () => markLost(lead._id) : undefined}
                                                 onMarkWon={permissions?.update ? () => markWon(lead._id) : undefined}
                                             />
@@ -396,8 +413,8 @@ export default function LeadsKanbanView({
                         columns={lostLeadsColumns}
                         loading={false}
                         actions
-                        onView={(row) => onView(row)}
-                        onEdit={permissions?.update ? (row) => onEdit(row) : undefined}
+                        onView={(row) => onView?.(row)}
+                        onEdit={permissions?.update ? (row) => onEdit?.(row) : undefined}
                         extraActions={permissions?.update ? [
                             {
                                 label: 'Reactivate',
@@ -433,8 +450,8 @@ export default function LeadsKanbanView({
                         columns={wonLeadsColumns}
                         loading={false}
                         actions
-                        onView={(row) => onView(row)}
-                        onEdit={permissions?.update ? (row) => onEdit(row) : undefined}
+                        onView={(row) => onView?.(row)}
+                        onEdit={permissions?.update ? (row) => onEdit?.(row) : undefined}
                     />
                 </div>
             )}

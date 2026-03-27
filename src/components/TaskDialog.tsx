@@ -744,7 +744,7 @@ const defaultForm: TaskFormData = {
   subject: '',
   startDate: '',
   endDate: '',
-  status: 'todo',
+  status: '',
   priority: 'medium',
   assignedUsers: [],
   assignedTeams: [],
@@ -820,8 +820,13 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
         const fd = new FormData();
 
         Object.entries(values).forEach(([k, v]) => {
-          if (Array.isArray(v)) fd.append(k, JSON.stringify(v));
-          else fd.append(k, v as string);
+          if (k === 'status') {
+            fd.append('taskStatus', v as string);
+          } else if (Array.isArray(v)) {
+            fd.append(k, JSON.stringify(v));
+          } else {
+            fd.append(k, v as string);
+          }
         });
         attachments.forEach((f) => fd.append('attachments', f));
 
@@ -982,7 +987,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
         subject: initialData.subject || '',
         startDate: initialData.startDate ? initialData.startDate.split('T')[0] : '',
         endDate: initialData.endDate ? initialData.endDate.split('T')[0] : '',
-        status: initialData.status || 'todo',
+        status: initialData.taskStatus?._id || (initialData.status as any)?._id || '',
         priority: initialData.priority || 'medium',
         assignedUsers: (initialData.assignedUsers || []).map((u: any) => u._id || u),
         assignedTeams: (initialData.assignedTeams || []).map((t: any) => t._id || t),
@@ -998,11 +1003,14 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
     setPreviewUrl(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, initialData, isOpen]);
+
   const PRIORITY_OPTIONS = [
     { value: 'low', label: 'Low', cls: 'bg-green-100 text-green-700' },
     { value: 'medium', label: 'Medium', cls: 'bg-yellow-100 text-yellow-700' },
     { value: 'high', label: 'High', cls: 'bg-red-100 text-red-700' },
   ]
+
+  const dropdownStatuses = taskStatuses && taskStatuses.length > 0 ? taskStatuses : localTaskStatuses;
 
   if (!isOpen) return null;
 
@@ -1081,9 +1089,9 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
               label="Status"
               name="status"
               value={formik.values.status}
-              onChange={(val) => formik.setFieldValue('status', val)}
+              onChange={(val) => updateField('status', val)}
               onBlur={() => formik.setFieldTouched('status')}
-              options={taskStatuses.map((s) => ({ value: s._id, label: s.name! }))}
+              options={dropdownStatuses.map((s: any) => ({ value: s._id, label: s.name! }))}
               error={formik.touched.status && formik.errors.status}
               placeholder="— Select Status —"
               required
@@ -1092,7 +1100,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
               label="Priority"
               name="priority"
               value={formik.values.priority}
-              onChange={(val) => formik.setFieldValue('priority', val)}
+              onChange={(val) => updateField('priority', val)}
               onBlur={() => formik.setFieldTouched('priority')}
               options={PRIORITY_OPTIONS.map((p) => ({ value: p.value, label: p.label }))}
               error={formik.touched.priority && formik.errors.priority}

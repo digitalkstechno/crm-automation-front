@@ -44,10 +44,27 @@ interface Props {
   statuses: ApiStatus[];
   sources: ApiSource[];
   staffMembers: ApiUser[];
-  onEdit: (lead: ApiLead) => void;
-  onView: (lead: ApiLead) => void;
+  onEdit?: (lead: ApiLead) => void;
+  onView?: (lead: ApiLead) => void;
   onRefresh: () => void;
-  permissions?: { create: boolean; update: boolean; delete: boolean };
+  permissions?: {
+    create: boolean;
+    update: boolean;
+    delete: boolean;
+    readAll?: boolean;
+    readOwn?: boolean;
+    assign?: boolean;
+    transfer?: boolean;
+    convert?: boolean;
+  };
+  scope?: 'all' | 'my';
+  filters: {
+    search?: string;
+    status?: string;
+    source?: string;
+    staff?: string;
+    date?: string;
+  };
 }
 
 function mapLead(item: any): TableLead {
@@ -71,46 +88,35 @@ function mapLead(item: any): TableLead {
   };
 }
 
-export default function LeadsListView({ statuses, sources, staffMembers, onEdit, onView, onRefresh, permissions }: Props) {
+export default function LeadsListView({ 
+  statuses, sources, staffMembers, 
+  onEdit, onView, onRefresh, permissions, scope = 'all',
+  filters = {}
+}: Props) {
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [leads, setLeads] = useState<TableLead[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TableLead | null>(null);
-  const [dateFilter, setDateFilter] = useState((router.query.date as string) || '');
-  const [staffFilter, setStaffFilter] = useState((router.query.staff as string) || '');
-  const [sourceFilter, setSourceFilter] = useState((router.query.source as string) || '');
-  const [statusFilter, setStatusFilter] = useState((router.query.status as string) || '');
-
-  const debouncedSearch = useDebounce(search, 600);
-
-  // Sync URL query → filters
-  useEffect(() => {
-    if (router.query.status) setStatusFilter(router.query.status as string);
-    if (router.query.source) setSourceFilter(router.query.source as string);
-    if (router.query.staff) setStaffFilter(router.query.staff as string);
-    if (router.query.date) setDateFilter(router.query.date as string);
-  }, [router.query]);
 
   const fetchLeads = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(baseUrl.getAllLeads, {
+      const url = scope === 'my' ? baseUrl.myLeads : baseUrl.getAllLeads;
+      const res = await axios.get(url, {
         headers: { Authorization: `Bearer ${getAuthToken()}` },
         params: {
           page,
           limit,
-          search: debouncedSearch || undefined,
-          status: statusFilter || undefined,
-          source: sourceFilter || undefined,
-          staff: staffFilter || undefined,
-          date: dateFilter || undefined,
+          search: filters.search || undefined,
+          status: filters.status || undefined,
+          source: filters.source || undefined,
+          staff: filters.staff || undefined,
+          date: filters.date || undefined,
         },
       });
       setLeads((res.data.data || []).map(mapLead));
@@ -126,7 +132,7 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
 
   useEffect(() => {
     fetchLeads();
-  }, [debouncedSearch, statusFilter, sourceFilter, staffFilter, dateFilter, page, limit]);
+  }, [page, limit, scope, filters]);
 
   // ── Columns ──────────────────────────────────────────────────────────────
   const columns: Column<TableLead>[] = [
@@ -187,7 +193,7 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
         headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       const d = res.data.data;
-      onView(d);
+      onView?.(d);
     } catch {
       // fallback
       const apiLead: ApiLead = {
@@ -196,7 +202,7 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
         contact: row.phone,
         email: row.email,
       };
-      onView(apiLead);
+      onView?.(apiLead);
     }
   };
 
@@ -225,7 +231,7 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
         note: d.note,
         isActive: d.isActive,
       };
-      onEdit(apiLead);
+      onEdit?.(apiLead);
     } catch {
       console.error('Failed to fetch lead for edit');
     }
@@ -240,6 +246,7 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
       toast.success('Lead deleted successfully');
       setLeads((prev) => prev.filter((l) => l.id !== deleteTarget.id));
       setTotalRecords((p) => p - 1);
+      onRefresh?.();
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Failed to delete lead');
     } finally {
@@ -250,77 +257,6 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
 
   return (
     <div className="space-y-4">
-      {/* Filter bar */}
-      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div className="flex items-center gap-3 px-5 py-3">
-          <button
-            onClick={() => setShowFilters((v) => !v)}
-            className="flex items-center cursor-pointer gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium hover:bg-blue-50 transition-colors"
-          >
-            <Filter className="h-4 w-4 text-blue-600" />
-            Filters
-          </button>
-        </div>
-
-        {showFilters ? <div
-          className={`transition-all duration-300 ${showFilters ? 'max-h-[1000px] opacity-100 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'
-            }`}
-        >
-          <div className="grid grid-cols-1 gap-3 border-t border-gray-100 bg-gradient-to-br from-blue-50 via-white to-purple-50 px-5 py-4 sm:grid-cols-2 lg:grid-cols-5">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 cursor-pointer rounded-xl border border-gray-300 bg-white px-3 text-sm"
-            >
-              <option value="">All Status</option>
-              {statuses.map((s) => (
-                <option key={s._id} value={s._id}>{s.name}</option>
-              ))}
-            </select>
-
-            <select
-              value={sourceFilter}
-              onChange={(e) => setSourceFilter(e.target.value)}
-              className="h-10 cursor-pointer rounded-xl border border-gray-300 bg-white px-3 text-sm"
-            >
-              <option value="">All Sources</option>
-              {sources.map((s) => (
-                <option key={s._id} value={s._id}>{s.name}</option>
-              ))}
-            </select>
-
-            <select
-              value={staffFilter}
-              onChange={(e) => setStaffFilter(e.target.value)}
-              className="h-10 cursor-pointer rounded-xl border border-gray-300 bg-white px-3 text-sm"
-            >
-              <option value="">All Staff</option>
-              {staffMembers.map((s) => (
-                <option key={s._id} value={s._id}>{s.fullName}</option>
-              ))}
-            </select>
-
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="h-10 cursor-pointer rounded-xl border border-gray-300 bg-white px-3 text-sm"
-            />
-
-            <button
-              onClick={() => {
-                setStatusFilter('');
-                setSourceFilter('');
-                setStaffFilter('');
-                setDateFilter('');
-              }}
-              className="h-10 cursor-pointer rounded-xl border border-gray-300 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
-            >
-              Clear Filters
-            </button>
-          </div>
-        </div> : null}
-      </div>
 
       {/* Data table */}
       <DataTable
@@ -334,7 +270,6 @@ export default function LeadsListView({ statuses, sources, staffMembers, onEdit,
         pageSize={limit}
         onPageChange={setPage}
         onPageSizeChange={(size) => { setLimit(size); setPage(1); }}
-        onSearch={(v) => setSearch(v)}
         actions
         onView={handleView}
         onEdit={permissions?.update ? handleEdit : undefined}
