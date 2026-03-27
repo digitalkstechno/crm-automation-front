@@ -348,6 +348,7 @@ export default function LeadsPage() {
             onRefresh={refetchAll}
             scope={activeTab}
             filters={filters}
+            externalLeads={leads}
             permissions={{
               create: canCreate,
               readAll: canReadAll,

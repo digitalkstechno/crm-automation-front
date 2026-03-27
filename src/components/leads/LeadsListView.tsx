@@ -65,6 +65,7 @@ interface Props {
     staff?: string;
     date?: string;
   };
+  externalLeads?: ApiLead[]; // NEW: optional external leads from parent
 }
 
 function mapLead(item: any): TableLead {
@@ -88,10 +89,11 @@ function mapLead(item: any): TableLead {
   };
 }
 
-export default function LeadsListView({ 
-  statuses, sources, staffMembers, 
+export default function LeadsListView({
+  statuses, sources, staffMembers,
   onEdit, onView, onRefresh, permissions, scope = 'all',
-  filters = {}
+  filters = {},
+  externalLeads // NEW: pass leads from parent
 }: Props) {
   const router = useRouter();
   const [page, setPage] = useState(1);
@@ -102,6 +104,22 @@ export default function LeadsListView({
   const [leads, setLeads] = useState<TableLead[]>([]);
   const [showDelete, setShowDelete] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TableLead | null>(null);
+
+  // Use external leads if provided, otherwise fetch internally
+  useEffect(() => {
+    if (externalLeads && externalLeads.length > 0) {
+      // Apply pagination to external leads
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedLeads = externalLeads.slice(startIndex, endIndex);
+      setLeads(paginatedLeads.map(mapLead));
+      setTotalRecords(externalLeads.length);
+      setTotalPages(Math.ceil(externalLeads.length / limit) || 1);
+      setLoading(false);
+    } else {
+      fetchLeads();
+    }
+  }, [externalLeads, page, limit]);
 
   const fetchLeads = async () => {
     setLoading(true);

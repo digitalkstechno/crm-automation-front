@@ -141,7 +141,13 @@ export default function TasksPage() {
       const res = await axios.patch(`${baseUrl.updateTaskStatus}/${taskId}/status`, { status }, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setTasks((prev) => prev.map((t) => t._id === taskId ? { ...t, status: res.data.data.status } : t));
+      // Find the full status object from taskStatuses
+      const fullStatus = taskStatuses.find(s => s._id === status);
+      if (fullStatus) {
+        setTasks((prev) => prev.map((t) => t._id === taskId ? { ...t, status: fullStatus, taskStatus: fullStatus } : t));
+      }
+      // Refresh both views to reflect changes
+      refreshData();
     } catch {
       toast.error('Failed to update status');
     }
@@ -154,6 +160,8 @@ export default function TasksPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTasks((prev) => prev.map((t) => t._id === taskId ? { ...t, priority } : t));
+      // Refresh both views to reflect changes
+      refreshData();
     } catch {
       toast.error('Failed to update priority');
     }
@@ -269,7 +277,7 @@ export default function TasksPage() {
               onTaskClick={(task) => setViewTask(task)}
               onEdit={(task) => { setEditTask(task); setShowDialog(true); }}
               onDelete={(task) => setDeleteTask(task)}
-              onRefresh={fetchKanbanData}
+              onRefresh={refreshData}
             />
           )}
         </div>
