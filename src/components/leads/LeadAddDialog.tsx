@@ -54,14 +54,6 @@ const leadValidationSchema = Yup.object({
   assignedTo: Yup.string().required('Please assign staff'),
   labels: Yup.array().of(Yup.string()),
   priority: Yup.string().oneOf(['high', 'medium', 'low']),
-  lastFollowUp: Yup.date().nullable(),
-  nextFollowupDate: Yup.date()
-    .nullable()
-    .min(Yup.ref('lastFollowUp'), 'Next follow-up date must be after last follow-up date'),
-  nextFollowupTime: Yup.string()
-    .nullable()
-    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format'),
-  note: Yup.string().max(1000, 'Note must not exceed 1000 characters'),
   isActive: Yup.boolean(),
 });
 
@@ -97,10 +89,6 @@ export default function LeadAddDialog({
       assignedTo: '',
       labels: [] as string[],
       priority: 'medium' as 'high' | 'medium' | 'low',
-      lastFollowUp: new Date().toISOString().split('T')[0],
-      nextFollowupDate: '',
-      nextFollowupTime: '',
-      note: '',
       isActive: true,
     },
     validationSchema: leadValidationSchema,
@@ -121,10 +109,6 @@ export default function LeadAddDialog({
           assignedTo: values.assignedTo,
           leadLabel: values.labels,
           priority: values.priority,
-          lastFollowUp: values.lastFollowUp,
-          nextFollowupDate: values.nextFollowupDate || null,
-          nextFollowupTime: values.nextFollowupTime || null,
-          note: values.note.trim(),
           isActive: values.isActive,
         };
 
@@ -209,10 +193,6 @@ export default function LeadAddDialog({
         assignedTo: initialData.assignedTo?._id || '',
         labels: labelIds,
         priority: ((initialData.priority || 'medium').toLowerCase()) as 'high' | 'medium' | 'low',
-        lastFollowUp: initialData.lastFollowUp || new Date().toISOString().split('T')[0],
-        nextFollowupDate: initialData.nextFollowupDate || '',
-        nextFollowupTime: initialData.nextFollowupTime || '',
-        note: initialData.note || '',
         isActive: initialData.isActive ?? true,
       });
       setExistingAttachments(initialData.attachments || []);
@@ -477,49 +457,7 @@ export default function LeadAddDialog({
             />
 
             {/* Last Follow-Up */}
-            <FormInput
-              label="Last Follow-Up"
-              name="lastFollowUp"
-              type="date"
-              value={formik.values.lastFollowUp}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={getFieldError('lastFollowUp')}
-            />
 
-            {/* Next Follow-Up */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormInput
-                label="Next Follow-Up Date"
-                name="nextFollowupDate"
-                type="date"
-                value={formik.values.nextFollowupDate}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                error={getFieldError('nextFollowupDate')}
-              />
-              <FormInput
-                label="Next Follow-Up Time"
-                name="nextFollowupTime"
-                type="time"
-                value={formik.values.nextFollowupTime}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                error={getFieldError('nextFollowupTime')}
-              />
-            </div>
-
-            {/* Note */}
-            <FormInput
-              label="Note"
-              name="note"
-              value={formik.values.note}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={getFieldError('note')}
-              placeholder="Add notes..."
-              as="textarea"
-            />
 
             {/* Attachments */}
             <div>

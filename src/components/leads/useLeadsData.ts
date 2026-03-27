@@ -18,6 +18,7 @@ export function useLeadsData(
   } = {}
 ) {
   const [leads, setLeads] = useState<ApiLead[]>([]);
+  const [leadsList, setLeadsList] = useState<ApiLead[]>([]);
   const [lostLeads, setLostLeads] = useState<ApiLead[]>([]);
   const [wonLeads, setWonLeads] = useState<ApiLead[]>([]);
   const [sources, setSources] = useState<ApiSource[]>([]);
@@ -49,6 +50,26 @@ export function useLeadsData(
       setLeads(data.flatMap((g) => g.leads || []));
     } catch (e) {
       console.error('Failed to fetch kanban leads', e);
+    }
+  }, [activeTab, filters]);
+
+  const fetchLeadsList = useCallback(async () => {
+    try {
+      const url = activeTab === 'my' ? baseUrl.myLeads : baseUrl.getAllLeads;
+      const res = await axios.get(url, {
+        headers: headers(),
+        params: {
+          search: filters.search || undefined,
+          status: filters.status || undefined,
+          source: filters.source || undefined,
+          staff: filters.staff || undefined,
+          date: filters.date || undefined,
+          limit: 100, // Fetch more for list view
+        }
+      });
+      setLeadsList(res.data?.data || []);
+    } catch (e) {
+      console.error('Failed to fetch leads list', e);
     }
   }, [activeTab, filters]);
 
@@ -144,6 +165,7 @@ export function useLeadsData(
     setLoading(true);
     await Promise.all([
       fetchKanbanLeads(),
+      fetchLeadsList(),
       fetchLostLeads(),
       fetchWonLeads(),
       fetchMeta(),
@@ -166,16 +188,22 @@ export function useLeadsData(
     [leads, lostLeads, wonLeads]
   );
 
-  const refetchAll = useCallback(() => {
-    fetchKanbanLeads();
-    fetchLostLeads();
-    fetchWonLeads();
-    fetchCounts();
-  }, [fetchKanbanLeads, fetchLostLeads, fetchWonLeads, fetchCounts]);
+  const refetchAll = useCallback(async () => {
+    setLoading(true);
+    await Promise.all([
+      fetchKanbanLeads(),
+      fetchLeadsList(),
+      fetchLostLeads(),
+      fetchWonLeads(),
+      fetchCounts(),
+    ]);
+    setLoading(false);
+  }, [fetchKanbanLeads, fetchLeadsList, fetchLostLeads, fetchWonLeads, fetchCounts]);
 
 
   return {
     leads, setLeads,
+    leadsList, setLeadsList,
     lostLeads, wonLeads,
     sources, statuses, staffMembers, leadLabels,
     counts,

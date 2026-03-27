@@ -16,7 +16,7 @@ export default function Table({ data, columns }: TableProps) {
               >
                 {col}
               </th>
-            ))}
+            ))} 
           </tr>
         </thead>
         <tbody>

@@ -116,8 +116,14 @@ export default function LeadsPage() {
 
   // ── Data ─────────────────────────────────────────────────────────────────
   const {
-    leads, lostLeads, wonLeads,
-    sources, statuses, staffMembers, leadLabels,
+    leads,
+    leadsList,
+    lostLeads,
+    wonLeads,
+    sources,
+    statuses,
+    staffMembers,
+    leadLabels,
     counts,
     loading,
     refetchAll,
@@ -372,7 +378,8 @@ export default function LeadsPage() {
             onRefresh={refetchAll}
             scope={activeTab}
             filters={filters}
-            externalLeads={leads}
+            externalLeads={leadsList}
+            loading={loading}
             permissions={{
               create: canCreate,
               readAll: canReadAll,

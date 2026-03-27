@@ -24,6 +24,15 @@ export type LeadLabel = {
   color?: string;
 };
 
+export type ApiFollowUp = {
+  _id?: string;
+  date: string;
+  time: string;
+  note: string;
+  staff: ApiUser;
+  createdAt?: string;
+};
+
 export type ApiLead = {
   _id: string;
   fullName: string;
@@ -41,13 +50,22 @@ export type ApiLead = {
   nextFollowupTime?: string;
   note?: string;
   isActive?: boolean;
-  attachments?: { name: string; url?: string }[];
+  followUps?: ApiFollowUp[];
+  attachments?: {
+    _id?: string;
+    originalName?: string;
+    name?: string;
+    path: string;
+    filename: string;
+    size?: number;
+  }[];
   isLost?: boolean;
   isWon?: boolean;
   amount?: number;
   lostReason?: string;
   lostDate?: string;
   wonDate?: string;
+  amountDate?: string;
 };
 
 export type AddLeadForm = {
