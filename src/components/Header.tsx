@@ -48,7 +48,7 @@ export default function Header() {
       try {
         const permission = await Notification.requestPermission();
         setNotificationPermission(permission);
-        
+
         if (permission === 'granted') {
           console.log('Notification permission granted');
           // Show a test notification to confirm it's working
@@ -127,10 +127,12 @@ export default function Header() {
       .then(res => {
         const currentUserId = res.data?.data?._id;
         if (!currentUserId) return;
-        
+
         const socketUrl = (process.env.NEXT_PUBLIC_IMAGE_URL || '').replace(/\/v1\/api\/?$/, '');
-        socket = io(socketUrl || 'http://localhost:5000');
-        
+        const socket = io(socketUrl || 'http://localhost:5000', {
+          path: '/api/socket.io',   // 👈 IMPORTANT
+          transports: ['websocket', 'polling'],
+        });
         socket.on('connect', () => {
           socket.emit('joinRoom', currentUserId);
         });
@@ -286,7 +288,7 @@ export default function Header() {
                   )}
                 </div>
               </div>
-              
+
               {/* Permission denied message */}
               {notificationPermission === 'denied' && (
                 <div className="px-4 py-3 bg-yellow-50 border-b border-yellow-100">
@@ -295,7 +297,7 @@ export default function Header() {
                   </p>
                 </div>
               )}
-              
+
               <div className="max-h-[70vh] overflow-y-auto">
                 {unreadNotifications.length === 0 ? (
                   <div className="px-4 py-6 text-center text-sm text-gray-500">No new notifications</div>
@@ -318,8 +320,8 @@ export default function Header() {
                         <p className="text-xs text-gray-800 line-clamp-2 pr-6">
                           {notif.message}
                         </p>
-                        
-                        <button 
+
+                        <button
                           onClick={(e) => markAsReadSingle(e, notif._id)}
                           className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700 bg-white shadow-sm rounded-full p-1 transition-all"
                           title="Mark as read"
