@@ -26,6 +26,7 @@ import {
 import axios from "axios";
 import { baseUrl, getAuthToken } from "@/config";
 import moment from "moment";
+import Link from 'next/link';
 
 interface StatusCount {
   statusId: string;
@@ -76,6 +77,10 @@ export default function Dashboard() {
   const [dueTotalPages, setDueTotalPages] = useState(1);
   const [dueFollowups, setDueFollowups] = useState<any[]>([]);
   const [dueLoading, setDueLoading] = useState(false);
+
+  // Today's Tasks
+  const [todayTasks, setTodayTasks] = useState<any[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
 
   const [permissions, setPermissions] = useState<{ readAll: boolean; readOwn: boolean }>({ readAll: false, readOwn: false });
 
@@ -222,11 +227,28 @@ export default function Dashboard() {
     }
   };
 
+  const fetchTodayTasks = async () => {
+    if (!token) return;
+    setTasksLoading(true);
+    try {
+      const res = await axios.get(baseUrl.todayTasks, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTodayTasks(res.data?.data || []);
+    } catch (err) {
+      console.error("Today tasks error:", err);
+      setTodayTasks([]);
+    } finally {
+      setTasksLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (token) {
       fetchLeadSummary();
       fetchUpcomingFollowups(1);
       fetchDueFollowups(1);
+      fetchTodayTasks();
 
       // Only fetch staff stats if they have readAll
       if (permissions.readAll) {
@@ -375,105 +397,58 @@ export default function Dashboard() {
             )}
             <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
           </div>
-          <span className={`inline-flex items-center rounded-full ${dateHeader === "Follow up Date" ? "bg-gray-100 text-gray-800" : "bg-red-100 text-red-700"} px-3 py-1 text-xs font-medium `}>
+          <span className={`inline-flex items-center rounded-full ${dateHeader === "Follow up Date" ? "bg-gray-100 text-gray-800" : "bg-red-100 text-red-700"} px-2 py-0.5 text-[10px] font-medium `}>
             {items.length} Total
           </span>
         </div>
       </div>
 
       {loading ? (
-        <div className="p-12 text-center flex-1 flex items-center justify-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-          <p className="mt-3 text-sm text-gray-600">Loading follow-ups...</p>
+        <div className="p-8 text-center flex-1 flex items-center justify-center">
+          <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
         </div>
       ) : items.length === 0 ? (
-        <div className="p-12 text-center flex-1 flex items-center justify-center">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-            <Calendar className="h-6 w-6 text-gray-400" />
-          </div>
-          <p className="mt-3 text-sm text-gray-600">No follow-ups found</p>
+        <div className="p-8 text-center flex-1 flex items-center justify-center">
+          <p className="text-sm text-gray-500">No follow-ups found</p>
         </div>
       ) : (
         <>
           <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-secondary text-sm uppercase tracking-wider text-white">
+            <table className="w-full text-left text-xs min-w-[500px]">
+              <thead className="bg-[#f8faff] text-[10px] uppercase tracking-wider text-gray-500 border-b border-gray-100">
                 <tr>
-                  <th className="px-6 py-4 font-semibold">Lead</th>
-                  <th className="px-6 py-4 font-semibold">Contact</th>
-                  <th className="px-6 py-4 font-semibold">Source</th>
-                  <th className="px-6 py-4 font-semibold">Status</th>
-                  <th className="px-6 py-4 font-semibold">Assigned To</th>
-                  <th className="px-6 py-4 font-semibold">{dateHeader}</th>
+                  <th className="px-4 py-3 font-semibold">Lead Info</th>
+                  <th className="px-4 py-3 font-semibold">{dateHeader}</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-100">
                 {items.map((lead, index) => (
                   <tr
                     key={lead._id || lead.id || index}
-                    className="hover:bg-blue-50/50 transition-colors"
+                    className="hover:bg-blue-50/30 transition-colors"
                   >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
-                          <User className="h-4 w-4 text-blue-700" />
-                        </div>
-                        <span className="font-medium text-gray-900">
-                          {lead.lead?.fullName || lead.fullName || "-"}
-                        </span>
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-gray-900 truncate max-w-[120px]">
+                        {lead.lead?.fullName || lead.fullName || "-"}
+                      </div>
+                      <div className="text-[10px] text-gray-500 truncate max-w-[120px]">
+                        {lead.lead?.contact || lead.contact || "-"}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <Phone className="h-3.5 w-3.5 text-gray-400" />
-                          <span className="text-sm">
-                            {lead.lead?.contact || lead.contact || "-"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <Mail className="h-3.5 w-3.5 text-gray-400" />
-                          <span className="text-sm">
-                            {lead.lead?.email || lead.email || "-"}
-                          </span>
-                        </div>
-                      </div>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {lead.nextFollowupDate
+                        ? moment(lead.nextFollowupDate).format("DD MMM, YYYY")
+                        : "-"}
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-700">
-                        {lead.lead?.leadSource?.name || lead.leadSource?.name || "-"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${getStatusColor(
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${getStatusColor(
                           lead.lead?.leadStatus?.name || lead.leadStatus?.name || "",
                         )}`}
                       >
                         {lead.lead?.leadStatus?.name || lead.leadStatus?.name || "-"}
                       </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-100">
-                          <span className="text-xs font-medium text-purple-700">
-                            {lead.assignedTo?.fullName?.charAt(0) || lead.lead?.assignedTo?.fullName?.charAt(0) || "?"}
-                          </span>
-                        </div>
-                        <span className="text-sm text-gray-700">
-                          {lead.assignedTo?.fullName || lead.lead?.assignedTo?.fullName || "-"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <CalendarIcon className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-900">
-                          {lead.nextFollowupDate
-                            ? moment(lead.nextFollowupDate).format("DD-MM-YYYY")
-                            : "-"}
-                        </span>
-                      </div>
                     </td>
                   </tr>
                 ))}
@@ -481,13 +456,106 @@ export default function Dashboard() {
             </table>
           </div>
 
-          <PaginationControls
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            disabled={loading}
-          />
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+              <button
+                onClick={() => setPage(page - 1)}
+                disabled={page === 1}
+                className="p-1 rounded hover:bg-gray-100 disabled:opacity-30"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-[10px] font-medium text-gray-500">Page {page} of {totalPages}</span>
+              <button
+                onClick={() => setPage(page + 1)}
+                disabled={page === totalPages}
+                className="p-1 rounded hover:bg-gray-100 disabled:opacity-30"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </>
+      )}
+    </div>
+  );
+
+  const renderTodayTasksTable = (
+    items: any[],
+    loading: boolean,
+  ) => (
+    <div className="rounded-xl bg-white shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
+      <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CalendarIcon className="h-5 w-5 text-purple-600" />
+            <h3 className="text-lg font-semibold text-gray-800">Today's Tasks</h3>
+          </div>
+          <span className="inline-flex items-center rounded-full bg-purple-100 text-purple-700 px-2 py-0.5 text-[10px] font-medium">
+            {items.length} Tasks
+          </span>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="p-8 text-center flex-1 flex items-center justify-center">
+          <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent"></div>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="p-8 text-center flex-1 flex items-center justify-center">
+          <p className="text-sm text-gray-500">No tasks for today</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto flex-1">
+          <table className="w-full text-left text-xs min-w-[500px]">
+            <thead className="bg-[#fcf8ff] text-[10px] uppercase tracking-wider text-gray-500 border-b border-gray-100">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Subject</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Priority</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {items.map((task, index) => (
+                <tr
+                  key={task._id || index}
+                  className="hover:bg-purple-50/30 transition-colors"
+                >
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-gray-900 truncate max-w-[150px]">
+                      {task.subject}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border ${
+                      task.taskStatus?.name?.toLowerCase() === 'completed' 
+                        ? 'bg-green-100 text-green-700 border-green-200' 
+                        : 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                    }`}>
+                      {task.taskStatus?.name || 'In Progress'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border ${
+                      task.priority === 'high' 
+                        ? 'bg-red-100 text-red-700 border-red-200' 
+                        : task.priority === 'medium'
+                          ? 'bg-orange-100 text-orange-700 border-orange-200'
+                          : 'bg-blue-100 text-blue-700 border-blue-200'
+                    }`}>
+                      {task.priority?.toUpperCase()}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="p-4 border-t border-gray-50">
+            <Link href="/tasks" className="text-[11px] text-purple-600 font-semibold hover:text-purple-800 transition-colors flex items-center gap-1">
+              View all tasks <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -563,118 +631,108 @@ export default function Dashboard() {
 
   return (
     <>
-      <div className="flex flex-col h-full bg-gray-50">
-
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-12 gap-6">
-            {/* Left Column - Follow-up Tables (3/12 width) */}
-            <div className="col-span-6 space-y-6">
-              {/* Upcoming Follow-ups */}
-              <div className="h-[calc(50vh-2rem)]">
-                {renderFollowupTable(
-                  "Upcoming Follow-ups",
-                  upcomingFollowups,
-                  upcomingLoading,
-                  upcomingPage,
-                  upcomingTotalPages,
-                  (p) => {
-                    if (p >= 1 && p <= upcomingTotalPages) fetchUpcomingFollowups(p);
-                  },
-                  "Follow up Date",
-                )}
-              </div>
-
-              {/* Due Follow-ups */}
-              <div className="h-[calc(50vh-2rem)]">
-                {renderFollowupTable(
-                  "Due Follow-ups",
-                  dueFollowups,
-                  dueLoading,
-                  duePage,
-                  dueTotalPages,
-                  (p) => {
-                    if (p >= 1 && p <= dueTotalPages) fetchDueFollowups(p);
-                  },
-                  "Due Date",
-                )}
-              </div>
-            </div>
-
-            {/* Middle Column - Chart (6/12 width) */}
-            <div className="col-span-3">
-              <div className="rounded-xl bg-white shadow-sm border border-gray-200 p-6 h-full">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Lead Source Count</h3>
-                <div className="flex flex-col items-center justify-center h-[calc(100%-3rem)]">
-                  <div className="h-64 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={leadsBySource}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={100}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {leadsBySource.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
+      <div className="flex flex-col h-full bg-gray-50 overflow-y-auto">
+        <div className="p-6 space-y-6">
+          
+          {/* Summary Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {summaryCards.map((card, i) => {
+              const Icon = card.Icon;
+              return (
+                <div
+                  key={i}
+                  className={`rounded-2xl p-5 shadow-sm border border-gray-100 bg-white hover:shadow-md transition-all cursor-pointer flex items-center gap-4`}
+                  onClick={() => handleCardClick(card)}
+                >
+                  <div className={`h-12 w-12 rounded-xl ${card.iconBg} flex items-center justify-center`}>
+                    <Icon className={`h-6 w-6 ${card.iconColor}`} />
                   </div>
-                  <div className="w-full mt-6 space-y-3">
-                    {leadsBySource.map((source, index) => (
-                      <div key={index} className="flex items-center justify-between px-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: source.fill }}></div>
-                          <span className="text-sm font-medium text-gray-700">{source.name}</span>
-                        </div>
-                        <span className="text-sm font-bold text-gray-900">{source.value} leads</span>
-                      </div>
-                    ))}
+                  <div>
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{card.label}</div>
+                    <div className="text-xl font-bold text-gray-900">{card.value}</div>
                   </div>
                 </div>
-              </div>
-            </div>
+              );
+            })}
 
-            {/* Right Column - Statistics (3/12 width) */}
-            <div className="col-span-3">
-              <div className="rounded-xl bg-white shadow-sm border border-gray-200 p-6 h-full overflow-y-auto">
-                <h3 className="text-lg font-semibold text-gray-800 mb-6 sticky top-0 bg-white">Statistics</h3>
-                <div className="space-y-4">
-                  {summaryCards.slice(1).map((card, i) => {
-                    const Icon = card.Icon;
-                    return (
-                      <div
-                        key={i}
-                        className={`
-              rounded-xl p-4 shadow-sm cursor-pointer 
-              hover:shadow-md transition-all 
-              ${card.iconBg} 
-              border border-gray-200 
-              
-            `}
-                        onClick={() => handleCardClick(card)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-
-                            <div>
-                              <div className="text-sm font-semibold text-gray-600">{card.label}</div>
-                              <div className="text-2xl font-bold text-gray-900">{card.value}</div>
-                            </div>
-                          </div>
+            {/* Source Chart Card - if space available */}
+            {leadsBySource.length > 0 && (
+              <div className="md:col-span-2 lg:col-span-4 rounded-2xl bg-white shadow-sm border border-gray-100 p-5">
+                 <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Leads by Source</h4>
+                 </div>
+                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                    <div className="h-32 w-full md:col-span-1">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={leadsBySource}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={30}
+                            outerRadius={45}
+                            paddingAngle={5}
+                            dataKey="value"
+                          >
+                            {leadsBySource.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="md:col-span-3 flex flex-wrap gap-4">
+                      {leadsBySource.map((s, i) => (
+                        <div key={i} className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.fill }}></span>
+                          <span className="text-xs font-medium text-gray-700">{s.name}</span>
+                          <span className="text-xs font-bold text-gray-900 ml-1">{s.value}</span>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      ))}
+                    </div>
+                 </div>
               </div>
-            </div>
+            )}
           </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Upcoming Follow-ups */}
+            <div className="h-[450px]">
+              {renderFollowupTable(
+                "Upcoming",
+                upcomingFollowups,
+                upcomingLoading,
+                upcomingPage,
+                upcomingTotalPages,
+                (p) => {
+                  if (p >= 1 && p <= upcomingTotalPages) fetchUpcomingFollowups(p);
+                },
+                "Follow up Date",
+              )}
+            </div>
+
+            {/* Due Follow-ups */}
+            <div className="h-[450px]">
+              {renderFollowupTable(
+                "Overdue",
+                dueFollowups,
+                dueLoading,
+                duePage,
+                dueTotalPages,
+                (p) => {
+                  if (p >= 1 && p <= dueTotalPages) fetchDueFollowups(p);
+                },
+                "Due Date",
+              )}
+            </div>
+
+             {/* Today's Tasks */}
+             <div className="h-[450px]">
+               {renderTodayTasksTable(todayTasks, tasksLoading)}
+             </div>
+          </div>
+
         </div>
       </div>
     </>

@@ -246,7 +246,7 @@ export default function SalesExecutiveForm({
     }
   };
 
-  console.log(formik.values.role,'formik.values.role')
+  console.log(formik.errors,'formik.values.role')
 
   return (
     <Dialog
@@ -376,7 +376,7 @@ export default function SalesExecutiveForm({
             label="Status"
             name="status"
             value={formik.values.status}
-            onChange={formik.handleChange}
+            onChange={(e) => formik.setFieldValue('status', e)}
             onBlur={formik.handleBlur}
             options={statusOptions.map((status) => ({ value: status, label: status }))}
             placeholder="— Select —"

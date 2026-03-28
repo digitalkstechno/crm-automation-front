@@ -6,6 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import { usePathname } from "next/navigation";
+import Header from "@/components/Header";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -43,17 +44,9 @@ export default function App({ Component, pageProps }: AppProps) {
         >
           <main className="animate-in fade-in duration-300">
             {/* Only show header for non-login pages */}
-            {!isLoginPage && (
-              <div className="p-4 border border-gray-200 shadow-lg w-full">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-3xl font-bold text-gray-900">
-                      {getLabel() || "Default Title"}
-                    </h1>
-                  </div>
-                </div>
-              </div>
-            )}
+            {!isLoginPage ? (
+              <Header />
+            ) : null}
             <div className={isLoginPage ? "p-0" : "p-6"}>
               <Component {...pageProps} />
             </div>
