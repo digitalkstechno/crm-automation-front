@@ -42,6 +42,17 @@ export default function Header() {
     return ""
   }
 
+  useEffect(() => {
+  if (typeof window !== 'undefined' && 'Notification' in window) {
+    if (Notification.permission === 'default') {
+      // show custom UI first (button, modal etc.)
+      console.log("Ask user via button");
+    } else {
+      setNotificationPermission(Notification.permission);
+    }
+  }
+}, []);
+
   // Request notification permission with user interaction
   const requestNotificationPermission = async () => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -123,58 +134,144 @@ export default function Header() {
 
     let socket: any;
 
-    axios.get(baseUrl.currentStaff, { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => {
+    axios
+      .get(baseUrl.currentStaff, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
         const currentUserId = res.data?.data?._id;
         if (!currentUserId) return;
 
-        const socketUrl = (process.env.NEXT_PUBLIC_IMAGE_URL || '').replace(/\/v1\/api\/?$/, '');
-        const socket = io(socketUrl || 'http://localhost:5000', {
-          path: '/api/socket.io',   // 👈 IMPORTANT
+        // ✅ Correct socket URL (NO /api/v1/api)
+        const socketUrl = (
+          process.env.NEXT_PUBLIC_SOCKET_URL ||
+          process.env.NEXT_PUBLIC_IMAGE_URL ||
+          ''
+        ).replace(/\/api\/?$/, '');
+
+        console.log('[Socket] Connecting to:', socketUrl);
+
+        socket = io(socketUrl || 'http://localhost:5000', {
+          path: '/api/socket.io', // ✅ your custom path
           transports: ['websocket', 'polling'],
         });
-        socket.on('connect', () => {
-          socket.emit('joinRoom', currentUserId);
+
+        // =========================
+        // 🔥 GLOBAL EVENT LOGGER
+        // =========================
+        socket.onAny((event: string, ...args: any[]) => {
+          console.log('[Socket][onAny] 👉', event, args);
         });
 
-        socket.on('new_task_assigned', (notif: Notification) => {
-          setNotifications(prev => [notif, ...prev]);
+        // =========================
+        // 🔌 CONNECTION EVENTS
+        // =========================
+        socket.on('connect', () => {
+          console.log('[Socket] ✅ Connected:', socket.id);
 
-          // Check if browser notifications are supported and permission is granted
+          socket.emit('joinRoom', currentUserId);
+          console.log('[Socket] 📌 Joined room:', currentUserId);
+        });
+
+        socket.on('disconnect', (reason: string) => {
+          console.log('[Socket] ❌ Disconnected:', reason);
+        });
+
+        socket.on('connect_error', (error: any) => {
+          console.error('[Socket] 🚨 Connect Error:', error.message);
+        });
+
+        // =========================
+        // 🔄 RECONNECT EVENTS
+        // =========================
+        socket.io.on('reconnect_attempt', () => {
+          console.log('[Socket] 🔄 Reconnect Attempt...');
+        });
+
+        socket.io.on('reconnect', (attempt: number) => {
+          console.log('[Socket] ♻️ Reconnected after:', attempt);
+        });
+
+        socket.io.on('reconnect_error', (err: any) => {
+          console.error('[Socket] 🚨 Reconnect Error:', err.message);
+        });
+
+        // =========================
+        // ⚡ ENGINE EVENTS (DEEP DEBUG)
+        // =========================
+        socket.io.engine.on('upgrade', () => {
+          console.log('[Socket] ⚡ Upgraded to WebSocket');
+        });
+
+        socket.io.engine.on('packet', (packet: any) => {
+          console.log('[Socket] 📦 Packet:', packet);
+        });
+
+        // =========================
+        // 📩 CUSTOM EVENTS
+        // =========================
+
+        socket.on('new_task_assigned', (notif: Notification) => {
+          console.log('[Socket] 📩 new_task_assigned:', notif);
+
+          setNotifications((prev) => [notif, ...prev]);
+
           if (typeof window !== 'undefined' && 'Notification' in window) {
             if (Notification.permission === 'granted') {
               const browserNotif = new window.Notification(notif.title, {
                 body: notif.message,
-                icon: '/notification-icon.png', // Add your notification icon
-                badge: '/badge-icon.png' // Add your badge icon for mobile
+                icon: '/notification-icon.png',
+                badge: '/badge-icon.png',
               });
 
               browserNotif.onclick = async () => {
                 window.focus();
                 try {
                   if (!notif.isRead) {
-                    await axios.put(`${baseUrl.getBaseUrl}/notification/mark-read/${notif._id}`, {}, {
-                      headers: { Authorization: `Bearer ${getAuthToken()}` }
-                    });
+                    await axios.put(
+                      `${baseUrl.getBaseUrl}/notification/mark-read/${notif._id}`,
+                      {},
+                      {
+                        headers: {
+                          Authorization: `Bearer ${getAuthToken()}`,
+                        },
+                      }
+                    );
                   }
-                  router.push(notif.type === 'task' ? '/tasks' : '/leads/list');
+                  router.push(
+                    notif.type === 'task' ? '/tasks' : '/leads/list'
+                  );
                 } catch (e) {
                   console.error(e);
                 }
                 browserNotif.close();
               };
-            } else if (Notification.permission === 'default') {
-              // Permission not yet asked, we can show a prompt in the notification dropdown
-              // But we don't auto-request as browsers require user interaction
-              console.log('Notification permission not yet granted');
             }
           }
         });
-      })
-      .catch(err => console.error('Failed to get user for socket', err));
 
+        socket.on('new_lead_assigned', (notif: Notification) => {
+          console.log('[Socket] 📩 new_lead_assigned:', notif);
+          setNotifications((prev) => [notif, ...prev]);
+        });
+
+        socket.on('task_updated', (notif: Notification) => {
+          console.log('[Socket] 📩 task_updated:', notif);
+          setNotifications((prev) => [notif, ...prev]);
+        });
+      })
+      .catch((err) => {
+        console.error('[Socket] ❌ Failed to get user:', err);
+      });
+
+    // =========================
+    // 🧹 CLEANUP
+    // =========================
     return () => {
-      if (socket) socket.disconnect();
+      if (socket) {
+        console.log('[Socket] 🧹 Cleaning up...');
+        socket.disconnect();
+      }
     };
   }, [router]);
 
@@ -268,11 +365,11 @@ export default function Header() {
 
           {showNotifications && (
             <div className="absolute right-0 mt-2 w-80 rounded-lg bg-white shadow-xl overflow-hidden z-50">
-              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+              <div className="px-4 py-3 border-b border-gray-100 bg-[#0a2352] flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-gray-800">Notifications</h3>
+                  <h3 className="text-sm font-semibold text-white">Notifications</h3>
                   {/* Counter badge on the right side of the header */}
-                  <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                  <span className="bg-white text-primary text-xs font-medium px-2 py-0.5 rounded-full">
                     {totalCount}
                   </span>
                 </div>

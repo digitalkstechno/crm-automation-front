@@ -376,7 +376,7 @@ export default function SalesExecutiveForm({
             label="Status"
             name="status"
             value={formik.values.status}
-            onChange={(e) => formik.setFieldValue('status', e)}
+            onChange={(e) => { formik.setFieldValue('status', e); formik.setFieldTouched('status', true, false); }}
             onBlur={formik.handleBlur}
             options={statusOptions.map((status) => ({ value: status, label: status }))}
             placeholder="— Select —"
@@ -386,7 +386,7 @@ export default function SalesExecutiveForm({
             label="Role"
             name="role"
             value={formik.values.role}
-            onChange={(e) => formik.setFieldValue('role', e)}
+            onChange={(e) => { formik.setFieldValue('role', e); formik.setFieldTouched('role', true, false); }}
             onBlur={formik.handleBlur}
             options={roles.map((role) => ({ value: role._id, label: role.roleName }))}
             placeholder="— Select —"
@@ -401,7 +401,7 @@ export default function SalesExecutiveForm({
               label="Teams"
               name="teams"
               value={formik.values.teams}
-              onChange={(vals) => formik.setFieldValue('teams', vals)}
+              onChange={(vals) => { formik.setFieldValue('teams', vals); formik.setFieldTouched('teams', true, false); }}
               onBlur={() => formik.setFieldTouched('teams')}
               options={teams.map((t) => ({ value: t._id, label: t.name }))}
               error={formik.touched.teams && formik.errors.teams ? formik.errors.teams : undefined}
@@ -413,7 +413,7 @@ export default function SalesExecutiveForm({
               label="Organizations"
               name="organizations"
               value={formik.values.organizations}
-              onChange={(vals) => formik.setFieldValue('organizations', vals)}
+              onChange={(vals) => { formik.setFieldValue('organizations', vals); formik.setFieldTouched('organizations', true, false); }}
               onBlur={() => formik.setFieldTouched('organizations')}
               options={organizations.map((o) => ({ value: o._id, label: o.name }))}
               error={formik.touched.organizations && formik.errors.organizations ? formik.errors.organizations : undefined}

@@ -183,6 +183,10 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
     if (formik.errors[field]) {
       formik.setFieldError(field, undefined);
     }
+    // Mark field as touched to hide error after selection
+    if (!formik.touched[field]) {
+      formik.setFieldTouched(field, true, false);
+    }
   };
 
   const toggleUser = (id: string) => {
@@ -418,8 +422,8 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
               label="Status"
               name="status"
               value={formik.values.status}
-              onChange={(val) => updateField('status', val)}
-              onBlur={() => formik.setFieldTouched('status')}
+              onChange={(val) => formik.setFieldValue('status', val)}
+              // onBlur={() => formik.setFieldTouched('status')}
               options={dropdownStatuses.map((s: any) => ({ value: s._id, label: s.name! }))}
               error={formik.touched.status && formik.errors.status}
               placeholder="— Select Status —"

@@ -400,7 +400,7 @@ export default function LeadAddDialog({
                 label="Source"
                 name="leadSource"
                 value={formik.values.leadSource}
-                onChange={(val) => formik.setFieldValue('leadSource', val)}
+                onChange={(val) => { formik.setFieldValue('leadSource', val); formik.setFieldTouched('leadSource', true, false); }}
                 onBlur={() => formik.setFieldTouched('leadSource')}
                 options={sources.map((s) => ({ value: s._id, label: s.name! }))}
                 error={getFieldError('leadSource')}
@@ -411,7 +411,7 @@ export default function LeadAddDialog({
                 label="Status"
                 name="leadStatus"
                 value={formik.values.leadStatus}
-                onChange={(val) => formik.setFieldValue('leadStatus', val)}
+                onChange={(val) => { formik.setFieldValue('leadStatus', val); formik.setFieldTouched('leadStatus', true, false); }}
                 onBlur={() => formik.setFieldTouched('leadStatus')}
                 options={statuses.map((s) => ({ value: s._id, label: s.name! }))}
                 error={getFieldError('leadStatus')}
@@ -422,7 +422,7 @@ export default function LeadAddDialog({
                 label="Assigned Staff"
                 name="assignedTo"
                 value={formik.values.assignedTo}
-                onChange={(val) => formik.setFieldValue('assignedTo', val)}
+                onChange={(val) => { formik.setFieldValue('assignedTo', val); formik.setFieldTouched('assignedTo', true, false); }}
                 onBlur={() => formik.setFieldTouched('assignedTo')}
                 options={staff.map((s) => ({ value: s._id, label: s.fullName || s.name! }))}
                 error={getFieldError('assignedTo')}
@@ -433,7 +433,7 @@ export default function LeadAddDialog({
                 label="Priority"
                 name="priority"
                 value={formik.values.priority}
-                onChange={(val) => formik.setFieldValue('priority', val)}
+                onChange={(val) => { formik.setFieldValue('priority', val); formik.setFieldTouched('priority', true, false); }}
                 onBlur={() => formik.setFieldTouched('priority')}
                 options={[
                   { value: 'high', label: 'High' },
@@ -449,7 +449,7 @@ export default function LeadAddDialog({
               label="Lead Labels"
               name="labels"
               value={formik.values.labels}
-              onChange={(vals) => formik.setFieldValue('labels', vals)}
+              onChange={(vals) => { formik.setFieldValue('labels', vals); formik.setFieldTouched('labels', true, false); }}
               onBlur={() => formik.setFieldTouched('labels')}
               options={labelOptions}
               error={getFieldError('labels')}
