@@ -128,7 +128,7 @@ export default function Header() {
         const currentUserId = res.data?.data?._id;
         if (!currentUserId) return;
         
-        const socketUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/v1\/api\/?$/, '');
+        const socketUrl = (process.env.NEXT_PUBLIC_IMAGE_URL || '').replace(/\/v1\/api\/?$/, '');
         socket = io(socketUrl || 'http://localhost:5000');
         
         socket.on('connect', () => {
