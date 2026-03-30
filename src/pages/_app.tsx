@@ -31,7 +31,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <div className={poppins.className}>
-      <div className="flex min-h-screen bg-[#ffffff]">
+      <div className="flex min-h-screen bg-white">
         {!isLoginPage && (
           <Sidebar
             isOpen={isSidebarOpen}

@@ -186,7 +186,7 @@ export default function LeadsPage() {
   if (!canRead && !loading && leadPermissions !== null) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="rounded-lg bg-red-50 p-8 text-center">
+        <div className="rounded-md bg-red-50 p-8 text-center">
           <h2 className="text-xl font-semibold text-red-800">Access Denied</h2>
           <p className="mt-2 text-red-600">You don't have permission to view leads.</p>
         </div>
@@ -194,26 +194,27 @@ export default function LeadsPage() {
     );
   }
 
-  if (loading && leads.length === 0) {
+  // Show skeleton loader when loading
+  if (loading) {
     return (
       <div className="flex h-full flex-col gap-4 relative overflow-hidden">
-        {/* Page Header & Unified Toolbar */}
-        <div className="rounded-3xl border border-gray-200 bg-white px-6 py-4 shadow-sm transition-all duration-300">
+        {/* Page Header & Unified Toolbar Skeleton */}
+        <div className="rounded-md border border-gray-200 bg-white px-6 py-4 transition-all duration-300">
           <div className="flex flex-wrap items-center gap-3">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
+              <div className="h-8 w-24 bg-gray-200 rounded-md animate-pulse" />
             </div>
             <div className="flex items-center gap-3 ml-auto">
-              <div className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse" />
-              <div className="h-10 w-20 bg-gray-200 rounded-lg animate-pulse" />
-              <div className="h-10 w-32 bg-gray-200 rounded-xl animate-pulse" />
+              <div className="h-10 w-24 bg-gray-200 rounded-md animate-pulse" />
+              <div className="h-10 w-20 bg-gray-200 rounded-md animate-pulse" />
+              <div className="h-10 w-32 bg-gray-200 rounded-md animate-pulse" />
             </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-hidden">
           {viewMode === 'list' ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="bg-white rounded-md border border-gray-200 p-4">
               <PageSkeleton />
             </div>
           ) : (
@@ -242,7 +243,7 @@ export default function LeadsPage() {
     <div className="flex h-full flex-col gap-4 relative overflow-hidden">
 
       {/* ── Page Header & Unified Toolbar ───────────────────────────────── */}
-      <div className="rounded-3xl border border-gray-200 bg-white px-6 py-4 shadow-sm transition-all duration-300">
+      <div className="rounded-md border border-gray-200 bg-white px-6 py-4 transition-all duration-300">
         <div className="flex flex-wrap items-center gap-3">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
@@ -252,7 +253,7 @@ export default function LeadsPage() {
             {/* Advanced Filter Button */}
             <button
               onClick={() => setShowFilterDrawer(!showFilterDrawer)}
-              className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${showFilterDrawer || hasActiveFilters
+              className={`relative flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${showFilterDrawer || hasActiveFilters
                 ? 'bg-primary-50 text-primary-500 border border-primary-200 hover:bg-primary-100'
                 : 'bg-gray-100 text-gray-700 border border-transparent hover:bg-gray-200'
                 }`}
@@ -262,7 +263,7 @@ export default function LeadsPage() {
             </button>
 
             {/* View toggle */}
-            <div className="relative flex items-center bg-gray-100 p-1 rounded-lg w-fit">
+            <div className="relative flex items-center bg-gray-100 p-1 rounded-md w-fit">
               <div
                 className={`absolute z-0 top-1 bottom-1 w-10 rounded-md bg-secondary transition-all duration-300 ease-in-out ${viewMode === 'list' ? 'left-1' : 'left-[calc(50%)]'
                   }`}
@@ -288,7 +289,7 @@ export default function LeadsPage() {
             {canCreate && (
               <button
                 onClick={handleOpenAdd}
-                className="flex cursor-pointer items-center gap-2 rounded-xl bg-secondary px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-blue-700 hover:shadow-lg active:scale-95 transition-all"
+                className="flex cursor-pointer items-center gap-2 rounded-md bg-secondary px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-blue-700 hover:shadow-lg active:scale-95 transition-all"
               >
                 <Plus className="h-4 w-4" />
                 Add Lead
@@ -358,7 +359,7 @@ export default function LeadsPage() {
               </button>
               <button
                 onClick={() => setShowFilterDrawer(false)}
-                className="px-4 py-1.5 text-xs font-bold text-secondary bg-blue-50 hover:bg-blue-100 rounded-lg transition-all cursor-pointer"
+                className="px-4 py-1.5 text-xs font-bold text-secondary bg-blue-50 hover:bg-blue-100 rounded-md transition-all cursor-pointer"
               >
                 Collapse
               </button>

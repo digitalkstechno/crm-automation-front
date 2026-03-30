@@ -248,7 +248,7 @@ export default function Setup() {
       <div className="space-y-6">
         <div className="grid grid-cols-12 gap-6">
           <div className="col-span-12 md:col-span-3">
-            <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+            <div className="rounded-md border border-gray-200 bg-white p-3">
               {menuItems.map((item: any, index: number) => {
                 const Icon = item.icon;
 
@@ -257,7 +257,7 @@ export default function Setup() {
                     key={item.name}
                     onClick={() => handleTabChange(item.name)}
                     className={`${index !== 0 ? "mt-1" : ""
-                      } flex w-full items-center gap-3 cursor-pointer rounded-xl px-4 py-3 text-sm font-medium transition-colors ${activeTab === item.name
+                      } flex w-full items-center gap-3 cursor-pointer rounded-md px-4 py-3 text-sm font-medium transition-colors ${activeTab === item.name
                         ? "bg-blue-50 text-blue-700"
                         : "text-gray-700 hover:bg-gray-50"
                       }`}
@@ -271,7 +271,7 @@ export default function Setup() {
           </div>
 
           <div className="col-span-12 md:col-span-9">
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="rounded-md border border-gray-200 bg-white p-6">
               {activeTab === 'Role Management' && <RolesContent />}
               {activeTab === 'Staff Management' && <StaffManagementContent />}
               {activeTab === 'Lead Sources' && <LeadSourcesContent />}
@@ -307,7 +307,7 @@ export default function Setup() {
                     </div>
                   </div>
 
-                  <div className="border border-gray-200 rounded-xl p-4 max-h-[420px] overflow-y-auto">
+                  <div className="border border-gray-200 rounded-md p-4 max-h-[420px] overflow-y-auto">
                     {leadStatuses.length === 0 ? (
                       <div className="text-center py-8">
                         <p className="text-sm text-gray-500">No lead statuses found.</p>

@@ -86,7 +86,7 @@ export default function TaskListView({
                 <div className="flex flex-wrap gap-1">
                     {v?.length
                         ? v.map((u) => (
-                            <span key={u._id} className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs">
+                            <span key={u._id} className="p-2 bg-[#0a2352]/10 text-[#0a2352] rounded text-xs">
                                 {u.fullName}
                             </span>
                         ))
@@ -101,7 +101,7 @@ export default function TaskListView({
                 <div className="flex flex-wrap gap-1">
                     {v?.length
                         ? v.map((t) => (
-                            <span key={t._id} className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full text-xs">
+                            <span key={t._id} className="p-2 bg-[#0a2352]/10 text-[#0a2352] rounded text-xs">
                                 {t.name}
                             </span>
                         ))

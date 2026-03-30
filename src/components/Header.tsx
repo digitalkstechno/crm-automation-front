@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
-import { baseUrl, getAuthToken } from '@/config';
+import { baseUrl, clearAuthToken, getAuthToken } from '@/config';
 import { useRouter } from 'next/router';
-import { Bell, CheckCircle, CheckCheck } from 'lucide-react';
+import { Bell, CheckCircle, CheckCheck, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { io } from 'socket.io-client';
+import Swal from 'sweetalert2';
 
 interface Notification {
   _id: string;
@@ -43,15 +44,15 @@ export default function Header() {
   }
 
   useEffect(() => {
-  if (typeof window !== 'undefined' && 'Notification' in window) {
-    if (Notification.permission === 'default') {
-      // show custom UI first (button, modal etc.)
-      console.log("Ask user via button");
-    } else {
-      setNotificationPermission(Notification.permission);
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        // show custom UI first (button, modal etc.)
+        console.log("Ask user via button");
+      } else {
+        setNotificationPermission(Notification.permission);
+      }
     }
-  }
-}, []);
+  }, []);
 
   // Request notification permission with user interaction
   const requestNotificationPermission = async () => {
@@ -152,7 +153,6 @@ export default function Header() {
         console.log('[Socket] Connecting to:', socketUrl);
 
         socket = io(socketUrl || 'http://localhost:5000', {
-          path: '/api/socket.io', // ✅ your custom path
           transports: ['websocket', 'polling'],
         });
 
@@ -285,6 +285,7 @@ export default function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // FIXED: Mark single notification as read
   const markAsReadSingle = async (e: React.MouseEvent, notifId: string) => {
     e.stopPropagation();
     try {
@@ -292,12 +293,19 @@ export default function Header() {
       await axios.put(`${baseUrl.getBaseUrl}/notification/mark-read/${notifId}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setNotifications(prev => prev.map(n => n._id === notifId ? { ...n, isRead: true } : n));
+      
+      // Update the notification to mark it as read
+      setNotifications(prev => prev.map(notification => 
+        notification._id === notifId 
+          ? { ...notification, isRead: true } 
+          : notification
+      ));
     } catch (error) {
       console.error('Failed to mark read', error);
     }
   };
 
+  // FIXED: Mark all notifications as read
   const markAllAsRead = async () => {
     if (markingAllRead) return;
     setMarkingAllRead(true);
@@ -306,7 +314,12 @@ export default function Header() {
       await axios.put(`${baseUrl.getBaseUrl}/notification/mark-all-read`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      await fetchNotifications();
+      
+      // Mark all notifications as read in the state
+      setNotifications(prev => prev.map(notification => ({
+        ...notification,
+        isRead: true
+      })));
     } catch (error) {
       console.error('Failed to mark all as read', error);
     } finally {
@@ -314,6 +327,7 @@ export default function Header() {
     }
   };
 
+  // FIXED: Handle notification click - mark as read and navigate
   const handleNotificationClick = async (notif: Notification) => {
     try {
       const token = getAuthToken();
@@ -321,7 +335,11 @@ export default function Header() {
         await axios.put(`${baseUrl.getBaseUrl}/notification/mark-read/${notif._id}`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setNotifications(prev => prev.map(n => n._id === notif._id ? { ...n, isRead: true } : n));
+        
+        // Update the state to mark this notification as read
+        setNotifications(prev => prev.map(n => 
+          n._id === notif._id ? { ...n, isRead: true } : n
+        ));
       }
 
       setShowNotifications(false);
@@ -336,18 +354,66 @@ export default function Header() {
     }
   };
 
+  const handleLogout = () => {
+    Swal.fire({
+      title: 'Are you sure?',
+      text: "You will be logged out of your account",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, logout',
+      cancelButtonText: 'Cancel',
+      background: '#fff',
+      backdrop: true,
+      allowOutsideClick: false,
+      allowEscapeKey: true,
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          title: 'Logging out...',
+          text: 'Please wait',
+          icon: 'info',
+          showConfirmButton: false,
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        clearAuthToken();
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("token");
+          localStorage.removeItem("auth");
+        }
+
+        Swal.fire({
+          title: 'Logged Out!',
+          text: 'You have been successfully logged out',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false,
+        }).then(() => {
+          router.replace("/login");
+        });
+      }
+    });
+  };
+
+  // Calculate unread notifications count
   const unreadNotifications = notifications.filter(n => !n.isRead);
   const unreadCount = unreadNotifications.length;
   const totalCount = notifications.length;
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center justify-between bg-white border-b border-gray-200 px-6 shadow-sm backdrop-blur-sm">
+    <header className="sticky top-0 z-20 flex h-20 items-center justify-between bg-white border-b border-gray-200 px-6 backdrop-blur-sm">
       <div className="flex items-center gap-4">
         <h1 className="text-3xl font-bold text-gray-900">
           {getLabel() || "Default Title"}
         </h1>
       </div>
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-3">
 
         {/* Alerts / Notifications */}
         <div className="relative" ref={dropdownRef}>
@@ -370,7 +436,7 @@ export default function Header() {
                   <h3 className="text-sm font-semibold text-white">Notifications</h3>
                   {/* Counter badge on the right side of the header */}
                   <span className="bg-white text-primary text-xs font-medium px-2 py-0.5 rounded-full">
-                    {totalCount}
+                    {unreadCount}
                   </span>
                 </div>
                 <div className="flex gap-2">
@@ -397,9 +463,11 @@ export default function Header() {
 
               <div className="max-h-[70vh] overflow-y-auto">
                 {unreadNotifications.length === 0 ? (
-                  <div className="px-4 py-6 text-center text-sm text-gray-500">No new notifications</div>
+                  <div className="px-4 py-6 text-center text-sm text-gray-500">
+                    {totalCount === 0 ? 'No notifications' : 'No new notifications'}
+                  </div>
                 ) : (
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-gray-100 max-h-[30vh] overflow-y-auto">
                     {unreadNotifications.map(notif => (
                       <div
                         key={notif._id}
@@ -411,7 +479,7 @@ export default function Header() {
                             {notif.title}
                           </h4>
                           <span className="text-[10px] text-gray-400 whitespace-nowrap ml-2">
-                            {new Date(notif.createdAt).toLocaleDateString()}
+                            {notif.createdAt ? new Date(notif.createdAt).toLocaleDateString() : 'Just now'}
                           </span>
                         </div>
                         <p className="text-xs text-gray-800 line-clamp-2 pr-6">
@@ -440,13 +508,20 @@ export default function Header() {
                     className="w-full px-4 py-3 text-sm bg-[#0a2352] text-white font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <CheckCheck className="w-4 h-4" />
-                    {markingAllRead ? 'Marking all as read...' : `Mark all as read`}
+                    {markingAllRead ? 'Marking all as read...' : `Mark all as read (${unreadCount})`}
                   </button>
                 </div>
               )}
             </div>
           )}
         </div>
+        <button
+          onClick={handleLogout}
+          className="flex items-center justify-center h-10 w-10 rounded-full hover:bg-red-50 transition-all duration-200 text-gray-600 hover:text-red-600 focus:ring-red-500 focus:ring-offset-2"
+          title="Logout"
+        >
+          <LogOut className="h-5 w-5" />
+        </button>
       </div>
     </header>
   );

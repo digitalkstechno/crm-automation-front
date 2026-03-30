@@ -1,12 +1,25 @@
 'use client';
 
-import { useEffect } from 'react';
-import { FiChevronLeft, FiChevronRight, FiEdit, FiTrash2, FiEye, FiSearch } from 'react-icons/fi';
+import { useEffect, useState } from 'react';
+import {
+  FiChevronLeft,
+  FiChevronRight,
+  FiEdit,
+  FiTrash2,
+  FiEye,
+  FiSearch,
+  FiFilter,
+  FiDownload,
+  FiMoreVertical,
+  FiRefreshCw
+} from 'react-icons/fi';
+
 export interface Column<T> {
   key: keyof T | string;
   label: string;
   sortable?: boolean;
   render?: (value: any, row: T) => React.ReactNode;
+  className?: string;
 }
 
 interface DataTableProps<T> {
@@ -29,11 +42,15 @@ interface DataTableProps<T> {
   loading?: boolean;
   actions?: boolean;
   title?: string;
+  subtitle?: string;
   striped?: boolean;
   addButton?: {
     label: string;
     onClick: () => void;
+    icon?: React.ReactNode;
   };
+  onRefresh?: () => void;
+  onExport?: () => void;
   extraActions?: {
     label: string;
     onClick: (row: T) => void;
@@ -62,59 +79,62 @@ export default function DataTable<T extends Record<string, any>>({
   loading = false,
   actions = true,
   title,
+  subtitle,
   striped = true,
   addButton,
+  onRefresh,
+  onExport,
   extraActions,
 }: DataTableProps<T>) {
+  const [searchValue, setSearchValue] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+
   const renderCell = (column: Column<T>, row: T) => {
     const value = row[column.key as string];
     return column.render ? column.render(value, row) : value ?? '-';
   };
 
+  const handleSearch = (value: string) => {
+    setSearchValue(value);
+    onSearch(value);
+  };
+
   // Calculate page numbers to show
   const getPageNumbers = () => {
     const pages = [];
-    const maxVisible = 5; // Maximum number of page buttons to show
+    const maxVisible = 5;
 
     if (totalPages <= maxVisible) {
-      // Show all pages if total pages are less than max visible
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
-      // Always show first page
       pages.push(1);
 
-      // Calculate start and end of visible pages
       let start = Math.max(2, currentPage - 1);
       let end = Math.min(totalPages - 1, currentPage + 1);
 
-      // Adjust if at the beginning
       if (currentPage <= 3) {
         end = Math.min(totalPages - 1, 4);
       }
 
-      // Adjust if at the end
       if (currentPage >= totalPages - 2) {
         start = Math.max(2, totalPages - 3);
       }
 
-      // Add ellipsis if needed
       if (start > 2) {
         pages.push('...');
       }
 
-      // Add middle pages
       for (let i = start; i <= end; i++) {
         pages.push(i);
       }
 
-      // Add ellipsis if needed
       if (end < totalPages - 1) {
         pages.push('...');
       }
 
-      // Always show last page
       if (totalPages > 1) {
         pages.push(totalPages);
       }
@@ -131,36 +151,74 @@ export default function DataTable<T extends Record<string, any>>({
   }, [pagination, currentPage, data.length, totalRecords, onPageChange]);
 
   return (
-    <div className="rounded-xl bg-white shadow-sm border border-gray-200 overflow-hidden">
-      {/* Header */}
-      <div className="border-b border-gray-200 bg-[#ffffff] px-6 py-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          {title && (
-            <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
-          )}
+    <div className="rounded-md bg-white border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-2xl">
+      {/* Header - Premium Design */}
+      <div className="bg-gradient-to-r from-gray-50 via-white to-gray-50 border-b border-gray-200 px-3 py-3">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            {title && (
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                {title}
+              </h2>
+            )}
+            {subtitle && (
+              <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+            )}
+            {totalRecords > 0 && (
+              <p className="text-xs text-gray-400 mt-2">
+                Showing {data.length} of {totalRecords} entries
+              </p>
+            )}
+          </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 ml-auto">
+          <div className="flex flex-wrap items-center gap-3">
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                className="group relative inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                <FiRefreshCw className="h-4 w-4 transition-transform group-hover:rotate-180 duration-500" />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
+            )}
+
+            {onExport && (
+              <button
+                onClick={onExport}
+                className="group relative inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                <FiDownload className="h-4 w-4" />
+                <span className="hidden sm:inline">Export</span>
+              </button>
+            )}
+
             {searchable && (
               <div className="relative">
-                {/* 🔍 Search Icon */}
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-
-                {/* Input */}
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4 pointer-events-none" />
                 <input
                   type="search"
-                  placeholder="Search..."
-                  onChange={(e) => onSearch(e.target.value)}
-                  className="w-full sm:w-64 rounded-lg border border-gray-300 pl-10 pr-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-400 transition-all focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  placeholder="Search anything..."
+                  value={searchValue}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="w-full sm:w-80 rounded-md border border-gray-200 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-400 transition-all duration-200 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 hover:border-gray-300"
                 />
               </div>
             )}
 
+            {/* <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              <FiFilter className="h-4 w-4" />
+              <span className="hidden sm:inline">Filters</span>
+            </button> */}
+
             {addButton && (
               <button
                 onClick={addButton.onClick}
-                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+                className="inline-flex items-center gap-2 rounded-md bg-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:from-blue-700 hover:to-blue-800 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 active:scale-95"
               >
-                <span>+</span>
+                {addButton.icon || <span className="text-lg">+</span>}
                 {addButton.label}
               </button>
             )}
@@ -168,34 +226,36 @@ export default function DataTable<T extends Record<string, any>>({
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table - Modern Design */}
       <div className="overflow-x-auto overflow-y-visible">
-        <table className="w-full bg-secondary min-w-full divide-y divide-gray-200">
-          <thead className="bg-secondary text-white">
+        <table className="w-full min-w-full divide-y divide-gray-100">
+          <thead className="bg-gray-100">
             <tr>
               {columns.map((column) => (
                 <th
                   key={String(column.key)}
-                  className="px-4 py-2 text-left text-sm font-bold uppercase tracking-wider"
+                  className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 ${column.className || ''}`}
                 >
                   {column.label}
                 </th>
               ))}
-              {actions && (onView || onEdit || onDelete) && (
-                <th className="px-4 py-2 text-left text-sm font-bold uppercase tracking-wider">
+              {actions && (onView || onEdit || onDelete || extraActions) && (
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
                   Actions
                 </th>
               )}
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-gray-50 bg-white">
             {loading ? (
               <tr>
-                <td colSpan={columns.length + (actions ? 1 : 0)} className="px-6 py-12 text-center">
-                  <div className="flex flex-col items-center justify-center gap-3">
-                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-                    <p className="text-sm text-gray-600">Loading data...</p>
+                <td colSpan={columns.length + (actions ? 1 : 0)} className="px-6 py-16 text-center">
+                  <div className="flex flex-col items-center justify-center gap-4">
+                    <div className="relative">
+                      <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-200 border-r-blue-600"></div>
+                    </div>
+                    <p className="text-sm font-medium text-gray-600">Loading your data...</p>
                   </div>
                 </td>
               </tr>
@@ -203,16 +263,20 @@ export default function DataTable<T extends Record<string, any>>({
               <tr>
                 <td
                   colSpan={columns.length + (actions ? 1 : 0)}
-                  className="px-6 py-12 text-center"
+                  className="px-3 py-16 text-center"
                 >
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    <p className="text-sm text-gray-600">No records found</p>
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <div className="rounded-full bg-gray-50 p-4">
+                      <FiSearch className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-600">No records found</p>
+                    <p className="text-xs text-gray-400">Try adjusting your search or filters</p>
                     {addButton && (
                       <button
                         onClick={addButton.onClick}
-                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                        className="mt-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
                       >
-                        Add your first record
+                        + Add your first record
                       </button>
                     )}
                   </div>
@@ -222,75 +286,94 @@ export default function DataTable<T extends Record<string, any>>({
               data.map((row, index) => (
                 <tr
                   key={index}
+                  onMouseEnter={() => setHoveredRow(index)}
+                  onMouseLeave={() => setHoveredRow(null)}
                   className={`
-                    transition-colors hover:bg-blue-50/70 
-                    ${striped && index % 2 === 1 ? 'bg-gray-100' : 'bg-[ffffff]'}
-                    border-b border-gray-100 last:border-0
+                    transition-all duration-200
+                    ${striped && index % 2 === 1 ? 'bg-gray-50/50' : 'bg-white'}
+                    ${hoveredRow === index ? 'bg-blue-50/30 shadow-inner' : ''}
+                    border-b border-gray-50 last:border-0
                   `}
                 >
                   {columns.map((column) => (
-                    <td key={String(column.key)} className="px-6 py-4 text-sm text-gray-700">
+                    <td
+                      key={String(column.key)}
+                      className={`px-6 py-4 text-sm text-gray-700 ${column.className || ''}`}
+                    >
                       {renderCell(column, row)}
                     </td>
                   ))}
 
-                  {actions && (onView || onEdit || onDelete) && (
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        {onView && (
-                          <button
-                            onClick={() => onView(row)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-[#ffffff] shadow-sm transition-all hover:bg-secondary hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 active:scale-95 cursor-pointer"
-                            title="View"
-                          >
-                            <FiEye className="w-4 h-4" />
-                          </button>
-                        )}
-                        {onEdit && (!canEdit || canEdit(row)) && (
-                          <button
-                            onClick={() => onEdit(row)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-green-500 text-[#ffffff] shadow-sm transition-all hover:bg-green-600 hover:shadow focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 active:scale-95 cursor-pointer"
-                            title="Edit"
-                          >
-                            <FiEdit className="w-4 h-4" />
-                          </button>
-                        )}
-                        {onDelete && (!canDelete || canDelete(row)) && (
-                          <button
-                            onClick={() => onDelete(row)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-500 text-[#ffffff] shadow-sm transition-all hover:bg-red-600 hover:shadow focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 active:scale-95 cursor-pointer"
-                            title="Delete"
-                          >
-                            <FiTrash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                        {extraActions?.map((act, idx) => {
-                          const colors = {
-                            blue: 'bg-blue-600 hover:bg-blue-700',
-                            green: 'bg-green-600 hover:bg-green-700',
-                            red: 'bg-red-600 hover:bg-red-700',
-                            orange: 'bg-orange-500 hover:bg-orange-600',
-                            purple: 'bg-purple-600 hover:bg-purple-700',
-                          };
-                          const cls = colors[act.color || 'blue'];
+                  {actions && (onView || onEdit || onDelete || extraActions) && (
+  <td className="px-6 py-4">
+    <div className="flex items-center gap-2">
 
-                          return (
-                            <button
-                              key={idx}
-                              onClick={() => act.onClick(row)}
-                              className={`inline-flex h-9 min-w-[36px] items-center justify-center rounded-lg text-white px-2 shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-95 cursor-pointer ${cls}`}
-                              title={act.label}
-                            >
-                              {act.icon ? (
-                                <span className={act.label ? 'mr-1.5' : ''}>{act.icon}</span>
-                              ) : null}
-                              {act.label && <span className="text-xs font-semibold">{act.label}</span>}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </td>
-                  )}
+      {/* VIEW */}
+      {onView && (
+        <button
+          onClick={() => onView(row)}
+          className="group h-9 w-9 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition-all duration-200 hover:bg-[#0a2352] hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:scale-95"
+        >
+          <FiEye className="h-4 w-4 group-hover:scale-110 transition-transform" />
+        </button>
+      )}
+
+      {/* EDIT */}
+      {onEdit && (!canEdit || canEdit(row)) && (
+        <button
+          onClick={() => onEdit(row)}
+          className="group h-9 w-9 flex items-center justify-center rounded-lg bg-gray-100 text-green-600 transition-all duration-200 hover:bg-green-600 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 active:scale-95"
+        >
+          <FiEdit className="h-4 w-4 group-hover:scale-110 transition-transform" />
+        </button>
+      )}
+
+      {/* DELETE */}
+      {onDelete && (!canDelete || canDelete(row)) && (
+        <button
+          onClick={() => onDelete(row)}
+          className="group h-9 w-9 flex items-center justify-center rounded-lg bg-gray-100 text-red-600 transition-all duration-200 hover:bg-red-500 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 active:scale-95"
+        >
+          <FiTrash2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
+        </button>
+      )}
+
+      {/* EXTRA ACTIONS */}
+      {extraActions?.map((act, idx) => {
+        const colors = {
+          blue: 'text-blue-600 hover:bg-blue-600 focus:ring-blue-500',
+          green: 'text-green-600 hover:bg-green-600 focus:ring-green-500',
+          red: 'text-red-600 hover:bg-red-500 focus:ring-red-500',
+          orange: 'text-orange-600 hover:bg-orange-500 focus:ring-orange-500',
+          purple: 'text-purple-600 hover:bg-purple-600 focus:ring-purple-500',
+        };
+
+        const colorClass = colors[act.color || 'blue'];
+
+        return (
+          <button
+            key={idx}
+            onClick={() => act.onClick(row)}
+            className={`group h-9 min-w-[36px] flex items-center justify-center rounded-lg bg-gray-100 ${colorClass} hover:text-white px-3 transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-95`}
+            title={act.label}
+          >
+            {act.icon && (
+              <span className={act.label ? 'mr-1.5' : ''}>
+                {act.icon}
+              </span>
+            )}
+            {act.label && (
+              <span className="text-xs font-semibold">
+                {act.label}
+              </span>
+            )}
+          </button>
+        );
+      })}
+
+    </div>
+  </td>
+)}
                 </tr>
               ))
             )}
@@ -298,56 +381,57 @@ export default function DataTable<T extends Record<string, any>>({
         </table>
       </div>
 
-      {/* Pagination */}
-      {pagination && totalPages > 0 && (
-        <div className="border-t border-gray-200 bg-[#ffffff] px-6 py-4">
+      {/* Pagination - Modern Design */}
+      {pagination && totalPages > 0 && !loading && data.length > 0 && (
+        <div className="border-t border-gray-100 bg-gradient-to-r from-gray-50 to-white px-6 py-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3 text-sm text-gray-700">
-              <span className="font-medium">Show</span>
-              <select
-                value={pageSize}
-                onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                className="rounded-lg cursor-pointer border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              >
-                {[10, 25, 50, 100].map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              <span className="font-medium">entries</span>
-              {totalRecords > 0 && (
-                <span className="text-gray-600">
-                  (Total: {totalRecords} records)
-                </span>
-              )}
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-600">Rows per page</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                  className="cursor-pointer rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-all duration-200 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100 hover:border-gray-300"
+                >
+                  {[10, 25, 50, 100].map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <span className="text-gray-500">
+                Showing <span className="font-medium text-gray-700">{(currentPage - 1) * pageSize + 1}</span> to{' '}
+                <span className="font-medium text-gray-700">
+                  {Math.min(currentPage * pageSize, totalRecords)}
+                </span>{' '}
+                of <span className="font-medium text-gray-700">{totalRecords}</span> entries
+              </span>
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Previous button */}
               <button
                 onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className={`inline-flex cursor-pointer h-9 w-9 items-center justify-center rounded-lg border ${currentPage === 1
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-all duration-200 ${currentPage === 1
                   ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-                  } transition-colors`}
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+                  }`}
               >
-                <FiChevronLeft className="w-4 h-4" />
+                <FiChevronLeft className="h-4 w-4" />
               </button>
 
-              {/* Page numbers */}
               <div className="flex items-center gap-1">
                 {getPageNumbers().map((page, index) => (
                   page === '...' ? (
-                    <span key={`ellipsis-${index}`} className="px-3 py-1.5 text-sm text-gray-600">
+                    <span key={`ellipsis-${index}`} className="px-2 py-1.5 text-sm text-gray-400">
                       ...
                     </span>
                   ) : (
                     <button
                       key={`page-${page}`}
                       onClick={() => onPageChange(page as number)}
-                      className={`inline-flex cursor-pointer min-w-[2.25rem] h-9 items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${currentPage === page
-                        ? 'bg-secondary text-white hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-                        : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+                      className={`inline-flex min-w-[2.5rem] h-9 items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-200 ${currentPage === page
+                        ? 'bg-secondary text-white shadow-md'
+                        : 'border border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm'
                         }`}
                     >
                       {page}
@@ -356,16 +440,15 @@ export default function DataTable<T extends Record<string, any>>({
                 ))}
               </div>
 
-              {/* Next button */}
               <button
                 onClick={() => onPageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className={`inline-flex cursor-pointer h-9 w-9 items-center justify-center rounded-lg border ${currentPage === totalPages
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-all duration-200 ${currentPage === totalPages
                   ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-                  } transition-colors`}
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+                  }`}
               >
-                <FiChevronRight className="w-4 h-4" />
+                <FiChevronRight className="h-4 w-4" />
               </button>
             </div>
           </div>

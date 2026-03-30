@@ -10,8 +10,7 @@ import { TaskStatus, TaskSummary } from '@/components/tasks/taskConstants';
 import TaskListView from '@/components/tasks/taskListView';
 import TaskKanbanView from '@/components/tasks/taskKanbanView';
 import TaskViewDialog from '@/components/tasks/taskViewDialog';
-import TaskStatsCards from '@/components/tasks/taskStatsCard';
-import PageSkeleton, { KanbanColumnSkeleton } from '@/components/ui/Skeleton';
+import { KanbanColumnSkeleton, PageSkeleton, TableSkeleton } from '@/components/ui/Skeleton';
 
 export default function TasksPage() {
   // ── State ──────────────────────────────────────────────────────────────────
@@ -190,21 +189,23 @@ export default function TasksPage() {
     }
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
-  const isLoading = loading || kanbanLoading;
+  // Check if we're loading and have no data (initial load)
+  const isInitialLoad = (loading && tasks.length === 0) || (kanbanLoading && kanbanData.length === 0);
+  const isRefreshing = (loading && tasks.length > 0) || (kanbanLoading && kanbanData.length > 0);
 
-  if (isLoading && tasks.length === 0 && kanbanData.length === 0) {
+  // Show skeleton loader only on initial load
+  if (isInitialLoad) {
     return (
       <div className="space-y-6">
         {/* Page Header Skeleton */}
-        <div className="rounded-3xl border border-gray-200 bg-white px-6 py-4 shadow-sm transition-all duration-300">
+        <div className="rounded-md border border-gray-200 bg-white px-6 py-4 transition-all duration-300">
           <div className="flex flex-wrap items-center gap-3">
             <div>
               <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" />
             </div>
             <div className="flex items-center gap-3 ml-auto">
-              <div className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse" />
-              <div className="h-10 w-20 bg-gray-200 rounded-lg animate-pulse" />
+              <div className="h-10 w-20 bg-gray-200 rounded-md animate-pulse" />
+              <div className="h-10 w-32 bg-gray-200 rounded-md animate-pulse" />
             </div>
           </div>
         </div>
@@ -212,7 +213,7 @@ export default function TasksPage() {
         {/* Content Skeleton */}
         <div className="flex-1 overflow-hidden">
           {viewMode === 'list' ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="bg-white rounded-md border border-gray-200 p-4">
               <PageSkeleton />
             </div>
           ) : (
@@ -231,11 +232,8 @@ export default function TasksPage() {
   return (
     <>
       <div className="space-y-6">
-        {/* Stats */}
-        {/* <TaskStatsCards summary={summary} activeTab={activeTab} /> */}
-
         {/* Page Header (Matching Leads) */}
-        <div className="rounded-3xl border border-gray-200 bg-white px-6 py-4 shadow-sm transition-all duration-300">
+        <div className="rounded-md border border-gray-200 bg-white px-6 py-4 transition-all duration-300">
           <div className="flex flex-wrap items-center gap-3">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>
@@ -243,7 +241,7 @@ export default function TasksPage() {
 
             <div className="flex items-center gap-3 ml-auto">
               {/* View Toggle */}
-              <div className="relative flex items-center bg-gray-100 p-1 rounded-lg w-fit">
+              <div className="relative flex items-center bg-gray-100 p-1 rounded-md w-fit">
                 <div
                   className={`absolute z-0 top-1 bottom-1 w-10 rounded-md bg-secondary transition-all duration-300 ease-in-out ${viewMode === 'list' ? 'left-1' : 'left-[calc(50%)]'
                     }`}
@@ -275,7 +273,7 @@ export default function TasksPage() {
 
               <button
                 onClick={() => { setEditTask(null); setShowDialog(true); }}
-                className="cursor-pointer flex items-center gap-2 px-6 py-2.5 rounded-xl bg-secondary hover:bg-blue-700 text-white text-sm font-semibold shadow-md active:scale-95 transition-all"
+                className="cursor-pointer flex items-center gap-2 px-6 py-2.5 rounded-md bg-secondary hover:bg-blue-700 text-white text-sm font-semibold shadow-md active:scale-95 transition-all"
               >
                 <Plus className="w-4 h-4" />
                 Add Task
@@ -316,6 +314,7 @@ export default function TasksPage() {
               onEdit={(task) => { setEditTask(task); setShowDialog(true); }}
               onDelete={(task) => setDeleteTask(task)}
               onRefresh={refreshData}
+              loading={kanbanLoading}
             />
           )}
         </div>
