@@ -4,7 +4,7 @@
 
 import { useRouter } from 'next/router';
 import { useEffect, useState, useMemo } from 'react';
-import { LayoutDashboard, ListCollapse, Plus, Filter, KanbanIcon, Kanban, Search } from 'lucide-react';
+import { ListCollapse, Plus, Filter, Kanban, Search } from 'lucide-react';
 import axios from 'axios';
 import { baseUrl, getAuthToken } from '@/config';
 
@@ -18,16 +18,12 @@ import { PageSkeleton, KanbanColumnSkeleton } from '@/components/ui/Skeleton';
 // ── Types ────────────────────────────────────────────────────────────────────
 import {
   ApiLead,
-  ApiSource,
-  ApiStatus,
-  ApiUser,
-  LeadLabel,
 } from '@/components/leads/types';
 
 // ── Hooks / Config ───────────────────────────────────────────────────────────
 import { useLeadsData } from '@/components/leads/useLeadsData';
-import FormSelect, { FormMultiSelect } from '@/components/ui/FormSelect';
 import FormInput from '@/components/ui/Input';
+import { FormMultiSelect } from '@/components/ui/FormSelect';
 
 export type ViewMode = 'list' | 'kanban';
 export type KanbanSubView = 'board' | 'lost' | 'won';
@@ -49,6 +45,9 @@ export default function LeadsPage() {
   // ── Active view (list | kanban) ──────────────────────────────────────────
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [activeTab, setActiveTab] = useState<'all' | 'my'>('all');
+
+  // ── Kanban sub-view — lifted here so hook knows which data to fetch ───────
+  const [kanbanSubView, setKanbanSubView] = useState<KanbanSubView>('board');
 
   // ── Search & Filters ─────────────────────────────────────────────────────
   const [search, setSearch] = useState('');
@@ -106,15 +105,18 @@ export default function LeadsPage() {
     fetchPermissions();
   }, [token]);
 
-  const filters = useMemo(() => ({
-    search: debouncedSearch,
-    status: statusFilter.length > 0 ? statusFilter.join(',') : '',
-    source: sourceFilter.length > 0 ? sourceFilter.join(',') : '',
-    staff: staffFilter.length > 0 ? staffFilter.join(',') : '',
-    date: dateFilter
-  }), [debouncedSearch, statusFilter, sourceFilter, staffFilter, dateFilter]);
+  const filters = useMemo(
+    () => ({
+      search: debouncedSearch,
+      status: statusFilter.length > 0 ? statusFilter.join(',') : '',
+      source: sourceFilter.length > 0 ? sourceFilter.join(',') : '',
+      staff: staffFilter.length > 0 ? staffFilter.join(',') : '',
+      date: dateFilter,
+    }),
+    [debouncedSearch, statusFilter, sourceFilter, staffFilter, dateFilter]
+  );
 
-  // ── Data ─────────────────────────────────────────────────────────────────
+  // ── Data — pass kanbanSubView so hook fetches only what's needed ──────────
   const {
     leads,
     leadsList,
@@ -123,12 +125,15 @@ export default function LeadsPage() {
     sources,
     statuses,
     staffMembers,
-    leadLabels,
     counts,
     loading,
     refetchAll,
+    fetchLeadsList,
     findLeadById,
-  } = useLeadsData(activeTab, filters);
+    listPagination,
+    lostPagination,
+    wonPagination,
+  } = useLeadsData(activeTab, filters, viewMode, kanbanSubView);
 
   // ── Sync URL → state ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -154,14 +159,12 @@ export default function LeadsPage() {
   };
 
   const handleEdit = (lead: ApiLead) => {
-    // Only allow edit if user has update permission
     if (!leadPermissions?.update) return;
     setEditingLead(lead);
     setShowAddDialog(true);
   };
 
   const handleView = (lead: ApiLead) => {
-    // Only allow view if user has permission
     if (!canRead) return;
     setViewingLead(lead);
   };
@@ -171,7 +174,7 @@ export default function LeadsPage() {
     setEditingLead(null);
   };
 
-  // Check permissions
+  // ── Permission flags ──────────────────────────────────────────────────────
   const canCreate = !!leadPermissions?.create;
   const canRead = !!(leadPermissions?.readAll || leadPermissions?.readOwn);
   const canReadAll = !!leadPermissions?.readAll;
@@ -182,7 +185,23 @@ export default function LeadsPage() {
   const canTransfer = !!leadPermissions?.transfer;
   const canConvert = !!leadPermissions?.convert;
 
-  // If user doesn't have read permission, show access denied
+  const clearFilters = () => {
+    setStatusFilter([]);
+    setSourceFilter([]);
+    setStaffFilter([]);
+    setDateFilter('');
+    setSearch('');
+  };
+
+  const hasActiveFilters = !!(
+    statusFilter.length > 0 ||
+    sourceFilter.length > 0 ||
+    staffFilter.length > 0 ||
+    dateFilter ||
+    search
+  );
+
+  // ── Access denied ─────────────────────────────────────────────────────────
   if (!canRead && !loading && leadPermissions !== null) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -194,11 +213,10 @@ export default function LeadsPage() {
     );
   }
 
-  // Show skeleton loader when loading
+  // ── Loading skeleton ──────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex h-full flex-col gap-4 relative overflow-hidden">
-        {/* Page Header & Unified Toolbar Skeleton */}
         <div className="rounded-md border border-gray-200 bg-white px-6 py-4 transition-all duration-300">
           <div className="flex flex-wrap items-center gap-3">
             <div>
@@ -229,16 +247,7 @@ export default function LeadsPage() {
     );
   }
 
-  const clearFilters = () => {
-    setStatusFilter([]);
-    setSourceFilter([]);
-    setStaffFilter([]);
-    setDateFilter('');
-    setSearch('');
-  };
-
-  const hasActiveFilters = !!(statusFilter.length > 0 || sourceFilter.length > 0 || staffFilter.length > 0 || dateFilter || search);
-
+  // ── Main render ───────────────────────────────────────────────────────────
   return (
     <div className="flex h-full flex-col gap-4 relative overflow-hidden">
 
@@ -249,37 +258,74 @@ export default function LeadsPage() {
             <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
           </div>
 
+          {/* Search Bar */}
+          <div className="flex-1 max-w-md">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search leads..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
           <div className="flex items-center gap-3 ml-auto">
+            {/* Tab Toggle (All/My) */}
+            {canReadAll && canReadOwn && (
+              <div className="relative flex items-center bg-gray-100 p-1 rounded-md">
+                <button
+                  onClick={() => setActiveTab('all')}
+                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  All Leads
+                </button>
+                <button
+                  onClick={() => setActiveTab('my')}
+                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'my' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  My Leads
+                </button>
+              </div>
+            )}
+
             {/* Advanced Filter Button */}
             <button
               onClick={() => setShowFilterDrawer(!showFilterDrawer)}
-              className={`relative flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${showFilterDrawer || hasActiveFilters
-                ? 'bg-primary-50 text-primary-500 border border-primary-200 hover:bg-primary-100'
-                : 'bg-gray-100 text-gray-700 border border-transparent hover:bg-gray-200'
-                }`}
+              className={`relative flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${
+                showFilterDrawer || hasActiveFilters
+                  ? 'bg-primary-50 text-primary-600 border border-primary-200 hover:bg-primary-100'
+                  : 'bg-gray-100 text-gray-700 border border-transparent hover:bg-gray-200'
+              }`}
             >
               <Filter className="h-5 w-4" />
               <span>Filters</span>
+              {hasActiveFilters && (
+                <span className="absolute -top-1 -right-1 h-2 w-2 bg-primary-500 rounded-full"></span>
+              )}
             </button>
 
             {/* View toggle */}
             <div className="relative flex items-center bg-gray-100 p-1 rounded-md w-fit">
               <div
-                className={`absolute z-0 top-1 bottom-1 w-10 rounded-md bg-secondary transition-all duration-300 ease-in-out ${viewMode === 'list' ? 'left-1' : 'left-[calc(50%)]'
-                  }`}
-                title='view'
+                className={`absolute z-0 top-1 bottom-1 w-10 rounded-md bg-secondary transition-all duration-300 ease-in-out ${
+                  viewMode === 'list' ? 'left-1' : 'left-[calc(50%)]'
+                }`}
+                title="view"
               />
               <button
                 onClick={() => switchView('list')}
                 className={`relative z-10 cursor-pointer flex items-center justify-center w-10 h-10 rounded-md transition-colors duration-300 ${viewMode === 'list' ? 'text-white' : 'text-gray-700'}`}
-                title='list'
+                title="List View"
               >
                 <ListCollapse className="h-5 w-5 text-current" />
               </button>
               <button
                 onClick={() => switchView('kanban')}
                 className={`relative z-10 cursor-pointer flex items-center justify-center w-10 h-10 rounded-md transition-colors duration-300 ${viewMode === 'kanban' ? 'text-white' : 'text-gray-700'}`}
-                title='kanban'
+                title="Kanban View"
               >
                 <Kanban className="h-5 w-5 text-current" />
               </button>
@@ -298,8 +344,14 @@ export default function LeadsPage() {
           </div>
         </div>
 
-        {/* ── Filter Section (Inline Expandable) ────────────────────────────────── */}
-        <div className={`grid transition-all duration-300 ease-in-out ${showFilterDrawer ? 'grid-rows-[1fr] opacity-100 mt-4 pt-4 border-t border-gray-100' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
+        {/* ── Filter Section (Inline Expandable) ────────────────────────────── */}
+        <div
+          className={`grid transition-all duration-300 ease-in-out ${
+            showFilterDrawer
+              ? 'grid-rows-[1fr] opacity-100 mt-4 pt-4 border-t border-gray-100'
+              : 'grid-rows-[0fr] opacity-0 overflow-hidden'
+          }`}
+        >
           <div className="overflow-hidden">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
@@ -307,10 +359,7 @@ export default function LeadsPage() {
                   label="Lead Status"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e)}
-                  options={statuses.map((s) => ({
-                    value: s._id,
-                    label: s.name,
-                  }))}
+                  options={statuses.map((s) => ({ value: s._id, label: s.name }))}
                 />
               </div>
 
@@ -319,10 +368,7 @@ export default function LeadsPage() {
                   label="Lead Source"
                   value={sourceFilter}
                   onChange={(e) => setSourceFilter(e)}
-                  options={sources.map((s) => ({
-                    value: s._id,
-                    label: s.name,
-                  }))}
+                  options={sources.map((s) => ({ value: s._id, label: s.name }))}
                 />
               </div>
 
@@ -331,10 +377,7 @@ export default function LeadsPage() {
                   label="Assigned Staff"
                   value={staffFilter}
                   onChange={(e) => setStaffFilter(e)}
-                  options={staffMembers.map((s) => ({
-                    value: s._id,
-                    label: s.fullName,
-                  }))}
+                  options={staffMembers.map((s) => ({ value: s._id, label: s.fullName }))}
                 />
               </div>
 
@@ -368,6 +411,7 @@ export default function LeadsPage() {
         </div>
       </div>
 
+      {/* ── Main Content ─────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-hidden">
         {viewMode === 'list' ? (
           <LeadsListView
@@ -380,6 +424,7 @@ export default function LeadsPage() {
             scope={activeTab}
             filters={filters}
             externalLeads={leadsList}
+            fetchLeadsList={fetchLeadsList}
             loading={loading}
             permissions={{
               create: canCreate,
@@ -391,6 +436,7 @@ export default function LeadsPage() {
               transfer: canTransfer,
               convert: canConvert,
             }}
+            pagination={listPagination}
           />
         ) : (
           <LeadsKanbanView
@@ -404,6 +450,11 @@ export default function LeadsPage() {
             onRefresh={refetchAll}
             scope={activeTab}
             filters={filters}
+            // Pass separate paginations for lost/won
+            lostPagination={lostPagination}
+            wonPagination={wonPagination}
+            // Notify parent when sub-view changes so hook fetches correct data
+            onSubViewChange={setKanbanSubView}
             permissions={{
               create: canCreate,
               readAll: canReadAll,

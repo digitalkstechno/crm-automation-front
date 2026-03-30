@@ -36,8 +36,8 @@ type TableLead = {
   note?: string;
   isActive?: boolean;
   attachments?: { name: string; url?: string }[];
-  leadLabel?: Array<{ _id: string; name: string; color: string }>; // Changed to array
-  _raw?: any; // full backend object for edit
+  leadLabel?: Array<{ _id: string; name: string; color: string }>;
+  _raw?: any;
 };
 
 interface Props {
@@ -65,8 +65,17 @@ interface Props {
     staff?: string;
     date?: string;
   };
-  externalLeads?: ApiLead[]; // NEW: optional external leads from parent
+  externalLeads?: ApiLead[];
   loading?: boolean;
+  // Add pagination props from parent
+  pagination?: {
+    currentPage: number;
+    rowsPerPage: number;
+    totalPages: number;
+    totalItems: number;
+    handlePageChange: (page: number) => void;
+    handleRowsPerPageChange: (rows: number) => void;
+  };
 }
 
 function mapLead(item: any): TableLead {
@@ -75,85 +84,52 @@ function mapLead(item: any): TableLead {
     name: item.fullName,
     companyName: item.companyName,
     address: item.address,
-    phone: item.contact,
+    phone: item.contact || item.phone,
     email: item.email,
-    source: item.leadSource?.name || '-',
-    status: item.leadStatus?.name || '-',
+    source: item.leadSource?.name || item.source?.name || '-',
+    status: item.leadStatus?.name || item.status?.name || '-',
     staff: item.assignedTo?.fullName || '-',
     priority: item.priority?.toUpperCase() || 'MEDIUM',
     lastFollowUp: item.updatedAt
       ? new Date(item.updatedAt).toLocaleDateString()
       : '-',
     isActive: item.isActive,
-    leadLabel: item.leadLabel || [], // Ensure it's always an array
+    leadLabel: item.leadLabel || [],
     _raw: item,
   };
 }
 
 export default function LeadsListView({
-  statuses, sources, staffMembers,
-  onEdit, onView, onRefresh, permissions, scope = 'all',
+  statuses,
+  sources,
+  staffMembers,
+  onEdit,
+  onView,
+  onRefresh,
+  permissions,
+  scope = 'all',
   filters = {},
   externalLeads,
-  loading: loadingProp
+  loading: loadingProp,
+  pagination, // Receive pagination from parent
 }: Props) {
   const router = useRouter();
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
-  const [loading, setLoading] = useState(false);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalRecords, setTotalRecords] = useState(0);
   const [leads, setLeads] = useState<TableLead[]>([]);
   const [showDelete, setShowDelete] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TableLead | null>(null);
+  const [localLoading, setLocalLoading] = useState(false);
 
-  // Use external leads if provided, otherwise fetch from API
+  // Use loading from prop or local state
+  const loading = loadingProp !== undefined ? loadingProp : localLoading;
+
+  // Map external leads to table format when they change
   useEffect(() => {
-    if (externalLeads) {
-      // Apply pagination to external leads
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedLeads = externalLeads.slice(startIndex, endIndex);
-      setLeads(paginatedLeads.map(mapLead));
-      setTotalRecords(externalLeads.length);
-      setTotalPages(Math.ceil(externalLeads.length / limit) || 1);
-      // We only stop local loading once any external loading is done
-      if (loadingProp !== undefined) {
-        setLoading(loadingProp);
-      } else {
-        setLoading(false);
-      }
-    } else {
-      fetchLeads();
-    }
-  }, [externalLeads, page, limit, filters, loadingProp]);
-
-  const fetchLeads = async () => {
-    setLoading(true);
-    try {
-      const url = scope === 'my' ? baseUrl.myLeads : baseUrl.getAllLeads;
-      const res = await axios.get(url, {
-        headers: { Authorization: `Bearer ${getAuthToken()}` },
-        params: {
-          page,
-          limit,
-          search: filters.search || undefined,
-          status: filters.status || undefined,
-          source: filters.source || undefined,
-          staff: filters.staff || undefined,
-          date: filters.date || undefined,
-        },
-      });
-      setLeads((res.data.data || []).map(mapLead));
-      setTotalPages(res.data.pagination?.totalPages || 1);
-      setTotalRecords(res.data.pagination?.totalRecords || 0);
-    } catch (e) {
-      console.error(e);
+    if (externalLeads && externalLeads.length > 0) {
+      setLeads(externalLeads.map(mapLead));
+    } else if (externalLeads && externalLeads.length === 0) {
       setLeads([]);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [externalLeads]);
 
   // ── Columns ──────────────────────────────────────────────────────────────
   const columns: Column<TableLead>[] = [
@@ -168,10 +144,10 @@ export default function LeadsListView({
       render: (_, row) => (
         <div className="space-y-0.5 text-sm text-gray-600">
           <div className="flex items-center gap-1.5">
-            <Phone className="h-3 w-3 text-gray-400" /> {row.phone}
+            <Phone className="h-3 w-3 text-gray-400" /> {row.phone || '-'}
           </div>
           <div className="flex items-center gap-1.5">
-            <Mail className="h-3 w-3 text-gray-400" /> {row.email}
+            <Mail className="h-3 w-3 text-gray-400" /> {row.email || '-'}
           </div>
         </div>
       ),
@@ -182,7 +158,6 @@ export default function LeadsListView({
       key: 'leadLabel',
       label: 'LABEL',
       render: (_: any, row: TableLead) => {
-        // Check if leadLabel exists and has items
         if (!row.leadLabel || row.leadLabel.length === 0) {
           return <span className="text-gray-400">-</span>;
         }
@@ -266,7 +241,6 @@ export default function LeadsListView({
       });
       toast.success('Lead deleted successfully');
       setLeads((prev) => prev.filter((l) => l.id !== deleteTarget.id));
-      setTotalRecords((p) => p - 1);
       onRefresh?.();
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Failed to delete lead');
@@ -276,21 +250,34 @@ export default function LeadsListView({
     }
   };
 
+  // Handle page change from DataTable
+  const handlePageChange = (newPage: number) => {
+    if (pagination) {
+      pagination.handlePageChange(newPage);
+    }
+  };
+
+  // Handle page size change from DataTable
+  const handlePageSizeChange = (newSize: number) => {
+    if (pagination) {
+      pagination.handleRowsPerPageChange(newSize);
+    }
+  };
+
   return (
     <div className="space-y-4">
-
       {/* Data table */}
       <DataTable
         data={leads}
         columns={columns}
         loading={loading}
         pagination
-        currentPage={page}
-        totalPages={totalPages}
-        totalRecords={totalRecords}
-        pageSize={limit}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => { setLimit(size); setPage(1); }}
+        currentPage={pagination?.currentPage || 1}
+        totalPages={pagination?.totalPages || 1}
+        totalRecords={pagination?.totalItems || 0}
+        pageSize={pagination?.rowsPerPage || 10}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
         actions
         onView={handleView}
         onEdit={permissions?.update ? handleEdit : undefined}

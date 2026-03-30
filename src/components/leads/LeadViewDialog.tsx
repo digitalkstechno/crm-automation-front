@@ -469,13 +469,13 @@
 // components/leads/LeadViewDialog.tsx
 // View dialog with editable Status + Next Follow-up (shared by List and Kanban)
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import Dialog, { CenterDialog } from '@/components/Dialog';
 import { baseUrl, getAuthToken } from '@/config';
 import { ApiLead, ApiStatus } from './types';
-import { Eye, Download, FileText, Image, File, FileSpreadsheet } from 'lucide-react';
+import { Eye, Download, FileText, Image, File, FileSpreadsheet, Search } from 'lucide-react';
 import { getFileIcon } from '@/utills/utill';
 
 interface Props {
@@ -508,6 +508,7 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
   const [previewAttachment, setPreviewAttachment] = useState<{ url: string; name: string; type: string } | null>(null);
   const [localFollowUps, setLocalFollowUps] = useState<FollowUp[]>([]);
   const [staffInfo, setStaffInfo] = useState<any>(null);
+  const [followUpSearch, setFollowUpSearch] = useState('');
 
   useEffect(() => {
     if (lead) {
@@ -517,6 +518,17 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
       setLocalFollowUps(lead.followUps || []);
     }
   }, [lead]);
+
+  const filteredFollowUps = useMemo(() => {
+    if (!followUpSearch.trim()) return localFollowUps;
+    const search = followUpSearch.toLowerCase();
+    return localFollowUps.filter(f => 
+      (f.note?.toLowerCase() || '').includes(search) ||
+      (f.date?.toLowerCase() || '').includes(search) ||
+      (f.time?.toLowerCase() || '').includes(search) ||
+      (f.staff?.fullName?.toLowerCase() || '').includes(search)
+    );
+  }, [localFollowUps, followUpSearch]);
 
   // Get current staff info from localStorage or API
   useEffect(() => {
@@ -740,7 +752,7 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
               </div>
 
               {/* Add New Follow-up Section */}
-              <div className="mb-6 p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
+              <div className="mb-6 p-4 bg-white border border-gray-200 rounded-xl">
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">Add New Follow-up</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
@@ -791,50 +803,77 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
 
               {/* Follow-up Table */}
               {localFollowUps && localFollowUps.length > 0 ? (
-                <div className="overflow-x-auto rounded-xl border border-gray-100 bg-white">
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr className="bg-gray-50 border-b border-gray-100">
-                        <th className="px-4 py-3 font-semibold text-gray-600">Date & Time</th>
-                        <th className="px-4 py-3 font-semibold text-gray-600">Note</th>
-                        <th className="px-4 py-3 font-semibold text-gray-600">Staff</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {localFollowUps.map((f, i) => (
-                        <tr key={f._id || i} className={`hover:bg-gray-50/50 transition-colors ${f._id?.startsWith('temp_') ? 'animate-pulse bg-blue-50/30' : ''}`}>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="font-medium text-gray-900">
-                              {f.date ? new Date(f.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
-                            </div>
-                            {f.time && (
-                              <div className="text-xs text-gray-500">{f.time}</div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 max-w-xs overflow-hidden">
-                            <p className="text-gray-700 break-words leading-relaxed">{f.note}</p>
-                            {f._id?.startsWith('temp_') && (
-                              <span className="inline-flex items-center gap-1 mt-1 text-xs text-blue-600">
-                                <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Saving...
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <div className="h-6 w-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold">
-                                {f.staff?.fullName?.charAt(0) || staffInfo?.fullName?.charAt(0) || 'U'}
-                              </div>
-                              <span className="text-gray-600">{f.staff?.fullName || staffInfo?.fullName || 'Current User'}</span>
-                            </div>
-                          </td>
+                <div className="rounded-xl border border-gray-200 bg-white">
+                  {/* Search Bar */}
+                  <div className="border-b border-gray-200 px-4 py-3">
+                    <div className="relative max-w-md">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Search follow-ups..."
+                        value={followUpSearch}
+                        onChange={(e) => setFollowUpSearch(e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-4 py-2 text-sm text-gray-700 placeholder:text-gray-400 transition-all duration-200 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 hover:border-gray-300"
+                      />
+                    </div>
+                    {followUpSearch && (
+                      <p className="mt-2 text-xs text-gray-500">
+                        Showing {filteredFollowUps.length} of {localFollowUps.length} records
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="bg-gray-100 border-b border-gray-200">
+                          <th className="px-4 py-3 font-semibold text-gray-600">Date & Time</th>
+                          <th className="px-4 py-3 font-semibold text-gray-600">Note</th>
+                          <th className="px-4 py-3 font-semibold text-gray-600">Staff</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {(followUpSearch ? filteredFollowUps : localFollowUps).map((f, i) => (
+                          <tr key={f._id || i} className={`hover:bg-gray-50/50 transition-colors ${f._id?.startsWith('temp_') ? 'animate-pulse bg-blue-50/30' : ''}`}>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="font-medium text-gray-900">
+                                {f.date ? new Date(f.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                              </div>
+                              {f.time && (
+                                <div className="text-xs text-gray-500">{f.time}</div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 max-w-xs overflow-hidden">
+                              <p className="text-gray-700 break-words leading-relaxed">{f.note}</p>
+                              {f._id?.startsWith('temp_') && (
+                                <span className="inline-flex items-center gap-1 mt-1 text-xs text-blue-600">
+                                  <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  Saving...
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="h-6 w-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold">
+                                  {f.staff?.fullName?.charAt(0) || staffInfo?.fullName?.charAt(0) || 'U'}
+                                </div>
+                                <span className="text-gray-600">{f.staff?.fullName || staffInfo?.fullName || 'Current User'}</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {followUpSearch && filteredFollowUps.length === 0 && (
+                      <div className="py-8 text-center text-gray-500">
+                        <p className="text-sm">No follow-ups match your search.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="py-8 text-center bg-white rounded-xl border border-gray-100 border-dashed">
