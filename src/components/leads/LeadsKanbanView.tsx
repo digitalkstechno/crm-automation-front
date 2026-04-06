@@ -93,6 +93,8 @@ export default function LeadsKanbanView({
 
     const [search, setSearch] = useState('');
     const [draggingId, setDraggingId] = useState<string | null>(null);
+    const [updatingId, setUpdatingId] = useState<string | null>(null);
+    const [optimisticStatuses, setOptimisticStatuses] = useState<Record<string, string>>({});
     const [pageMap, setPageMap] = useState<Record<string, number>>({});
     const [hasMoreMap, setHasMoreMap] = useState<Record<string, boolean>>({});
     const [loadingMoreMap, setLoadingMoreMap] = useState<Record<string, boolean>>({});
@@ -139,7 +141,10 @@ export default function LeadsKanbanView({
         .map((s) => ({
             id: s._id,
             title: s.name,
-            leads: filteredLeads.filter((l) => l.leadStatus?._id === s._id),
+            leads: filteredLeads.filter((l) => {
+                const effectiveStatusId = optimisticStatuses[l._id] || l.leadStatus?._id;
+                return effectiveStatusId === s._id;
+            }),
             count: s.count,
         }))
         .filter((group) => {
@@ -188,18 +193,34 @@ export default function LeadsKanbanView({
         if (!draggingId || !permissions?.update) return;
         const status = statuses.find((s) => s._id === statusId);
         if (!status) return;
+        
+        const currentDropId = draggingId;
+        setDraggingId(null);
+        setUpdatingId(currentDropId);
+        
+        // Optimistic UI update
+        setOptimisticStatuses((prev) => ({ ...prev, [currentDropId]: statusId }));
+
         try {
             await axios.put(
-                `${baseUrl.updateLead}/${draggingId}`,
+                `${baseUrl.updateKanbanStatus}/${currentDropId}/kanban-status`,
                 { leadStatus: statusId },
                 { headers: { Authorization: `Bearer ${token()}` } }
             );
             toast.success(`Lead moved to ${status.name}`);
+            // Fire and forget refresh so it updates counts but doesn't block UI locally.
             onRefresh();
         } catch {
             toast.error('Failed to update lead status');
+            // Revert optimistic
+            setOptimisticStatuses((prev) => {
+                const next = { ...prev };
+                delete next[currentDropId];
+                return next;
+            });
+        } finally {
+            setUpdatingId(null);
         }
-        setDraggingId(null);
     };
 
     // ── Mark lost / won / reactivate ──────────────────────────────────────
@@ -402,6 +423,7 @@ export default function LeadsKanbanView({
                                             <KanbanCard
                                                 key={lead._id}
                                                 lead={lead}
+                                                isUpdating={updatingId === lead._id}
                                                 onDragStart={() => {
                                                     if (permissions?.update) setDraggingId(lead._id);
                                                 }}

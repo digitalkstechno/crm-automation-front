@@ -25,7 +25,7 @@ interface Props {
 type SubView = 'board' | 'lost' | 'won';
 
 export default function KanbanCard({
-    lead, onDragStart, onView, onEdit, onMarkLost, onMarkWon,
+    lead, onDragStart, onView, onEdit, onMarkLost, onMarkWon, isUpdating
 }: {
     lead: ApiLead;
     onDragStart: () => void;
@@ -33,13 +33,21 @@ export default function KanbanCard({
     onEdit?: () => void;
     onMarkLost?: () => void;
     onMarkWon?: () => void;
+    isUpdating?: boolean;
 }) {
     return (
         <div
-            draggable
-            onDragStart={onDragStart}
-            className="cursor-move rounded-xl bg-white p-3 shadow-sm hover:shadow-md transition-shadow"
+            draggable={!isUpdating}
+            onDragStart={!isUpdating ? onDragStart : undefined}
+            className={`relative rounded-xl bg-white p-3 shadow-sm transition-shadow ${
+                isUpdating ? "opacity-60 pointer-events-none" : "cursor-move hover:shadow-md"
+            }`}
         >
+            {isUpdating && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/40">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
+                </div>
+            )}
             <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                     <div className="font-semibold text-gray-900 truncate">{lead.fullName}</div>
