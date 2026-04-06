@@ -48,28 +48,6 @@ export default function TaskListView({
             render: (v, row) => <span className="font-semibold">{row?.subject}</span>,
         },
         {
-            key: 'status',
-            label: 'STATUS',
-            render: (v, row) => (
-                <InlineDropdown
-                    value={row?.status?._id}
-                    options={taskStatuses.map((s) => ({ value: s._id, label: s.name, cls: '' }))}
-                    onSelect={(val) => onStatusChange(row._id, val)}
-                />
-            ),
-        },
-        {
-            key: 'priority',
-            label: 'PRIORITY',
-            render: (v, row) => (
-                <InlineDropdown
-                    value={v}
-                    options={PRIORITY_OPTIONS}
-                    onSelect={(val) => onPriorityChange(row._id, val)}
-                />
-            ),
-        },
-        {
             key: 'startDate',
             label: 'START DATE',
             render: (v) => (v ? <span style={{ whiteSpace: "nowrap" }}>{moment(v).format('DD-MM-YYYY')}</span> : '-'),
@@ -107,6 +85,28 @@ export default function TaskListView({
                         ))
                         : <span className="text-gray-400">-</span>}
                 </div>
+            ),
+        },
+        {
+            key: 'status',
+            label: 'STATUS',
+            render: (v, row) => (
+                <InlineDropdown
+                    value={row?.status?._id}
+                    options={taskStatuses.map((s) => ({ value: s._id, label: s.name, cls: '' }))}
+                    onSelect={(val) => onStatusChange(row._id, val)}
+                />
+            ),
+        },
+        {
+            key: 'priority',
+            label: 'PRIORITY',
+            render: (v, row) => (
+                <InlineDropdown
+                    value={v}
+                    options={PRIORITY_OPTIONS}
+                    onSelect={(val) => onPriorityChange(row._id, val)}
+                />
             ),
         },
     ];
