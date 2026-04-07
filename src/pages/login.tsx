@@ -27,7 +27,7 @@ export default function LoginPage() {
   // Formik form handling
   const formik = useFormik({
     initialValues: {
-      email: 'admin@gmail.com',
+      email: '',
       password: '',
     },
     validationSchema,
