@@ -297,7 +297,7 @@ export function useLeadsData(
         await Promise.all([fetchLeadsList(activeTab, filters, 1), fetchCounts(activeTab, filters)]);
       } else {
         const calls: Promise<void>[] = [
-          fetchKanbanLeads(activeTab, filters),
+          // Global Kanban fetch removed - component now fetches status-wise
           fetchCounts(activeTab, filters),
         ];
         if (kanbanSubView === 'lost') calls.push(fetchLostLeads(activeTab, filters, 1));
@@ -325,7 +325,7 @@ export function useLeadsData(
       fetchLeadsList(activeTab, filters, 1);
       fetchCounts(activeTab, filters);
     } else {
-      fetchKanbanLeads(activeTab, filters);
+      // fetchKanbanLeads(activeTab, filters); // Status-wise fetching handled by component
       fetchCounts(activeTab, filters);
       if (kanbanSubView === 'lost') fetchLostLeads(activeTab, filters, 1);
       if (kanbanSubView === 'won') fetchWonLeads(activeTab, filters, 1);
@@ -338,7 +338,7 @@ export function useLeadsData(
     if (prevSubView.current === kanbanSubView) return;
     prevSubView.current = kanbanSubView;
     if (viewMode !== 'kanban') return;
-    if (kanbanSubView === 'board') fetchKanbanLeads(activeTab, filters);
+    // if (kanbanSubView === 'board') fetchKanbanLeads(activeTab, filters); // Handled by component
     if (kanbanSubView === 'lost') fetchLostLeads(activeTab, filters, lostPage);
     if (kanbanSubView === 'won') fetchWonLeads(activeTab, filters, wonPage);
   }, [kanbanSubView]); // eslint-disable-line react-hooks/exhaustive-deps

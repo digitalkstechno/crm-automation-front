@@ -6,7 +6,7 @@ import { FiSearch, FiPhone, FiMail } from 'react-icons/fi';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { baseUrl, getAuthToken } from '@/config';
-import { ApiLead, ApiStatus } from './types';
+import { ApiLead } from './types';
 import { RefreshCw } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
 import KanbanCard from './KanbanCard';
@@ -47,24 +47,49 @@ interface Props {
         staff?: string;
         date?: string;
     };
-    // Separate paginations — no shared/global pagination anymore
     lostPagination?: PaginationShape;
     wonPagination?: PaginationShape;
-    // Callback so parent knows which sub-view is active (used by hook to fetch correct data)
     onSubViewChange?: (subView: 'board' | 'lost' | 'won') => void;
 }
 
 type SubView = 'board' | 'lost' | 'won';
 
 export default function LeadsKanbanView({
-    leads, lostLeads, wonLeads,
+    lostLeads, wonLeads,
     statuses,
     onEdit, onView, onRefresh, counts, permissions, scope = 'all',
+    filters,
     lostPagination,
     wonPagination,
     onSubViewChange,
 }: Props) {
     const [subView, setSubView] = useState<SubView>('board');
+    const [search, setSearch] = useState('');
+    const [draggingId, setDraggingId] = useState<string | null>(null);
+    const [updatingId, setUpdatingId] = useState<string | null>(null);
+    
+    // Board state
+    const [boardLeads, setBoardLeads] = useState<Record<string, ApiLead[]>>({});
+    const [columnLoading, setColumnLoading] = useState<Record<string, boolean>>({});
+    const [pageMap, setPageMap] = useState<Record<string, number>>({});
+    const [hasMoreMap, setHasMoreMap] = useState<Record<string, boolean>>({});
+    const [loadingMoreMap, setLoadingMoreMap] = useState<Record<string, boolean>>({});
+
+    const [kanbanVisibleStatusNames, setKanbanVisibleStatusNames] = useState<string[]>([]);
+
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('kanbanVisibleStatusNames');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                setKanbanVisibleStatusNames(Array.isArray(parsed) ? parsed : []);
+            }
+        } catch {
+            setKanbanVisibleStatusNames([]);
+        }
+    }, []);
+
+    const token = () => getAuthToken();
 
     // Notify parent when sub-view changes
     const handleSubViewChange = (v: SubView) => {
@@ -72,287 +97,194 @@ export default function LeadsKanbanView({
         onSubViewChange?.(v);
     };
 
-    // ── Kanban visible columns (persisted in localStorage) ────────────────
-    const [kanbanVisibleStatusNames, setKanbanVisibleStatusNames] = useState<string[]>([]);
-
-    useEffect(() => {
-        try {
-            const stored = localStorage.getItem('kanbanVisibleStatusNames');
-            if (stored) {
-                try {
-                    const parsed = JSON.parse(stored);
-                    setKanbanVisibleStatusNames(Array.isArray(parsed) ? parsed : []);
-                } catch {
-                    setKanbanVisibleStatusNames(stored.split(',').map((s) => s.trim()));
-                }
+    // Fetch leads for a specific status
+    const fetchStatusLeads = useCallback(
+        async (statusId: string, page = 1, isLoadMore = false, isSilent = false) => {
+            if (isLoadMore) {
+                setLoadingMoreMap((p) => ({ ...p, [statusId]: true }));
+            } else if (!isSilent) {
+                setColumnLoading((p) => ({ ...p, [statusId]: true }));
             }
-        } catch {
-            setKanbanVisibleStatusNames([]);
-        }
-    }, []);
 
-    const [search, setSearch] = useState('');
-    const [draggingId, setDraggingId] = useState<string | null>(null);
-    const [updatingId, setUpdatingId] = useState<string | null>(null);
-    const [optimisticStatuses, setOptimisticStatuses] = useState<Record<string, string>>({});
-    const [pageMap, setPageMap] = useState<Record<string, number>>({});
-    const [hasMoreMap, setHasMoreMap] = useState<Record<string, boolean>>({});
-    const [loadingMoreMap, setLoadingMoreMap] = useState<Record<string, boolean>>({});
-    const [extraLeads, setExtraLeads] = useState<ApiLead[]>([]);
-
-    const token = () => getAuthToken();
-
-    // ── Initialize hasMore per status column ──────────────────────────────
-    useEffect(() => {
-        if (!counts) return;
-        const initialHasMore: Record<string, boolean> = {};
-        statuses.forEach((s) => {
-            const total = counts[s._id] || 0;
-            const loaded = leads.filter((l) => l.leadStatus?._id === s._id).length;
-            initialHasMore[s._id] = loaded < total;
-        });
-        setHasMoreMap(initialHasMore);
-    }, [counts, statuses, leads]);
-
-    // Reset extra leads when base leads change (filters/scope change)
-    useEffect(() => {
-        setExtraLeads([]);
-        setPageMap({});
-    }, [scope, leads]);
-
-    // ── Filtered leads ────────────────────────────────────────────────────
-    const allBoardLeads = [...leads];
-    extraLeads.forEach((el) => {
-        if (!allBoardLeads.find((l) => l._id === el._id)) {
-            allBoardLeads.push(el);
-        }
-    });
-
-    const filteredLeads = allBoardLeads.filter(
-        (l) =>
-            !l.isLost &&
-            !l.isWon &&
-            (l.fullName.toLowerCase().includes(search.toLowerCase()) ||
-                l.companyName?.toLowerCase().includes(search.toLowerCase()) ||
-                l.email.toLowerCase().includes(search.toLowerCase()))
-    );
-
-    const statusGroups = statuses
-        .map((s) => ({
-            id: s._id,
-            title: s.name,
-            leads: filteredLeads.filter((l) => {
-                const effectiveStatusId = optimisticStatuses[l._id] || l.leadStatus?._id;
-                return effectiveStatusId === s._id;
-            }),
-            count: s.count,
-        }))
-        .filter((group) => {
-            if (kanbanVisibleStatusNames.length === 0) return true;
-            return kanbanVisibleStatusNames.includes(group.title);
-        });
-
-    // ── Infinite scroll — load more leads in a column ─────────────────────
-    const loadMore = useCallback(
-        async (statusId: string) => {
-            if (loadingMoreMap[statusId] || hasMoreMap[statusId] === false) return;
-            setLoadingMoreMap((p) => ({ ...p, [statusId]: true }));
             try {
-                const nextPage = (pageMap[statusId] || 1) + 1;
-                const res = await axios.get(
-                    `${baseUrl.getAllLeads}?status=${statusId}&page=${nextPage}&limit=10${scope === 'my' ? '&my=true' : ''}`,
-                    { headers: { Authorization: `Bearer ${token()}` } }
-                );
-                const data: ApiLead[] = res.data?.data || [];
-                if (data.length > 0) {
-                    setExtraLeads((prev) => {
-                        const newLeads = data.filter((d) => !prev.some((p) => p._id === d._id));
-                        return [...prev, ...newLeads];
-                    });
-                    setPageMap((p) => ({ ...p, [statusId]: nextPage }));
+                const res = await axios.get(baseUrl.getKanbanStatusLeads, {
+                    headers: { Authorization: `Bearer ${token()}` },
+                    params: {
+                        statusId,
+                        page,
+                        limit: 10,
+                        my: scope === 'my' || undefined,
+                        search: search || undefined,
+                        source: filters.source || undefined,
+                        staff: filters.staff || undefined,
+                        date: filters.date || undefined,
+                    },
+                });
 
-                    const total = counts ? counts[statusId] || 0 : 0;
-                    const initialCount = leads.filter((l) => l.leadStatus?._id === statusId).length;
-                    const extraCount = extraLeads.filter((l) => l.leadStatus?._id === statusId).length;
-                    const totalLoaded = initialCount + extraCount + data.length;
-                    setHasMoreMap((p) => ({ ...p, [statusId]: totalLoaded < total }));
-                } else {
-                    setHasMoreMap((p) => ({ ...p, [statusId]: false }));
-                }
-            } catch {
-                /* silent */
+                const newData: ApiLead[] = res.data?.data || [];
+                const pagination = res.data?.pagination || {};
+
+                setBoardLeads((prev) => ({
+                    ...prev,
+                    [statusId]: isLoadMore ? [...(prev[statusId] || []), ...newData] : newData,
+                }));
+
+                setPageMap((prev) => ({ ...prev, [statusId]: page }));
+                setHasMoreMap((prev) => ({
+                    ...prev,
+                    [statusId]: page < (pagination.totalPages || 1),
+                }));
+            } catch (error) {
+                console.error(`Failed to fetch leads for status ${statusId}:`, error);
             } finally {
+                setColumnLoading((p) => ({ ...p, [statusId]: false }));
                 setLoadingMoreMap((p) => ({ ...p, [statusId]: false }));
             }
         },
-        [loadingMoreMap, hasMoreMap, pageMap, scope, counts, leads, extraLeads]
+        [scope, search, filters]
     );
 
-    // ── Drag & drop ───────────────────────────────────────────────────────
-    const handleDrop = async (statusId: string) => {
+    // Initial fetch and re-fetch on filter change
+    useEffect(() => {
+        if (subView !== 'board') return;
+        statuses.forEach((s) => {
+            const isVisible = kanbanVisibleStatusNames.length === 0 || kanbanVisibleStatusNames.includes(s.name);
+            if (isVisible) {
+                fetchStatusLeads(s._id, 1);
+            }
+        });
+    }, [subView, statuses, kanbanVisibleStatusNames, scope, search, filters, fetchStatusLeads]);
+
+    const loadMore = useCallback(
+        async (statusId: string) => {
+            if (loadingMoreMap[statusId] || hasMoreMap[statusId] === false) return;
+            const nextPage = (pageMap[statusId] || 1) + 1;
+            fetchStatusLeads(statusId, nextPage, true);
+        },
+        [loadingMoreMap, hasMoreMap, pageMap, fetchStatusLeads]
+    );
+
+    const handleDrop = async (newStatusId: string) => {
         if (!draggingId || !permissions?.update) return;
-        const status = statuses.find((s) => s._id === statusId);
-        if (!status) return;
+
+        let sourceStatusId = '';
+        const entries = Object.entries(boardLeads);
+        for (let i = 0; i < entries.length; i++) {
+            const [sId, leadsArr] = entries[i];
+            if (leadsArr.some(l => l._id === draggingId)) {
+                sourceStatusId = sId;
+                break;
+            }
+        }
+
+        if (sourceStatusId === newStatusId || !sourceStatusId) {
+            setDraggingId(null);
+            return;
+        }
+
+        const targetStatus = statuses.find((s) => s._id === newStatusId);
+        if (!targetStatus) return;
         
         const currentDropId = draggingId;
         setDraggingId(null);
         setUpdatingId(currentDropId);
         
         // Optimistic UI update
-        setOptimisticStatuses((prev) => ({ ...prev, [currentDropId]: statusId }));
+        setBoardLeads(prev => {
+            const next = { ...prev };
+            const sourceLeads = [...(next[sourceStatusId] || [])];
+            const leadIndex = sourceLeads.findIndex(l => l._id === currentDropId);
+            if (leadIndex > -1) {
+                const [lead] = sourceLeads.splice(leadIndex, 1);
+                next[sourceStatusId] = sourceLeads;
+                next[newStatusId] = [lead, ...(next[newStatusId] || [])];
+                lead.leadStatus = targetStatus;
+            }
+            return next;
+        });
 
         try {
             await axios.put(
                 `${baseUrl.updateKanbanStatus}/${currentDropId}/kanban-status`,
-                { leadStatus: statusId },
+                { leadStatus: newStatusId },
                 { headers: { Authorization: `Bearer ${token()}` } }
             );
-            toast.success(`Lead moved to ${status.name}`);
-            // Fire and forget refresh so it updates counts but doesn't block UI locally.
+            toast.success(`Lead moved to ${targetStatus.name}`);
+            
+            // SILENT RE-FETCH: sync counts/order etc in background without showing loaders
+            fetchStatusLeads(sourceStatusId, 1, false, true);
+            fetchStatusLeads(newStatusId, 1, false, true);
+            
             onRefresh();
         } catch {
             toast.error('Failed to update lead status');
-            // Revert optimistic
-            setOptimisticStatuses((prev) => {
-                const next = { ...prev };
-                delete next[currentDropId];
-                return next;
-            });
+            // Re-fetch with loader to show the revert
+            fetchStatusLeads(sourceStatusId, 1);
+            fetchStatusLeads(newStatusId, 1);
         } finally {
             setUpdatingId(null);
         }
     };
 
-    // ── Mark lost / won / reactivate ──────────────────────────────────────
+    const statusGroups = statuses
+        .map((s) => ({
+            id: s._id,
+            title: s.name,
+            leads: boardLeads[s._id] || [],
+            count: counts ? counts[s._id] || 0 : 0,
+            isLoading: columnLoading[s._id]
+        }))
+        .filter((group) => {
+            if (kanbanVisibleStatusNames.length === 0) return true;
+            return kanbanVisibleStatusNames.includes(group.title);
+        });
+
     const markLost = async (id: string) => {
         try {
-            await axios.put(
-                `${baseUrl.updateLead}/${id}`,
-                { isLost: true, lostDate: new Date().toISOString() },
-                { headers: { Authorization: `Bearer ${token()}` } }
-            );
+            await axios.put(`${baseUrl.updateLead}/${id}`, { isLost: true, lostDate: new Date().toISOString() }, { headers: { Authorization: `Bearer ${token()}` } });
             toast.success('Lead marked as lost');
             onRefresh();
-        } catch {
-            toast.error('Failed to update lead');
-        }
+        } catch { toast.error('Failed to update lead'); }
     };
 
     const markWon = async (id: string) => {
         try {
-            await axios.put(
-                `${baseUrl.updateLead}/${id}`,
-                { isWon: true, wonDate: new Date().toISOString() },
-                { headers: { Authorization: `Bearer ${token()}` } }
-            );
+            await axios.put(`${baseUrl.updateLead}/${id}`, { isWon: true, wonDate: new Date().toISOString() }, { headers: { Authorization: `Bearer ${token()}` } });
             toast.success('Lead marked as won');
             onRefresh();
-        } catch {
-            toast.error('Failed to update lead');
-        }
+        } catch { toast.error('Failed to update lead'); }
     };
 
     const reactivate = async (id: string) => {
         try {
-            await axios.put(
-                `${baseUrl.updateLead}/${id}`,
-                { isLost: false, isWon: false },
-                { headers: { Authorization: `Bearer ${token()}` } }
-            );
+            await axios.put(`${baseUrl.updateLead}/${id}`, { isLost: false, isWon: false }, { headers: { Authorization: `Bearer ${token()}` } });
             toast.success('Lead reactivated');
             onRefresh();
-        } catch {
-            toast.error('Failed to reactivate lead');
-        }
+        } catch { toast.error('Failed to reactivate lead'); }
     };
 
-    // ── Columns ───────────────────────────────────────────────────────────
     const lostLeadsColumns: Column<ApiLead>[] = [
-        {
-            key: 'fullName',
-            label: 'LEAD NAME',
-            render: (v) => (
-                <div>
-                    <div className="font-semibold text-gray-900">{v}</div>
-                    <span className="text-xs text-red-500">• Lost</span>
-                </div>
-            ),
-        },
-        {
-            key: 'companyName',
-            label: 'COMPANY',
-            render: (v) => <span className="text-sm">{v || '-'}</span>,
-        },
-        {
-            key: 'address',
-            label: 'LOCATION',
-            render: (v) => <span className="text-sm">{v || '-'}</span>,
-        },
-        {
-            key: 'contact',
-            label: 'CONTACT',
-            render: (v, row) => <ContactCell phone={v} email={row.email} />,
-        },
-        {
-            key: 'lostDate',
-            label: 'LOST DATE',
-            render: (v) => (v ? new Date(v).toLocaleDateString() : 'N/A'),
-        },
-        {
-            key: 'assignedTo',
-            label: 'ASSIGNED TO',
-            render: (v) => v?.fullName || '-',
-        },
-        {
-            key: 'lostReason',
-            label: 'REASON',
-            render: (v) => v || 'Not specified',
-        },
+        { key: 'fullName', label: 'LEAD NAME', render: (v) => (<div><div className="font-semibold text-gray-900">{v}</div><span className="text-xs text-red-500">• Lost</span></div>) },
+        { key: 'companyName', label: 'COMPANY', render: (v) => <span className="text-sm">{v || '-'}</span> },
+        { key: 'address', label: 'LOCATION', render: (v) => <span className="text-sm">{v || '-'}</span> },
+        { key: 'contact', label: 'CONTACT', render: (v, row) => <ContactCell phone={v} email={row.email} /> },
+        { key: 'lostDate', label: 'LOST DATE', render: (v) => (v ? new Date(v).toLocaleDateString() : 'N/A') },
+        { key: 'assignedTo', label: 'ASSIGNED TO', render: (v) => v?.fullName || '-' },
+        { key: 'lostReason', label: 'REASON', render: (v) => v || 'Not specified' },
     ];
 
     const wonLeadsColumns: Column<ApiLead>[] = [
-        {
-            key: 'fullName',
-            label: 'LEAD NAME',
-            render: (v) => <span className="font-semibold text-gray-900">{v}</span>,
-        },
-        {
-            key: 'companyName',
-            label: 'COMPANY',
-            render: (v) => <span className="text-sm">{v || '-'}</span>,
-        },
-        {
-            key: 'address',
-            label: 'LOCATION',
-            render: (v) => <span className="text-sm">{v || '-'}</span>,
-        },
-        {
-            key: 'contact',
-            label: 'CONTACT',
-            render: (v, row) => <ContactCell phone={v} email={row.email} />,
-        },
-        {
-            key: 'wonDate',
-            label: 'WON DATE',
-            render: (v) => (v ? new Date(v).toLocaleDateString() : 'N/A'),
-        },
-        {
-            key: 'assignedTo',
-            label: 'ASSIGNED TO',
-            render: (v) => v?.fullName || '-',
-        },
-        {
-            key: 'amount',
-            label: 'AMOUNT',
-            render: (v) => (v ? `₹${v.toLocaleString()}` : '-'),
-        },
+        { key: 'fullName', label: 'LEAD NAME', render: (v) => <span className="font-semibold text-gray-900">{v}</span> },
+        { key: 'companyName', label: 'COMPANY', render: (v) => <span className="text-sm">{v || '-'}</span> },
+        { key: 'address', label: 'LOCATION', render: (v) => <span className="text-sm">{v || '-'}</span> },
+        { key: 'contact', label: 'CONTACT', render: (v, row) => <ContactCell phone={v} email={row.email} /> },
+        { key: 'wonDate', label: 'WON DATE', render: (v) => (v ? new Date(v).toLocaleDateString() : 'N/A') },
+        { key: 'assignedTo', label: 'ASSIGNED TO', render: (v) => v?.fullName || '-' },
+        { key: 'amount', label: 'AMOUNT', render: (v) => (v ? `₹${v.toLocaleString()}` : '-') },
     ];
 
-    // ── Render ─────────────────────────────────────────────────────────────
     return (
         <div className="flex h-full flex-col gap-4">
-
-            {/* Sub-view tabs + search */}
             <div className="flex flex-wrap items-center justify-between gap-3 px-1">
                 <div className="flex items-center gap-2">
                     {(['board', 'lost', 'won'] as SubView[]).map((v) => (
@@ -361,11 +293,7 @@ export default function LeadsKanbanView({
                             onClick={() => handleSubViewChange(v)}
                             className={`rounded-lg cursor-pointer px-4 py-1.5 text-sm font-medium capitalize transition-colors ${
                                 subView === v
-                                    ? v === 'lost'
-                                        ? 'bg-red-600 text-white'
-                                        : v === 'won'
-                                            ? 'bg-green-600 text-white'
-                                            : 'bg-secondary text-white'
+                                    ? v === 'lost' ? 'bg-red-600 text-white' : v === 'won' ? 'bg-green-600 text-white' : 'bg-secondary text-white'
                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                         >
@@ -373,7 +301,6 @@ export default function LeadsKanbanView({
                         </button>
                     ))}
                 </div>
-
                 {subView === 'board' && (
                     <div className="relative">
                         <FiSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -388,7 +315,6 @@ export default function LeadsKanbanView({
                 )}
             </div>
 
-            {/* ── Board View ─────────────────────────────────────────────────── */}
             {subView === 'board' && (
                 <div className="overflow-x-auto">
                     <div className="flex gap-4 h-[calc(100vh-280px)] w-100">
@@ -398,7 +324,7 @@ export default function LeadsKanbanView({
                                     <div className="flex items-center justify-between">
                                         <h3 className="font-semibold text-white capitalize">{group.title}</h3>
                                         <span className="rounded-full bg-white px-3 py-0.5 text-sm font-semibold text-secondary">
-                                            {counts ? counts[group.id] || 0 : group.count}
+                                            {group.count}
                                         </span>
                                     </div>
                                 </div>
@@ -414,19 +340,21 @@ export default function LeadsKanbanView({
                                         }
                                     }}
                                 >
-                                    {group.leads.length === 0 ? (
+                                    {group.isLoading ? (
+                                        <div className="flex h-full items-center justify-center py-10">
+                                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-transparent" />
+                                        </div>
+                                    ) : group.leads.length === 0 ? (
                                         <div className="flex h-full items-center justify-center text-sm text-gray-400">
                                             No leads
                                         </div>
                                     ) : (
-                                        group.leads.map((lead) => (
+                                        group.leads.map((lead: ApiLead) => (
                                             <KanbanCard
                                                 key={lead._id}
                                                 lead={lead}
                                                 isUpdating={updatingId === lead._id}
-                                                onDragStart={() => {
-                                                    if (permissions?.update) setDraggingId(lead._id);
-                                                }}
+                                                onDragStart={() => { if (permissions?.update) setDraggingId(lead._id); }}
                                                 onView={() => onView?.(lead)}
                                                 onEdit={permissions?.update ? () => onEdit?.(lead) : undefined}
                                                 onMarkLost={permissions?.update ? () => markLost(lead._id) : undefined}
@@ -436,7 +364,7 @@ export default function LeadsKanbanView({
                                     )}
                                     {loadingMoreMap[group.id] && (
                                         <div className="flex justify-center py-2">
-                                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+                                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                                         </div>
                                     )}
                                 </div>
@@ -446,14 +374,11 @@ export default function LeadsKanbanView({
                 </div>
             )}
 
-            {/* ── Lost Leads ────────────────────────────────────────────────── */}
             {subView === 'lost' && (
                 <div className="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm w-full">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-red-200 text-red-700 flex items-center justify-center font-bold text-lg">
-                                ×
-                            </div>
+                            <div className="h-8 w-8 rounded-full bg-red-200 text-red-700 flex items-center justify-center font-bold text-lg">×</div>
                             <div>
                                 <h2 className="text-xl font-semibold text-red-800">Lost Leads</h2>
                                 <p className="text-sm text-red-800 opacity-80">Leads that were not converted</p>
@@ -463,7 +388,6 @@ export default function LeadsKanbanView({
                             {lostPagination?.totalItems ?? lostLeads.length} Total
                         </span>
                     </div>
-
                     <DataTable
                         data={lostLeads}
                         columns={lostLeadsColumns}
@@ -478,30 +402,16 @@ export default function LeadsKanbanView({
                         actions
                         onView={(row) => onView?.(row)}
                         onEdit={permissions?.update ? (row) => onEdit?.(row) : undefined}
-                        extraActions={
-                            permissions?.update
-                                ? [
-                                      {
-                                          label: 'Reactivate',
-                                          onClick: (row) => reactivate(row._id),
-                                          icon: <RefreshCw className="h-4 w-4" />,
-                                          color: 'orange',
-                                      },
-                                  ]
-                                : undefined
-                        }
+                        extraActions={permissions?.update ? [{ label: 'Reactivate', onClick: (row) => reactivate(row._id), icon: <RefreshCw className="h-4 w-4" />, color: 'orange' }] : undefined}
                     />
                 </div>
             )}
 
-            {/* ── Won Leads ─────────────────────────────────────────────────── */}
             {subView === 'won' && (
                 <div className="rounded-2xl border border-green-200 bg-green-50 p-4 shadow-sm w-full">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-green-200 text-green-700 flex items-center justify-center font-bold text-lg">
-                                ✓
-                            </div>
+                            <div className="h-8 w-8 rounded-full bg-green-200 text-green-700 flex items-center justify-center font-bold text-lg">✓</div>
                             <div>
                                 <h2 className="text-xl font-semibold text-green-800">Won Leads</h2>
                                 <p className="text-sm text-green-800 opacity-80">Leads that were converted</p>
@@ -511,7 +421,6 @@ export default function LeadsKanbanView({
                             {wonPagination?.totalItems ?? wonLeads.length} Total
                         </span>
                     </div>
-
                     <DataTable
                         data={wonLeads}
                         columns={wonLeadsColumns}
@@ -536,14 +445,8 @@ export default function LeadsKanbanView({
 function ContactCell({ phone, email }: { phone: string; email: string }) {
     return (
         <div className="space-y-0.5 text-sm text-gray-600">
-            <div className="flex items-center gap-1.5">
-                <FiPhone className="h-3.5 w-3.5 text-gray-400" />
-                {phone}
-            </div>
-            <div className="flex items-center gap-1.5">
-                <FiMail className="h-3.5 w-3.5 text-gray-400" />
-                {email}
-            </div>
+            <div className="flex items-center gap-1.5"><FiPhone className="h-3.5 w-3.5 text-gray-400" />{phone}</div>
+            <div className="flex items-center gap-1.5"><FiMail className="h-3.5 w-3.5 text-gray-400" />{email}</div>
         </div>
     );
 }

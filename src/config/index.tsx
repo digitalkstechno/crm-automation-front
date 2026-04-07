@@ -25,6 +25,8 @@ export const baseUrl = {
   leadCountSummary: `${API}lead/count-summary`,
   myLeadCountSummary: `${API}lead/count-summary/my`,
   getKanbanData: `${API}lead/kanban`,
+  getKanbanStatusLeads: `${API}lead/kanban-status`,
+  getKanbanStatusTasks: `${API}task/kanban-status`,
   updateKanbanStatus: `${API}lead`,
   leadUpcomingFollowups: `${API}lead/followups/upcoming`,
   leadUpcomingFollowupsMy: `${API}lead/followups/upcoming/my`,

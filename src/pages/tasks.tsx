@@ -131,7 +131,7 @@ export default function TasksPage() {
   }, []);
 
   useEffect(() => {
-    if (viewMode === 'kanban') fetchKanbanData();
+    // if (viewMode === 'kanban') fetchKanbanData(); // Skip heavy global fetch, component now handles status-wise
   }, [viewMode, fetchKanbanData]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -170,9 +170,9 @@ export default function TasksPage() {
   const refreshData = useCallback(async () => {
     await Promise.all([
       fetchTasks(),
-      fetchKanbanData()
+      // fetchKanbanData() // Global fetch skipped
     ]);
-  }, [fetchTasks, fetchKanbanData]);
+  }, [fetchTasks]);
 
   const handleConfirmDelete = async () => {
     if (!deleteTask) return;
@@ -308,13 +308,13 @@ export default function TasksPage() {
           {/* Kanban View */}
           {viewMode === 'kanban' && (
             <TaskKanbanView
-              kanbanData={kanbanData}
               taskStatuses={taskStatuses}
               onTaskClick={(task) => setViewTask(task)}
               onEdit={(task) => { setEditTask(task); setShowDialog(true); }}
               onDelete={(task) => setDeleteTask(task)}
               onRefresh={refreshData}
-              loading={kanbanLoading}
+              searchQuery={searchQuery}
+              activeTab={effectiveTab as 'all' | 'my'}
             />
           )}
         </div>
