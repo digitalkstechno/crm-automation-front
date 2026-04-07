@@ -64,7 +64,6 @@ export default function LeadsKanbanView({
     onSubViewChange,
 }: Props) {
     const [subView, setSubView] = useState<SubView>('board');
-    const [search, setSearch] = useState('');
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
     
@@ -74,6 +73,7 @@ export default function LeadsKanbanView({
     const [pageMap, setPageMap] = useState<Record<string, number>>({});
     const [hasMoreMap, setHasMoreMap] = useState<Record<string, boolean>>({});
     const [loadingMoreMap, setLoadingMoreMap] = useState<Record<string, boolean>>({});
+    const [columnCounts, setColumnCounts] = useState<Record<string, number>>({});
 
     const [kanbanVisibleStatusNames, setKanbanVisibleStatusNames] = useState<string[]>([]);
 
@@ -114,7 +114,7 @@ export default function LeadsKanbanView({
                         page,
                         limit: 10,
                         my: scope === 'my' || undefined,
-                        search: search || undefined,
+                        search: filters.search || undefined,
                         source: filters.source || undefined,
                         staff: filters.staff || undefined,
                         date: filters.date || undefined,
@@ -129,6 +129,9 @@ export default function LeadsKanbanView({
                     [statusId]: isLoadMore ? [...(prev[statusId] || []), ...newData] : newData,
                 }));
 
+                const totalRecords = pagination.totalRecords ?? pagination.total ?? pagination.count ?? (isLoadMore ? (columnCounts[statusId] || 0) : newData.length);
+                setColumnCounts((prev) => ({ ...prev, [statusId]: totalRecords }));
+
                 setPageMap((prev) => ({ ...prev, [statusId]: page }));
                 setHasMoreMap((prev) => ({
                     ...prev,
@@ -141,7 +144,7 @@ export default function LeadsKanbanView({
                 setLoadingMoreMap((p) => ({ ...p, [statusId]: false }));
             }
         },
-        [scope, search, filters]
+        [scope, filters]
     );
 
     // Initial fetch and re-fetch on filter change
@@ -153,7 +156,7 @@ export default function LeadsKanbanView({
                 fetchStatusLeads(s._id, 1);
             }
         });
-    }, [subView, statuses, kanbanVisibleStatusNames, scope, search, filters, fetchStatusLeads]);
+    }, [subView, statuses, kanbanVisibleStatusNames, scope, filters, fetchStatusLeads]);
 
     const loadMore = useCallback(
         async (statusId: string) => {
@@ -231,7 +234,7 @@ export default function LeadsKanbanView({
             id: s._id,
             title: s.name,
             leads: boardLeads[s._id] || [],
-            count: counts ? counts[s._id] || 0 : 0,
+            count: columnCounts[s._id] ?? (counts ? counts[s._id] || 0 : 0),
             isLoading: columnLoading[s._id]
         }))
         .filter((group) => {
@@ -301,18 +304,6 @@ export default function LeadsKanbanView({
                         </button>
                     ))}
                 </div>
-                {subView === 'board' && (
-                    <div className="relative">
-                        <FiSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Search leads..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="rounded-lg border border-gray-300 pl-11 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
-                        />
-                    </div>
-                )}
             </div>
 
             {subView === 'board' && (
