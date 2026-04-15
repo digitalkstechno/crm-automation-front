@@ -4,7 +4,7 @@
 
 import { useRouter } from 'next/router';
 import { useEffect, useState, useMemo } from 'react';
-import { ListCollapse, Plus, Filter, Kanban, Search } from 'lucide-react';
+import { ListCollapse, Plus, Filter, Kanban, Search, Download, Upload } from 'lucide-react';
 import axios from 'axios';
 import { baseUrl, getAuthToken } from '@/config';
 
@@ -13,6 +13,7 @@ import LeadsListView from '@/components/leads/LeadsListView';
 import LeadsKanbanView from '@/components/leads/LeadsKanbanView';
 import LeadAddDialog from '@/components/leads/LeadAddDialog';
 import LeadViewDialog from '@/components/leads/LeadViewDialog';
+import LeadBulkImportDialog from '@/components/leads/LeadBulkImportDialog';
 import { PageSkeleton, KanbanColumnSkeleton } from '@/components/ui/Skeleton';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -54,7 +55,8 @@ export default function LeadsPage() {
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [sourceFilter, setSourceFilter] = useState<string[]>([]);
   const [staffFilter, setStaffFilter] = useState<string[]>([]);
-  const [dateFilter, setDateFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
 
   const debouncedSearch = useDebounce(search, 500);
@@ -63,6 +65,8 @@ export default function LeadsPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingLead, setEditingLead] = useState<ApiLead | null>(null);
   const [viewingLead, setViewingLead] = useState<ApiLead | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
 
   // ── Permissions ──────────────────────────────────────────────────────────
   const [leadPermissions, setLeadPermissions] = useState<{
@@ -111,9 +115,10 @@ export default function LeadsPage() {
       status: statusFilter.length > 0 ? statusFilter.join(',') : '',
       source: sourceFilter.length > 0 ? sourceFilter.join(',') : '',
       staff: staffFilter.length > 0 ? staffFilter.join(',') : '',
-      date: dateFilter,
+      from: fromDate,
+      to: toDate,
     }),
-    [debouncedSearch, statusFilter, sourceFilter, staffFilter, dateFilter]
+    [debouncedSearch, statusFilter, sourceFilter, staffFilter, fromDate, toDate]
   );
 
   // ── Data — pass kanbanSubView so hook fetches only what's needed ──────────
@@ -174,6 +179,43 @@ export default function LeadsPage() {
     setEditingLead(null);
   };
 
+  // ── Excel Export ──────────────────────────────────────────────────────────
+  const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const token = getAuthToken();
+      const params: Record<string, string> = {};
+      if (filters.search) params.search = filters.search;
+      if (filters.status) params.status = filters.status;
+      if (filters.source) params.source = filters.source;
+      if (filters.staff) params.staff = filters.staff;
+      if (filters.from) params.from = filters.from;
+      if (filters.to) params.to = filters.to;
+      if (activeTab === 'my') params.my = 'true';
+
+      const res = await axios.get(baseUrl.exportLeads, {
+        headers: { Authorization: `Bearer ${token}` },
+        params,
+        responseType: 'blob',
+      });
+
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `leads_export_${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert('Export failed. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // ── Permission flags ──────────────────────────────────────────────────────
   const canCreate = !!leadPermissions?.create;
   const canRead = !!(leadPermissions?.readAll || leadPermissions?.readOwn);
@@ -189,7 +231,8 @@ export default function LeadsPage() {
     setStatusFilter([]);
     setSourceFilter([]);
     setStaffFilter([]);
-    setDateFilter('');
+    setFromDate('');
+    setToDate('');
     setSearch('');
   };
 
@@ -197,7 +240,8 @@ export default function LeadsPage() {
     statusFilter.length > 0 ||
     sourceFilter.length > 0 ||
     staffFilter.length > 0 ||
-    dateFilter ||
+    fromDate ||
+    toDate ||
     search
   );
 
@@ -307,6 +351,29 @@ export default function LeadsPage() {
               )}
             </button>
 
+            {/* Excel Export Button */}
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              title="Export to Excel"
+              className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Download className="h-4 w-4" />
+              <span>{exporting ? 'Exporting...' : 'Export Excel'}</span>
+            </button>
+
+            {/* Bulk Import Button */}
+            {canCreate && (
+              <button
+                onClick={() => setShowBulkImport(true)}
+                title="Bulk Import Leads"
+                className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 transition-all cursor-pointer"
+              >
+                <Upload className="h-4 w-4" />
+                <span>Bulk Import</span>
+              </button>
+            )}
+
             {/* View toggle */}
             <div className="relative flex items-center bg-gray-100 p-1 rounded-md w-fit">
               <div
@@ -353,7 +420,7 @@ export default function LeadsPage() {
           }`}
         >
           <div className="overflow-hidden">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="space-y-2">
                 <FormMultiSelect
                   label="Lead Status"
@@ -381,13 +448,25 @@ export default function LeadsPage() {
                 />
               </div>
 
-              <div className="space-y-2 text-primary-500">
+              <div className="space-y-2">
                 <FormInput
                   label="From Date"
-                  name="dateFilter"
+                  name="fromDate"
                   type="date"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="bg-white"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FormInput
+                  label="To Date"
+                  name="toDate"
+                  type="date"
+                  value={toDate}
+                  min={fromDate || undefined}
+                  onChange={(e) => setToDate(e.target.value)}
                   className="bg-white"
                 />
               </div>
@@ -491,6 +570,16 @@ export default function LeadsPage() {
         statuses={statuses}
         onClose={() => setViewingLead(null)}
         onRefresh={refetchAll}
+      />
+
+      {/* ── Bulk Import Dialog ─────────────────────────────────────────── */}
+      <LeadBulkImportDialog
+        isOpen={showBulkImport}
+        onClose={() => setShowBulkImport(false)}
+        onImported={() => {
+          refetchAll();
+          setShowBulkImport(false);
+        }}
       />
     </div>
   );

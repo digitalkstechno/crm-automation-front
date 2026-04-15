@@ -10,7 +10,8 @@ type Filters = {
   status?: string;
   source?: string;
   staff?: string;
-  date?: string;
+  from?: string;
+  to?: string;
 };
 
 export function useLeadsData(
@@ -85,7 +86,8 @@ export function useLeadsData(
             status: f.status || undefined,
             source: f.source || undefined,
             staff: f.staff || undefined,
-            date: f.date || undefined,
+            from: f.from || undefined,
+            to: f.to || undefined,
             limit: LIMIT,
           },
         });
@@ -110,7 +112,8 @@ export function useLeadsData(
             status: f.status || undefined,
             source: f.source || undefined,
             staff: f.staff || undefined,
-            date: f.date || undefined,
+            from: f.from || undefined,
+            to: f.to || undefined,
             limit: 100,
           },
         });
@@ -136,7 +139,8 @@ export function useLeadsData(
           status: f.status || undefined,
           source: f.source || undefined,
           staff: f.staff || undefined,
-          date: f.date || undefined,
+          from: f.from || undefined,
+          to: f.to || undefined,
           page,
           limit: LIMIT,
         },
@@ -166,7 +170,8 @@ export function useLeadsData(
           status: f.status || undefined,
           source: f.source || undefined,
           staff: f.staff || undefined,
-          date: f.date || undefined,
+          from: f.from || undefined,
+          to: f.to || undefined,
           page,
           limit: LIMIT,
         },
@@ -197,7 +202,8 @@ export function useLeadsData(
           status: f.status || undefined,
           source: f.source || undefined,
           staff: f.staff || undefined,
-          date: f.date || undefined,
+          from: f.from || undefined,
+          to: f.to || undefined,
           page,
           limit: LIMIT,
         },
@@ -227,7 +233,8 @@ export function useLeadsData(
           status: f.status || undefined,
           source: f.source || undefined,
           staff: f.staff || undefined,
-          date: f.date || undefined,
+          from: f.from || undefined,
+          to: f.to || undefined,
         },
       });
       setCounts(res.data?.data || null);
