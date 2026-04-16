@@ -227,8 +227,8 @@ export default function DataTable<T extends Record<string, any>>({
       </div>
 
       {/* Table - Modern Design */}
-      <div className="overflow-x-auto overflow-y-visible">
-        <table className="w-full min-w-full divide-y divide-gray-100">
+      <div className="table-responsive border-t border-gray-100 overflow-x-auto">
+        <table className="min-w-[1000px] w-full divide-y divide-gray-100 whitespace-nowrap">
           <thead className="bg-gray-100">
             <tr>
               {columns.map((column) => (
@@ -240,7 +240,7 @@ export default function DataTable<T extends Record<string, any>>({
                 </th>
               ))}
               {actions && (onView || onEdit || onDelete || extraActions) && (
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                <th className="sticky right-0 z-10 bg-gray-100 px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 shadow-[-4px_0_10px_-3px_rgba(0,0,0,0.1)]">
                   Actions
                 </th>
               )}
@@ -305,8 +305,11 @@ export default function DataTable<T extends Record<string, any>>({
                   ))}
 
                   {actions && (onView || onEdit || onDelete || extraActions) && (
-  <td className="px-6 py-4">
-    <div className="flex items-center gap-2">
+                      <td className={`sticky right-0 z-10 px-6 py-4 shadow-[-4px_0_10px_-3px_rgba(0,0,0,0.1)] transition-colors duration-200
+                        ${striped && index % 2 === 1 ? 'bg-[#f9fafb]' : 'bg-white'}
+                        ${hoveredRow === index ? 'bg-[#eff6ff]' : ''}
+                      `}>
+                        <div className="flex items-center gap-2">
 
       {/* VIEW */}
       {onView && (
@@ -383,31 +386,31 @@ export default function DataTable<T extends Record<string, any>>({
 
       {/* Pagination - Modern Design */}
       {pagination && totalPages > 0 && !loading && data.length > 0 && (
-        <div className="border-t border-gray-100 bg-gradient-to-r from-gray-50 to-white px-6 py-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4 text-sm">
+        <div className="border-t border-gray-100 bg-gradient-to-r from-gray-50 to-white px-4 md:px-6 py-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-4 text-sm">
               <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-600">Rows per page</span>
+                <span className="font-medium text-gray-600">Rows</span>
                 <select
                   value={pageSize}
                   onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                  className="cursor-pointer rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-all duration-200 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100 hover:border-gray-300"
+                  className="cursor-pointer rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm font-medium text-gray-700 transition-all focus:border-primary-500 focus:outline-none"
                 >
                   {[10, 25, 50, 100].map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
               </div>
-              <span className="text-gray-500">
+              <span className="text-gray-500 text-xs md:text-sm">
                 Showing <span className="font-medium text-gray-700">{(currentPage - 1) * pageSize + 1}</span> to{' '}
                 <span className="font-medium text-gray-700">
                   {Math.min(currentPage * pageSize, totalRecords)}
                 </span>{' '}
-                of <span className="font-medium text-gray-700">{totalRecords}</span> entries
+                of <span className="font-medium text-gray-700">{totalRecords}</span>
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2 md:pb-0">
               <button
                 onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage === 1}

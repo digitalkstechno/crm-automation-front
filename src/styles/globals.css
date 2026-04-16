@@ -182,14 +182,23 @@ textarea[disabled] {
   background: var(--scrollbar-thumb-hover);
 }
 
-/* Hide scrollbar but keep functionality (optional utility class) */
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+/* Global Table Scroll Utility */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
+.table-responsive table {
+  min-width: 1000px;
+  width: 100%;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .table-responsive table {
+    min-width: 800px;
+  }
 }
 
 /* @media (prefers-color-scheme: dark) {

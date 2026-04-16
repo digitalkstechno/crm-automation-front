@@ -39,15 +39,16 @@ export default function App({ Component, pageProps }: AppProps) {
           />
         )}
         <div
-          className="flex-1 transition-all duration-300 ease-in-out"
-          style={{ marginLeft: !isLoginPage ? (isSidebarOpen ? '256px' : '80px') : '0' }}
+          className={`flex-1 transition-all duration-300 ease-in-out ${
+            !isLoginPage ? (isSidebarOpen ? 'md:ml-64' : 'md:ml-20') : ''
+          }`}
         >
           <main className="animate-in fade-in duration-300">
             {/* Only show header for non-login pages */}
             {!isLoginPage ? (
-              <Header />
+              <Header toggleSidebar={() => setIsSidebarOpen((prev) => !prev)} />
             ) : null}
-            <div className={isLoginPage ? "p-0" : "p-6"}>
+            <div className={isLoginPage ? "p-0" : "p-4 md:p-6"}>
               <Component {...pageProps} />
             </div>
           </main>

@@ -89,7 +89,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   ];
 
   if (canViewLead) {
-    menuItems.push({ icon: UserPlus, label: "Lead", path: "/leads" });
+    menuItems.push({ icon: UserPlus, label: "Leads", path: "/leads" });
   }
 
   if (canViewTask) {
@@ -189,45 +189,40 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
       {/* Overlay for mobile when sidebar is open */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-20 bg-black/50 backdrop-blur-sm md:hidden transition-opacity duration-300"
+          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm md:hidden transition-opacity duration-300"
           onClick={toggleSidebar}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-30 h-screen bg-[#05111e] text-white shadow-2xl transition-all duration-300 ease-in-out ${
-          isOpen ? 'w-64' : 'w-20'
+        className={`fixed top-0 left-0 z-40 h-screen bg-[#05111e] text-white shadow-2xl transition-all duration-300 ease-in-out ${
+          isOpen 
+            ? 'w-64 translate-x-0' 
+            : 'w-64 -translate-x-full md:w-20 md:translate-x-0'
         }`}
       >
         <div className="flex h-full flex-col">
           {/* Header with Logo */}
           <div className={`flex items-center h-20 px-4 border-b border-white/10 ${isOpen ? 'justify-between' : 'justify-center'}`}>
-            {isOpen ? (
-              <>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#30cdb2] to-[#23abed] flex items-center justify-center font-bold text-white shadow-lg">
-                    LF
-                  </div>
-                  <span className="text-lg font-semibold text-white tracking-wide">LeadFlow</span>
-                </div>
-                <button
-                  onClick={toggleSidebar}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-all duration-200 group"
-                  aria-label="Toggle sidebar"
-                >
-                  <ChevronLeft className="h-5 w-5 text-white/70 group-hover:text-white group-hover:scale-110 transition-all" />
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={toggleSidebar}
-                className="p-2 rounded-lg hover:bg-white/10 transition-all duration-200 group"
-                aria-label="Toggle sidebar"
-              >
-                <Menu className="h-6 w-6 text-white/70 group-hover:text-white group-hover:scale-110 transition-all" />
-              </button>
-            )}
+            <div className={`flex items-center gap-3 ${!isOpen && 'hidden md:flex'}`}>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#30cdb2] to-[#23abed] flex items-center justify-center font-bold text-white shadow-lg">
+                LF
+              </div>
+              {isOpen && <span className="text-lg font-semibold text-white tracking-wide">LeadFlow</span>}
+            </div>
+            
+            <button
+              onClick={toggleSidebar}
+              className={`p-2 rounded-lg hover:bg-white/10 transition-all duration-200 group ${!isOpen && 'md:block'}`}
+              aria-label="Toggle sidebar"
+            >
+              {isOpen ? (
+                <ChevronLeft className="h-5 w-5 text-white/70 group-hover:text-white transition-all" />
+              ) : (
+                <Menu className="h-6 w-6 text-white/70 group-hover:text-white transition-all" />
+              )}
+            </button>
           </div>
 
           {/* Navigation Menu */}

@@ -293,17 +293,33 @@ export default function LeadsPage() {
 
   // ── Main render ───────────────────────────────────────────────────────────
   return (
-    <div className="flex h-full flex-col gap-4 relative overflow-hidden">
+    <div className="flex min-h-full flex-col gap-4 relative">
 
       {/* ── Page Header & Unified Toolbar ───────────────────────────────── */}
-      <div className="rounded-md border border-gray-200 bg-white px-6 py-4 transition-all duration-300">
-        <div className="flex flex-wrap items-center gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
+      <div className="rounded-md border border-gray-200 bg-white px-4 md:px-6 py-4 transition-all duration-300">
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Leads</h1>
+            
+            {/* Mobile View Toggle */}
+            <div className="md:hidden relative flex items-center bg-gray-100 p-1 rounded-md w-fit">
+              <button
+                onClick={() => switchView('list')}
+                className={`relative z-10 cursor-pointer flex items-center justify-center w-8 h-8 rounded-md transition-colors ${viewMode === 'list' ? 'bg-secondary text-white shadow-sm' : 'text-gray-700'}`}
+              >
+                <ListCollapse className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => switchView('kanban')}
+                className={`relative z-10 cursor-pointer flex items-center justify-center w-8 h-8 rounded-md transition-colors ${viewMode === 'kanban' ? 'bg-secondary text-white shadow-sm' : 'text-gray-700'}`}
+              >
+                <Kanban className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           {/* Search Bar */}
-          <div className="flex-1 max-w-md">
+          <div className="w-full md:flex-1 md:max-w-md">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
@@ -316,21 +332,21 @@ export default function LeadsPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 ml-auto">
+          <div className="flex flex-wrap items-center gap-2 md:gap-3 md:ml-auto">
             {/* Tab Toggle (All/My) */}
             {canReadAll && canReadOwn && (
-              <div className="relative flex items-center bg-gray-100 p-1 rounded-md">
+              <div className="flex items-center bg-gray-100 p-1 rounded-md">
                 <button
                   onClick={() => setActiveTab('all')}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                  className={`px-3 py-1.5 text-xs md:text-sm font-medium rounded-md transition-all ${activeTab === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
                 >
-                  All Leads
+                  All
                 </button>
                 <button
                   onClick={() => setActiveTab('my')}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'my' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                  className={`px-3 py-1.5 text-xs md:text-sm font-medium rounded-md transition-all ${activeTab === 'my' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
                 >
-                  My Leads
+                  My
                 </button>
               </div>
             )}
@@ -338,16 +354,16 @@ export default function LeadsPage() {
             {/* Advanced Filter Button */}
             <button
               onClick={() => setShowFilterDrawer(!showFilterDrawer)}
-              className={`relative flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs md:text-sm font-medium transition-all cursor-pointer ${
                 showFilterDrawer || hasActiveFilters
                   ? 'bg-primary-50 text-primary-600 border border-primary-200 hover:bg-primary-100'
                   : 'bg-gray-100 text-gray-700 border border-transparent hover:bg-gray-200'
               }`}
             >
-              <Filter className="h-5 w-4" />
-              <span>Filters</span>
+              <Filter className="h-4 w-4" />
+              <span className="hidden sm:inline">Filters</span>
               {hasActiveFilters && (
-                <span className="absolute -top-1 -right-1 h-2 w-2 bg-primary-500 rounded-full"></span>
+                <span className="h-2 w-2 bg-primary-500 rounded-full"></span>
               )}
             </button>
 
@@ -356,10 +372,10 @@ export default function LeadsPage() {
               onClick={handleExport}
               disabled={exporting}
               title="Export to Excel"
-              className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-3 py-2 rounded-md text-xs md:text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-all cursor-pointer disabled:opacity-60"
             >
               <Download className="h-4 w-4" />
-              <span>{exporting ? 'Exporting...' : 'Export Excel'}</span>
+              <span className="hidden sm:inline">{exporting ? '...' : 'Export'}</span>
             </button>
 
             {/* Bulk Import Button */}
@@ -367,34 +383,28 @@ export default function LeadsPage() {
               <button
                 onClick={() => setShowBulkImport(true)}
                 title="Bulk Import Leads"
-                className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 transition-all cursor-pointer"
+                className="flex items-center gap-2 px-3 py-2 rounded-md text-xs md:text-sm font-medium bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 transition-all cursor-pointer"
               >
                 <Upload className="h-4 w-4" />
-                <span>Bulk Import</span>
+                <span className="hidden sm:inline">Import</span>
               </button>
             )}
 
-            {/* View toggle */}
-            <div className="relative flex items-center bg-gray-100 p-1 rounded-md w-fit">
-              <div
-                className={`absolute z-0 top-1 bottom-1 w-10 rounded-md bg-secondary transition-all duration-300 ease-in-out ${
-                  viewMode === 'list' ? 'left-1' : 'left-[calc(50%)]'
-                }`}
-                title="view"
-              />
+            {/* Desktop View toggle */}
+            <div className="hidden md:flex relative items-center bg-gray-100 p-1 rounded-md w-fit">
               <button
                 onClick={() => switchView('list')}
-                className={`relative z-10 cursor-pointer flex items-center justify-center w-10 h-10 rounded-md transition-colors duration-300 ${viewMode === 'list' ? 'text-white' : 'text-gray-700'}`}
+                className={`relative z-10 cursor-pointer flex items-center justify-center w-10 h-10 rounded-md transition-colors ${viewMode === 'list' ? 'bg-secondary text-white shadow-sm' : 'text-gray-700'}`}
                 title="List View"
               >
-                <ListCollapse className="h-5 w-5 text-current" />
+                <ListCollapse className="h-5 w-5" />
               </button>
               <button
                 onClick={() => switchView('kanban')}
-                className={`relative z-10 cursor-pointer flex items-center justify-center w-10 h-10 rounded-md transition-colors duration-300 ${viewMode === 'kanban' ? 'text-white' : 'text-gray-700'}`}
+                className={`relative z-10 cursor-pointer flex items-center justify-center w-10 h-10 rounded-md transition-colors ${viewMode === 'kanban' ? 'bg-secondary text-white shadow-sm' : 'text-gray-700'}`}
                 title="Kanban View"
               >
-                <Kanban className="h-5 w-5 text-current" />
+                <Kanban className="h-5 w-5" />
               </button>
             </div>
 
@@ -491,7 +501,7 @@ export default function LeadsPage() {
       </div>
 
       {/* ── Main Content ─────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1">
         {viewMode === 'list' ? (
           <LeadsListView
             statuses={statuses}

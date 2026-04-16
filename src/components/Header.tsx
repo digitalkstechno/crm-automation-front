@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { baseUrl, clearAuthToken, getAuthToken } from '@/config';
 import { useRouter } from 'next/router';
-import { Bell, CheckCircle, CheckCheck, LogOut } from 'lucide-react';
+import { Bell, CheckCircle, CheckCheck, LogOut, Menu } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { io } from 'socket.io-client';
@@ -20,7 +20,11 @@ interface Notification {
   createdAt: string;
 }
 
-export default function Header() {
+interface HeaderProps {
+  toggleSidebar: () => void;
+}
+
+export default function Header({ toggleSidebar }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -407,13 +411,21 @@ export default function Header() {
   const totalCount = notifications.length;
 
   return (
-    <header className="sticky top-0 z-20 flex h-20 items-center justify-between bg-white border-b border-gray-200 px-6 backdrop-blur-sm">
-      <div className="flex items-center gap-4">
-        <h1 className="text-3xl font-bold text-gray-900">
+    <header className="sticky top-0 z-20 flex h-20 items-center justify-between bg-white border-b border-gray-200 px-4 md:px-6 backdrop-blur-sm">
+      <div className="flex items-center gap-2 md:gap-4">
+        {/* Hamburger Menu for Mobile */}
+        <button
+          onClick={toggleSidebar}
+          className="p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 md:hidden"
+          aria-label="Toggle sidebar"
+        >
+          <Menu className="h-6 w-6 text-gray-600" />
+        </button>
+        <h1 className="text-xl md:text-3xl font-bold text-gray-900 truncate">
           {getLabel() || "Default Title"}
         </h1>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1 md:gap-3">
 
         {/* Alerts / Notifications */}
         <div className="relative" ref={dropdownRef}>

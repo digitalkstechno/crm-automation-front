@@ -283,7 +283,7 @@ export default function TasksPage() {
         </div>
 
         {/* View Content Wrapper */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1">
           {/* List View */}
           {viewMode === 'list' && (
             <TaskListView

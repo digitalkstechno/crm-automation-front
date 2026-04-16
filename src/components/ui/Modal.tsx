@@ -11,10 +11,10 @@ interface ModalProps {
 
 export default function Modal({ isOpen, onClose, title, children, maxWidth = 'md' }: ModalProps) {
   const widthClasses = {
-    sm: 'md:w-1/3',
-    md: 'md:w-1/2',
-    lg: 'md:w-2/3',
-    xl: 'md:w-3/4',
+    sm: 'w-full md:w-1/3',
+    md: 'w-full md:w-1/2',
+    lg: 'w-full md:w-2/3',
+    xl: 'w-full md:w-3/4',
   };
 
   return (

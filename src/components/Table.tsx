@@ -5,8 +5,8 @@ interface TableProps {
 
 export default function Table({ data, columns }: TableProps) {
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <table className="min-w-full text-sm text-slate-700">
+    <div className="table-responsive rounded-xl border border-slate-200 bg-white shadow-sm overflow-x-auto">
+      <table className="min-w-[1000px] w-full text-sm text-slate-700 whitespace-nowrap">
         <thead className="bg-slate-50">
           <tr>
             {columns.map((col, index) => (

@@ -21,10 +21,10 @@ export default function Dialog({
   size = 'lg',
 }: DialogProps) {
   const sizeClasses = {
-    sm: 'md:w-1/4 max-w-[25vw]',
-    md: 'md:w-1/3 max-w-[40vw]',
-    lg: 'md:w-1/2 max-w-[50vw]',
-    xl: 'md:w-2/3 max-w-[75vw]',
+    sm: 'md:w-1/4 md:max-w-[25vw]',
+    md: 'md:w-1/3 md:max-w-[40vw]',
+    lg: 'md:w-1/2 md:max-w-[50vw]',
+    xl: 'md:w-2/3 md:max-w-[75vw]',
   };
   useEffect(() => {
     if (isOpen) {

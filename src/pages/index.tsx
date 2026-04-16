@@ -597,7 +597,7 @@
     );
 
     return (
-      <div className="flex flex-col h-full overflow-y-auto">
+      <div className="flex flex-col min-h-full">
         <div className="p-0 space-y-6">
 
           {/* Welcome Section */}

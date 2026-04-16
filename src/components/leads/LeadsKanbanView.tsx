@@ -307,8 +307,8 @@ export default function LeadsKanbanView({
             </div>
 
             {subView === 'board' && (
-                <div className="overflow-x-auto">
-                    <div className="flex gap-4 h-[calc(100vh-280px)] w-100">
+                <div className="overflow-x-auto w-full pb-4">
+                    <div className="flex gap-4 h-[calc(100vh-280px)] min-w-max">
                         {statusGroups.map((group) => (
                             <div key={group.id} className="w-80 flex-shrink-0 flex flex-col">
                                 <div className="rounded-t-xl bg-secondary px-5 py-3">

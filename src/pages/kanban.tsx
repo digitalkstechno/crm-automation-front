@@ -878,8 +878,8 @@ export default function LeadsPage() {
                     />
                   </div>
                 </div>
-                <div className="mt-3 overflow-x-auto">
-                  <table className="w-full">
+                <div className="table-responsive overflow-x-auto">
+                  <table className="min-w-[1000px] w-full whitespace-nowrap">
                     <thead>
                       <tr className="bg-[#dee2e6] text-black text-xs font-bold">
                         <th className="px-4 py-3 text-left">Lead Name</th>
@@ -889,7 +889,7 @@ export default function LeadsPage() {
                         <th className="px-4 py-3 text-left">Lost Date</th>
                         <th className="px-4 py-3 text-left">Assigned To</th>
                         <th className="px-4 py-3 text-left">Reason</th>
-                        <th className="px-4 py-3 text-left">Actions</th>
+                        <th className="sticky right-0 z-10 bg-[#dee2e6] px-4 py-3 text-left shadow-[-4px_0_10px_-3px_rgba(0,0,0,0.1)]">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white">
@@ -932,7 +932,7 @@ export default function LeadsPage() {
                             </td>
                             <td className="px-4 py-3">{l.assignedTo?.fullName || '-'}</td>
                             <td className="px-4 py-3">{l.lostReason || 'Not specified'}</td>
-                            <td className="px-4 py-3">
+                            <td className="sticky right-0 z-10 bg-white px-4 py-3 shadow-[-4px_0_10px_-3px_rgba(0,0,0,0.1)]">
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => handleView(l._id)}
@@ -1003,8 +1003,8 @@ export default function LeadsPage() {
                     />
                   </div>
                 </div>
-                <div className="mt-3 overflow-x-auto">
-                  <table className="w-full">
+                <div className="table-responsive overflow-x-auto">
+                  <table className="min-w-[1000px] w-full whitespace-nowrap">
                     <thead>
                       <tr className="bg-[#dee2e6] text-black text-xs font-bold">
                         <th className="px-4 py-3 text-left">Lead Name</th>
@@ -1014,7 +1014,7 @@ export default function LeadsPage() {
                         <th className="px-4 py-3 text-left">Won Date</th>
                         <th className="px-4 py-3 text-left">Assigned To</th>
                         <th className="px-4 py-3 text-left">Amount</th>
-                        <th className="px-4 py-3 text-left">Actions</th>
+                        <th className="sticky right-0 z-10 bg-[#dee2e6] px-4 py-3 text-left shadow-[-4px_0_10px_-3px_rgba(0,0,0,0.1)]">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white">
@@ -1056,7 +1056,7 @@ export default function LeadsPage() {
                             <td className="px-4 py-3">
                               {l.amount ? `₹${l.amount.toLocaleString()}` : "-"}
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="sticky right-0 z-10 bg-white px-4 py-3 shadow-[-4px_0_10px_-3px_rgba(0,0,0,0.1)]">
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => handleView(l._id)}
