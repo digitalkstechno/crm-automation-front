@@ -246,9 +246,9 @@ export default function Setup() {
   return (
     <>
       <div className="space-y-6">
-        <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-12 md:col-span-3">
-            <div className="rounded-md border border-gray-200 bg-white p-3">
+        <div className="flex flex-col md:grid md:grid-cols-12 gap-6">
+          <div className="md:col-span-3">
+            <div className="rounded-md border border-gray-200 bg-white p-3 flex md:flex-col flex-row overflow-x-auto gap-1">
               {menuItems.map((item: any, index: number) => {
                 const Icon = item.icon;
 
@@ -256,8 +256,7 @@ export default function Setup() {
                   <button
                     key={item.name}
                     onClick={() => handleTabChange(item.name)}
-                    className={`${index !== 0 ? "mt-1" : ""
-                      } flex w-full items-center gap-3 cursor-pointer rounded-md px-4 py-3 text-sm font-medium transition-colors ${activeTab === item.name
+                    className={`flex shrink-0 md:w-full items-center gap-3 cursor-pointer rounded-md px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === item.name
                         ? "bg-blue-50 text-blue-700"
                         : "text-gray-700 hover:bg-gray-50"
                       }`}
@@ -270,7 +269,7 @@ export default function Setup() {
             </div>
           </div>
 
-          <div className="col-span-12 md:col-span-9">
+          <div className="md:col-span-9">
             <div className="rounded-md border border-gray-200 bg-white p-6">
               {activeTab === 'Role Management' && <RolesContent />}
               {activeTab === 'Staff Management' && <StaffManagementContent />}

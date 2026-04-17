@@ -233,13 +233,13 @@ export default function TasksPage() {
     <>
       <div className="space-y-6">
         {/* Page Header (Matching Leads) */}
-        <div className="rounded-md border border-gray-200 bg-white px-6 py-4 transition-all duration-300">
+        <div className="rounded-md border border-gray-200 bg-white px-4 sm:px-6 py-4 transition-all duration-300">
           <div className="flex flex-wrap items-center gap-3">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>
             </div>
 
-            <div className="flex items-center gap-3 ml-auto">
+            <div className="flex items-center gap-3 ml-auto flex-wrap justify-end">
               {/* View Toggle */}
               <div className="relative flex items-center bg-gray-100 p-1 rounded-md w-fit">
                 <div

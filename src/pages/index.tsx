@@ -615,7 +615,7 @@
                   <PieChartIcon className="h-5 w-5 text-gray-400" />
                 </div>
 
-                <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                   {/* Pie Chart */}
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
@@ -652,7 +652,7 @@
                   {/* Legend */}
                   <div className="grid grid-cols-1 gap-3">
                     {summaryCards.map((card, i) => (
-                      <div key={i} className="flex items-center gap-3 bg-gray-50 px-4 py-3 rounded-lg border border-gray-100">
+                      <div key={i} className="flex items-center gap-3 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: card.fill }}></div>
                         <span className="text-sm font-medium text-gray-700 flex-1">{card.label}</span>
                         <span className="text-sm font-bold text-gray-900">{card.value}</span>
@@ -678,7 +678,7 @@
                     <PieChartIcon className="h-5 w-5 text-gray-400" />
                   </div>
 
-                  <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                     {/* Pie Chart */}
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
@@ -734,7 +734,7 @@
           {/* Follow-ups and Tasks Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Upcoming Follow-ups */}
-            <div className="h-[500px]">
+            <div className="h-auto min-h-[400px] lg:h-[500px]">
               {renderFollowupTable(
                 "Upcoming Follow-ups",
                 upcomingFollowups,
@@ -749,7 +749,7 @@
             </div>
 
             {/* Due Follow-ups */}
-            <div className="h-[500px]">
+            <div className="h-auto min-h-[400px] lg:h-[500px]">
               {renderFollowupTable(
                 "Overdue Follow-ups",
                 dueFollowups,
@@ -764,7 +764,7 @@
             </div>
 
             {/* Today's Tasks */}
-            <div className="h-[500px]">
+            <div className="h-auto min-h-[400px] lg:h-[500px]">
               {renderTodayTasksTable(todayTasks, tasksLoading)}
             </div>
           </div>

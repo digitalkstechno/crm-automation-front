@@ -39,7 +39,7 @@ export default function App({ Component, pageProps }: AppProps) {
           />
         )}
         <div
-          className={`flex-1 transition-all duration-300 ease-in-out ${
+          className={`flex-1 min-w-0 transition-all duration-300 ease-in-out ${
             !isLoginPage ? (isSidebarOpen ? 'md:ml-64' : 'md:ml-20') : ''
           }`}
         >
