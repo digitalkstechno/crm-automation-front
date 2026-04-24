@@ -196,43 +196,44 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-30 h-screen bg-[#05111e] text-white shadow-2xl transition-all duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 z-30 h-screen text-white shadow-sidebar transition-all duration-300 ease-in-out ${
           isOpen ? 'w-64' : 'w-20'
         }`}
+        style={{ background: '#ffffff', borderRight: '1px solid #f0ece4' }}
       >
         <div className="flex h-full flex-col">
           {/* Header with Logo */}
-          <div className={`flex items-center h-20 px-4 border-b border-white/10 ${isOpen ? 'justify-between' : 'justify-center'}`}>
+          <div className={`flex items-center h-16 px-4 border-b border-gray-100 ${isOpen ? 'justify-between' : 'justify-center'}`}>
             {isOpen ? (
               <>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#30cdb2] to-[#23abed] flex items-center justify-center font-bold text-white shadow-lg">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm shadow-sm" style={{ background: 'linear-gradient(135deg, #C5A059, #a8843a)', color: '#fff' }}>
                     LF
                   </div>
-                  <span className="text-lg font-semibold text-white tracking-wide">LeadFlow</span>
+                  <span className="text-base font-semibold tracking-wide" style={{ color: '#C5A059' }}>LeadFlow</span>
                 </div>
                 <button
                   onClick={toggleSidebar}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-all duration-200 group"
+                  className="p-1.5 rounded-lg transition-all duration-200 hover:bg-gray-100"
                   aria-label="Toggle sidebar"
                 >
-                  <ChevronLeft className="h-5 w-5 text-white/70 group-hover:text-white group-hover:scale-110 transition-all" />
+                  <ChevronLeft className="h-4 w-4 text-gray-400" />
                 </button>
               </>
             ) : (
               <button
                 onClick={toggleSidebar}
-                className="p-2 rounded-lg hover:bg-white/10 transition-all duration-200 group"
+                className="p-1.5 rounded-lg transition-all duration-200 hover:bg-gray-100"
                 aria-label="Toggle sidebar"
               >
-                <Menu className="h-6 w-6 text-white/70 group-hover:text-white group-hover:scale-110 transition-all" />
+                <Menu className="h-5 w-5 text-gray-400" />
               </button>
             )}
           </div>
 
           {/* Navigation Menu */}
-          <nav className="flex-1 overflow-y-auto overflow-x-hidden py-6 px-3 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-            <ul className="space-y-1.5">
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3">
+            <ul className="space-y-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 const hasChildren = !!item.children;
@@ -245,44 +246,35 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
                       <div>
                         <button
                           onClick={() => toggleExpand(item.label)}
-                          className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 group ${
-                            expanded
-                              ? 'bg-white/10 text-white'
-                              : 'text-white/70 hover:bg-white/5 hover:text-white'
+                          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200 ${
+                            expanded ? 'bg-amber-50 text-gray-800' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
                           }`}
                         >
-                          <Icon className={`h-5 w-5 flex-shrink-0 transition-transform group-hover:scale-110 ${
-                            expanded ? 'text-white' : 'text-white/70'
-                          }`} />
+                          <Icon className="h-4 w-4 flex-shrink-0" style={{ color: expanded ? '#C5A059' : '#9ca3af' }} />
                           {isOpen && (
                             <>
                               <span className="flex-1 text-sm font-medium text-left">{item.label}</span>
-                              <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`} />
+                              <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`} />
                             </>
                           )}
                         </button>
 
-                        {/* Submenu */}
                         {isOpen && expanded && (
-                          <ul className="mt-1 ml-4 space-y-1 border-l border-white/10 pl-3">
+                          <ul className="mt-1 ml-4 space-y-0.5 border-l pl-3" style={{ borderColor: 'rgba(197,160,89,0.3)' }}>
                             {item.children?.map((child) => {
                               const ChildIcon = child.icon;
                               const isChildActive = isActive(child.path);
-                              
                               return (
                                 <li key={child.label}>
                                   <button
                                     onClick={() => handleNavigation(child.path)}
-                                    className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm transition-all duration-200 group ${
-                                      isChildActive
-                                        ? 'bg-gradient-to-r from-[#0f3c70]/20 to-[#0f2f5a]/20 text-white border border-white/10'
-                                        : 'text-white/60 hover:bg-white/5 hover:text-white'
+                                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-200 ${
+                                      isChildActive ? 'text-gray-900' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
                                     }`}
+                                    style={isChildActive ? { background: 'rgba(197,160,89,0.12)', borderLeft: '2px solid #C5A059' } : {}}
                                   >
-                                    <ChildIcon className={`h-4 w-4 flex-shrink-0 transition-transform group-hover:scale-110 ${
-                                      isChildActive ? 'text-[#9f7cff]' : 'text-white/60'
-                                    }`} />
-                                    <span className="text-sm">{child.label}</span>
+                                    <ChildIcon className="h-4 w-4 flex-shrink-0" style={{ color: isChildActive ? '#C5A059' : '#9ca3af' }} />
+                                    <span>{child.label}</span>
                                   </button>
                                 </li>
                               );
@@ -293,15 +285,12 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
                     ) : (
                       <button
                         onClick={() => handleNavigation(item.path)}
-                        className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 group ${
-                          isItemActive
-                            ? 'bg-gradient-to-r from-[#0f3c70] to-[#0f2f5a] text-white'
-                            : 'text-white/70 hover:bg-white/5 hover:text-white'
+                        className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200 ${
+                          isItemActive ? 'text-gray-900' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
                         }`}
+                        style={isItemActive ? { background: 'rgba(197,160,89,0.12)', borderLeft: '2px solid #C5A059' } : {}}
                       >
-                        <Icon className={`h-5 w-5 flex-shrink-0 transition-transform group-hover:scale-110 ${
-                          isItemActive ? 'text-white' : 'text-white/70'
-                        }`} />
+                        <Icon className="h-4 w-4 flex-shrink-0" style={{ color: isItemActive ? '#C5A059' : '#9ca3af' }} />
                         {isOpen && (
                           <span className="text-sm font-medium">{item.label}</span>
                         )}
@@ -312,8 +301,6 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
               })}
             </ul>
           </nav>
-
-
         </div>
       </aside>
     </>

@@ -407,63 +407,61 @@ export default function Header() {
   const totalCount = notifications.length;
 
   return (
-    <header className="sticky top-0 z-20 flex h-20 items-center justify-between bg-white border-b border-gray-200 px-6 backdrop-blur-sm">
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between bg-white border-b border-gray-100 px-6" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
       <div className="flex items-center gap-4">
-        <h1 className="text-3xl font-bold text-gray-900">
-          {getLabel() || "Default Title"}
+        <h1 className="text-xl font-semibold text-gray-800">
+          {getLabel() || "Dashboard"}
         </h1>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
 
         {/* Alerts / Notifications */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative flex items-center justify-center h-10 w-10 rounded-full hover:bg-gray-100 transition-colors"
+            className="relative flex items-center justify-center h-9 w-9 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            <Bell className="h-5 w-5 text-gray-600" />
+            <Bell className="h-5 w-5 text-gray-500" />
             {unreadCount > 0 && (
-              <span className="absolute top-1 max-w-[20px] max-h-[20px] overflow-hidden right-1 flex h-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                {unreadCount > 99 ? '99+' : unreadCount}
+              <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: '#C5A059' }}>
+                {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 rounded-lg bg-white shadow-xl overflow-hidden z-50">
-              <div className="px-4 py-3 border-b border-gray-100 bg-[#0a2352] flex justify-between items-center">
+            <div className="absolute right-0 mt-2 w-80 rounded-xl bg-white shadow-xl overflow-hidden z-50 border border-gray-100">
+              <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center" style={{ background: '#1a1a1a' }}>
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-semibold text-white">Notifications</h3>
-                  {/* Counter badge on the right side of the header */}
-                  <span className="bg-white text-primary text-xs font-medium px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: 'rgba(197,160,89,0.2)', color: '#C5A059' }}>
                     {unreadCount}
                   </span>
                 </div>
                 <div className="flex gap-2">
-                  {/* Permission status indicator and request button */}
                   {notificationPermission !== 'granted' && (
                     <button
                       onClick={requestNotificationPermission}
-                      className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer bg-blue-50 px-2 py-1 rounded"
+                      className="text-xs cursor-pointer px-2 py-1 rounded-lg transition-colors"
+                      style={{ background: 'rgba(197,160,89,0.15)', color: '#C5A059' }}
                     >
-                      {notificationPermission === 'denied' ? 'Enable Notifications' : 'Allow Notifications'}
+                      {notificationPermission === 'denied' ? 'Enable' : 'Allow'}
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Permission denied message */}
               {notificationPermission === 'denied' && (
-                <div className="px-4 py-3 bg-yellow-50 border-b border-yellow-100">
-                  <p className="text-xs text-yellow-800">
-                    Notifications are blocked. Please enable them in your browser settings to receive real-time updates.
+                <div className="px-4 py-3 bg-amber-50 border-b border-amber-100">
+                  <p className="text-xs text-amber-700">
+                    Notifications are blocked. Enable them in browser settings.
                   </p>
                 </div>
               )}
 
               <div className="max-h-[70vh] overflow-y-auto">
                 {unreadNotifications.length === 0 ? (
-                  <div className="px-4 py-6 text-center text-sm text-gray-500">
+                  <div className="px-4 py-8 text-center text-sm text-gray-400">
                     {totalCount === 0 ? 'No notifications' : 'No new notifications'}
                   </div>
                 ) : (
@@ -472,23 +470,24 @@ export default function Header() {
                       <div
                         key={notif._id}
                         onClick={() => handleNotificationClick(notif)}
-                        className="px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors bg-blue-50/30 group relative"
+                        className="px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors group relative"
+                        style={{ background: 'rgba(197,160,89,0.04)' }}
                       >
                         <div className="flex justify-between items-start mb-1">
-                          <h4 className="text-sm font-semibold text-gray-900 pr-6">
+                          <h4 className="text-sm font-semibold text-gray-800 pr-6">
                             {notif.title}
                           </h4>
                           <span className="text-[10px] text-gray-400 whitespace-nowrap ml-2">
                             {notif.createdAt ? new Date(notif.createdAt).toLocaleDateString() : 'Just now'}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-800 line-clamp-2 pr-6">
+                        <p className="text-xs text-gray-600 line-clamp-2 pr-6">
                           {notif.message}
                         </p>
-
                         <button
                           onClick={(e) => markAsReadSingle(e, notif._id)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700 bg-white shadow-sm rounded-full p-1 transition-all"
+                          className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 bg-white shadow-sm rounded-full p-1 transition-all"
+                          style={{ color: '#C5A059' }}
                           title="Mark as read"
                         >
                           <CheckCircle className="w-4 h-4" />
@@ -499,16 +498,16 @@ export default function Header() {
                 )}
               </div>
 
-              {/* Full width Mark all as read button at the bottom */}
               {unreadCount > 0 && (
                 <div className="border-t border-gray-100">
                   <button
                     onClick={markAllAsRead}
                     disabled={markingAllRead}
-                    className="w-full px-4 py-3 text-sm bg-[#0a2352] text-white font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-3 text-sm font-medium text-white transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ background: '#1a1a1a' }}
                   >
-                    <CheckCheck className="w-4 h-4" />
-                    {markingAllRead ? 'Marking all as read...' : `Mark all as read (${unreadCount})`}
+                    <CheckCheck className="w-4 h-4" style={{ color: '#C5A059' }} />
+                    <span>{markingAllRead ? 'Marking...' : `Mark all read (${unreadCount})`}</span>
                   </button>
                 </div>
               )}
@@ -517,7 +516,7 @@ export default function Header() {
         </div>
         <button
           onClick={handleLogout}
-          className="flex items-center justify-center h-10 w-10 rounded-full hover:bg-red-50 transition-all duration-200 text-gray-600 hover:text-red-600 focus:ring-red-500 focus:ring-offset-2"
+          className="flex items-center justify-center h-9 w-9 rounded-lg hover:bg-red-50 transition-all duration-200 text-gray-500 hover:text-red-500"
           title="Logout"
         >
           <LogOut className="h-5 w-5" />
