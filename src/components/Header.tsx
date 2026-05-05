@@ -128,9 +128,6 @@ export default function Header({ toggleSidebar }: HeaderProps) {
 
   useEffect(() => {
     fetchNotifications();
-    // Refresh notifications every minute
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -430,7 +427,12 @@ export default function Header({ toggleSidebar }: HeaderProps) {
         {/* Alerts / Notifications */}
         <div className="relative" ref={dropdownRef}>
           <button
-            onClick={() => setShowNotifications(!showNotifications)}
+            onClick={() => {
+              if (!showNotifications) {
+                fetchNotifications();
+              }
+              setShowNotifications(!showNotifications);
+            }}
             className="relative flex items-center justify-center h-10 w-10 rounded-full hover:bg-gray-100 transition-colors"
           >
             <Bell className="h-5 w-5 text-gray-600" />
