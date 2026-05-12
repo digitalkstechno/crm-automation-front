@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useFormik } from 'formik';
@@ -80,29 +80,7 @@ const defaultForm: TaskFormData = {
   description: '',
 };
 
-// Validation Schema
-const TaskValidationSchema = Yup.object().shape({
-  subject: Yup.string()
-    .required('Subject is required')
-    .min(3, 'Subject must be at least 3 characters')
-    .max(200, 'Subject must not exceed 200 characters'),
-  startDate: Yup.date()
-    .nullable()
-    .typeError('Invalid date format'),
-  endDate: Yup.date()
-    .nullable()
-    .typeError('Invalid date format')
-    .min(Yup.ref('startDate'), 'End date must be after start date'),
-  status: Yup.string()
-    .required('Status is required'),
-  priority: Yup.string()
-    .required('Priority is required')
-    .oneOf(['low', 'medium', 'high'], 'Invalid priority'),
-  assignedUsers: Yup.array().of(Yup.string()),
-  assignedTeams: Yup.array().of(Yup.string()),
-  description: Yup.string()
-    .max(5000, 'Description must not exceed 5000 characters'),
-});
+// Static TaskValidationSchema removed - moved inside component for dynamic required fields
 
 // Image extensions
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'];
@@ -134,6 +112,58 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
 
   const [loading, setLoading] = useState(false);
   const [loadingOptions, setLoadingOptions] = useState(false);
+  const [requiredFields, setRequiredFields] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadRequiredFields = () => {
+      const saved = localStorage.getItem('taskRequiredFields');
+      if (saved) {
+        try {
+          setRequiredFields(JSON.parse(saved));
+        } catch (e) {
+          setRequiredFields(['subject', 'status', 'priority']);
+        }
+      } else {
+        setRequiredFields(['subject', 'status', 'priority']);
+      }
+    };
+
+    loadRequiredFields();
+    window.addEventListener('fieldSettingsUpdated', loadRequiredFields);
+    return () => window.removeEventListener('fieldSettingsUpdated', loadRequiredFields);
+  }, []);
+
+  const TaskValidationSchema = useMemo(() => {
+    let shape: any = {
+      subject: Yup.string()
+        .min(3, 'Subject must be at least 3 characters')
+        .max(200, 'Subject must not exceed 200 characters'),
+      startDate: Yup.date()
+        .nullable()
+        .typeError('Invalid date format'),
+      endDate: Yup.date()
+        .nullable()
+        .typeError('Invalid date format')
+        .min(Yup.ref('startDate'), 'End date must be after start date'),
+      status: Yup.string(),
+      priority: Yup.string().oneOf(['low', 'medium', 'high'], 'Invalid priority'),
+      assignedUsers: Yup.array().of(Yup.string()),
+      assignedTeams: Yup.array().of(Yup.string()),
+      description: Yup.string()
+        .max(5000, 'Description must not exceed 5000 characters'),
+    };
+
+    if (requiredFields.includes('subject')) shape.subject = shape.subject.required('Subject is required');
+    if (requiredFields.includes('startDate')) shape.startDate = shape.startDate.required('Start Date is required');
+    if (requiredFields.includes('endDate')) shape.endDate = shape.endDate.required('End Date is required');
+    if (requiredFields.includes('status')) shape.status = shape.status.required('Status is required');
+    if (requiredFields.includes('priority')) shape.priority = shape.priority.required('Priority is required');
+    if (requiredFields.includes('description')) shape.description = shape.description.required('Description is required');
+    if (requiredFields.includes('assignedTeams')) shape.assignedTeams = Yup.array().min(1, 'Please assign at least one team').required();
+    if (requiredFields.includes('assignedUsers')) shape.assignedUsers = Yup.array().min(1, 'Please assign at least one user').required();
+
+    return Yup.object().shape(shape);
+  }, [requiredFields]);
 
   // Formik setup
   const formik = useFormik<TaskFormData>({
@@ -361,11 +391,13 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
             error={formik.touched.subject && formik.errors.subject}
             placeholder=""
             as="input"
-            required
+            required={requiredFields.includes('subject')}
           />
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description {requiredFields.includes('description') && <span className="text-red-700 ml-1 font-semibold">*</span>}
+            </label>
             <div className={`rounded-xl border overflow-hidden ${formik.touched.description && formik.errors.description
               ? 'border-red-500'
               : 'border-gray-300'
@@ -400,7 +432,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
               error={formik.touched.startDate && formik.errors.startDate}
               placeholder=""
               as="input"
-              required
+              required={requiredFields.includes('startDate')}
             />
             <FormInput
               label="End Date"
@@ -412,7 +444,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
               error={formik.touched.endDate && formik.errors.endDate}
               placeholder=""
               as="input"
-              required
+              required={requiredFields.includes('endDate')}
             />
           </div>
 
@@ -427,7 +459,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
               options={dropdownStatuses.map((s: any) => ({ value: s._id, label: s.name! }))}
               error={formik.touched.status && formik.errors.status}
               placeholder="— Select Status —"
-              required
+              required={requiredFields.includes('status')}
             />
             <FormSelect
               label="Priority"
@@ -438,13 +470,13 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
               options={PRIORITY_OPTIONS.map((p) => ({ value: p.value, label: p.label }))}
               error={formik.touched.priority && formik.errors.priority}
               placeholder="— Select Priority —"
-              required
+              required={requiredFields.includes('priority')}
             />
           </div>
 
           {/* Assign Teams */}
           <div>
-            <Label>Assign Teams</Label>
+            <Label>Assign Teams {requiredFields.includes('assignedTeams') && <span className="text-red-700 ml-1 font-semibold">*</span>}</Label>
             {loadingOptions ? (
               <div className="text-sm text-gray-400">Loading...</div>
             ) : (
@@ -489,7 +521,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
 
           {/* Assign Users */}
           <div>
-            <Label>Assign Users</Label>
+            <Label>Assign Users {requiredFields.includes('assignedUsers') && <span className="text-red-700 ml-1 font-semibold">*</span>}</Label>
             {loadingOptions ? (
               <div className="text-sm text-gray-400">Loading...</div>
             ) : (

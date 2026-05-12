@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import axios from 'axios';
@@ -32,30 +32,7 @@ interface Props {
   onLeadUpdated?: (lead: any) => void;
 }
 
-// Validation schema
-const leadValidationSchema = Yup.object({
-  fullName: Yup.string()
-    .required('Full Name is required')
-    .min(2, 'Full Name must be at least 2 characters')
-    .max(100, 'Full Name must not exceed 100 characters'),
-  companyName: Yup.string().required('Company Name is required'),
-  address: Yup.string().required('Address is required').max(500, 'Address must not exceed 500 characters'),
-  contact: Yup.string()
-    .required('Phone number is required')
-    .matches(/^[0-9+\-\s()]+$/, 'Invalid phone number format')
-    .min(10, 'Phone number must be at least 10 digits')
-    .max(20, 'Phone number must not exceed 20 digits'),
-  email: Yup.string()
-    .required('Email is required')
-    .email('Invalid email format')
-    .max(100, 'Email must not exceed 100 characters'),
-  leadSource: Yup.string().required('Please select a source'),
-  leadStatus: Yup.string().required('Please select a status'),
-  assignedTo: Yup.string().required('Please assign staff'),
-  labels: Yup.array().of(Yup.string()),
-  priority: Yup.string().oneOf(['high', 'medium', 'low']),
-  isActive: Yup.boolean(),
-});
+// Static schema removed - moved inside component for dynamic required fields
 
 export default function LeadAddDialog({
   isOpen, onClose, mode, initialData,
@@ -74,6 +51,63 @@ export default function LeadAddDialog({
     isOpen: boolean;
     attachment: Attachment | null;
   }>({ isOpen: false, attachment: null });
+
+  const [requiredFields, setRequiredFields] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadRequiredFields = () => {
+      const saved = localStorage.getItem('leadRequiredFields');
+      if (saved) {
+        try {
+          setRequiredFields(JSON.parse(saved));
+        } catch (e) {
+          setRequiredFields(['fullName', 'contact', 'email', 'leadSource', 'leadStatus', 'assignedTo']);
+        }
+      } else {
+        setRequiredFields(['fullName', 'contact', 'email', 'leadSource', 'leadStatus', 'assignedTo']);
+      }
+    };
+
+    loadRequiredFields();
+    window.addEventListener('fieldSettingsUpdated', loadRequiredFields);
+    return () => window.removeEventListener('fieldSettingsUpdated', loadRequiredFields);
+  }, []);
+
+  const leadValidationSchema = useMemo(() => {
+    let shape: any = {
+      fullName: Yup.string()
+        .min(2, 'Full Name must be at least 2 characters')
+        .max(100, 'Full Name must not exceed 100 characters'),
+      companyName: Yup.string(),
+      address: Yup.string().max(500, 'Address must not exceed 500 characters'),
+      contact: Yup.string()
+        .matches(/^[0-9+\-\s()]+$/, 'Invalid phone number format')
+        .min(10, 'Phone number must be at least 10 digits')
+        .max(20, 'Phone number must not exceed 20 digits'),
+      email: Yup.string()
+        .email('Invalid email format')
+        .max(100, 'Email must not exceed 100 characters'),
+      leadSource: Yup.string(),
+      leadStatus: Yup.string(),
+      assignedTo: Yup.string(),
+      labels: Yup.array().of(Yup.string()),
+      priority: Yup.string().oneOf(['high', 'medium', 'low']),
+      isActive: Yup.boolean(),
+    };
+
+    if (requiredFields.includes('fullName')) shape.fullName = shape.fullName.required('Full Name is required');
+    if (requiredFields.includes('companyName')) shape.companyName = Yup.string().required('Company Name is required');
+    if (requiredFields.includes('address')) shape.address = Yup.string().required('Address is required').max(500, 'Address must not exceed 500 characters');
+    if (requiredFields.includes('contact')) shape.contact = shape.contact.required('Phone number is required');
+    if (requiredFields.includes('email')) shape.email = shape.email.required('Email is required');
+    if (requiredFields.includes('leadSource')) shape.leadSource = Yup.string().required('Please select a source');
+    if (requiredFields.includes('leadStatus')) shape.leadStatus = Yup.string().required('Please select a status');
+    if (requiredFields.includes('assignedTo')) shape.assignedTo = Yup.string().required('Please assign staff');
+    if (requiredFields.includes('labels')) shape.labels = Yup.array().min(1, 'Please select at least one label').required();
+    if (requiredFields.includes('priority')) shape.priority = Yup.string().required('Priority is required');
+
+    return Yup.object().shape(shape);
+  }, [requiredFields]);
 
   const token = getAuthToken;
 
@@ -340,7 +374,7 @@ export default function LeadAddDialog({
                 onBlur={formik.handleBlur}
                 error={getFieldError('fullName')}
                 placeholder="Full Name"
-                required
+                required={requiredFields.includes('fullName')}
               />
               <FormInput
                 label="Company Name"
@@ -351,7 +385,7 @@ export default function LeadAddDialog({
                 onBlur={formik.handleBlur}
                 error={getFieldError('companyName')}
                 placeholder="Company"
-                required
+                required={requiredFields.includes('companyName')}
               />
             </div>
 
@@ -364,7 +398,7 @@ export default function LeadAddDialog({
               onBlur={formik.handleBlur}
               error={getFieldError('address')}
               placeholder="Address"
-              required
+              required={requiredFields.includes('address')}
               as="textarea"
             />
 
@@ -379,7 +413,7 @@ export default function LeadAddDialog({
                 onBlur={formik.handleBlur}
                 error={getFieldError('contact')}
                 placeholder="Phone"
-                required
+                required={requiredFields.includes('contact')}
               />
               <FormInput
                 label="Email"
@@ -390,7 +424,7 @@ export default function LeadAddDialog({
                 onBlur={formik.handleBlur}
                 error={getFieldError('email')}
                 placeholder="Email"
-                required
+                required={requiredFields.includes('email')}
               />
             </div>
 
@@ -405,7 +439,7 @@ export default function LeadAddDialog({
                 options={sources.map((s) => ({ value: s._id, label: s.name! }))}
                 error={getFieldError('leadSource')}
                 placeholder="— Select Source —"
-                required
+                required={requiredFields.includes('leadSource')}
               />
               <FormSelect
                 label="Status"
@@ -416,7 +450,7 @@ export default function LeadAddDialog({
                 options={statuses.map((s) => ({ value: s._id, label: s.name! }))}
                 error={getFieldError('leadStatus')}
                 placeholder="— Select Status —"
-                required
+                required={requiredFields.includes('leadStatus')}
               />
               <FormSelect
                 label="Assigned Staff"
@@ -427,7 +461,7 @@ export default function LeadAddDialog({
                 options={staff.map((s) => ({ value: s._id, label: s.fullName || s.name! }))}
                 error={getFieldError('assignedTo')}
                 placeholder="— Select Staff —"
-                required
+                required={requiredFields.includes('assignedTo')}
               />
               <FormSelect
                 label="Priority"
@@ -441,6 +475,7 @@ export default function LeadAddDialog({
                   { value: 'low', label: 'Low' },
                 ]}
                 error={getFieldError('priority')}
+                required={requiredFields.includes('priority')}
               />
             </div>
 
@@ -454,6 +489,7 @@ export default function LeadAddDialog({
               options={labelOptions}
               error={getFieldError('labels')}
               placeholder="Select labels..."
+              required={requiredFields.includes('labels')}
             />
 
             {/* Last Follow-Up */}

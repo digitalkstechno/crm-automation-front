@@ -15,11 +15,13 @@ import { TeamsContent } from './teams';
 import { OrganizationsContent } from './organizations';
 import { TaskStatusContent } from './task-status';
 import { useRouter } from 'next/router';
+import { FieldSettingsContent } from './field-settings';
+
 
 export default function Setup() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<
-    'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations' | 'Task Status'
+    'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations' | 'Task Status' | 'Field Settings'
   >('Role Management');
   const token = typeof window !== 'undefined' ? getAuthToken() : null;
   const [permissions, setPermissions] = useState<any>(null);
@@ -29,7 +31,7 @@ export default function Setup() {
   useEffect(() => {
     if (router.query.tab) {
       const tab = router.query.tab as string;
-      const validTabs = ['Role Management', 'Staff Management', 'Lead Sources', 'Lead Status', 'Kanban Status', 'Lead Labels', 'Teams', 'Organizations', 'Task Status'];
+      const validTabs = ['Role Management', 'Staff Management', 'Lead Sources', 'Lead Status', 'Kanban Status', 'Lead Labels', 'Teams', 'Organizations', 'Task Status', 'Field Settings'];
       if (validTabs.includes(tab)) {
         setActiveTab(tab as any);
       }
@@ -37,7 +39,7 @@ export default function Setup() {
   }, [router.query.tab]);
 
   // Handle tab change and update URL
-  const handleTabChange = (tab: 'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations' | 'Task Status') => {
+  const handleTabChange = (tab: 'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations' | 'Task Status' | 'Field Settings') => {
     setActiveTab(tab);
     router.push({
       pathname: router.pathname,
@@ -204,6 +206,7 @@ export default function Setup() {
       { name: "Task Status", icon: Settings, visible: canViewTaskStatus },
       { name: "Teams", icon: UsersRound, visible: canViewTeams },
       { name: "Organizations", icon: Building2, visible: canViewOrgs },
+      { name: "Field Settings", icon: Settings2, visible: true },
     ];
     return items.filter(i => i.visible);
   }, [canViewRole, canViewStaff, canViewLeadSource, canViewLeadStatus, canViewLeadLabel, canViewTeams, canViewOrgs, canViewTaskStatus]);
@@ -279,6 +282,7 @@ export default function Setup() {
               {activeTab === 'Teams' && <TeamsContent />}
               {activeTab === 'Organizations' && <OrganizationsContent />}
               {activeTab === 'Task Status' && <TaskStatusContent />}
+              {activeTab === 'Field Settings' && <FieldSettingsContent />}
               {activeTab === 'Kanban Status' && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">

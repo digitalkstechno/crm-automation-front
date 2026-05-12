@@ -135,9 +135,27 @@ export default function LeadsPage() {
   });
 
   // View dialog edit states
-  const [editingStatus, setEditingStatus] = useState("");
-  const [editingNextFollowupDate, setEditingNextFollowupDate] = useState("");
   const [editingNextFollowupTime, setEditingNextFollowupTime] = useState("");
+  const [requiredFields, setRequiredFields] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadRequiredFields = () => {
+      const saved = localStorage.getItem('leadRequiredFields');
+      if (saved) {
+        try {
+          setRequiredFields(JSON.parse(saved));
+        } catch (e) {
+          setRequiredFields(['fullName', 'contact', 'email', 'leadSource', 'leadStatus', 'assignedTo']);
+        }
+      } else {
+        setRequiredFields(['fullName', 'contact', 'email', 'leadSource', 'leadStatus', 'assignedTo']);
+      }
+    };
+
+    loadRequiredFields();
+    window.addEventListener('fieldSettingsUpdated', loadRequiredFields);
+    return () => window.removeEventListener('fieldSettingsUpdated', loadRequiredFields);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -305,15 +323,21 @@ export default function LeadsPage() {
   }, []);
 
   const handleSaveLead = async () => {
-    if (
-      !addForm.name ||
-      !addForm.phone ||
-      !addForm.email ||
-      !addForm.source ||
-      !addForm.status ||
-      !addForm.staff
-    ) {
-      toast.error("Please fill all required fields");
+    // Dynamic validation based on settings
+    const missingFields: string[] = [];
+    if (requiredFields.includes('fullName') && !addForm.name) missingFields.push('Full Name');
+    if (requiredFields.includes('companyName') && !addForm.companyName) missingFields.push('Company Name');
+    if (requiredFields.includes('address') && !addForm.address) missingFields.push('Address');
+    if (requiredFields.includes('contact') && !addForm.phone) missingFields.push('Phone');
+    if (requiredFields.includes('email') && !addForm.email) missingFields.push('Email');
+    if (requiredFields.includes('leadSource') && !addForm.source) missingFields.push('Source');
+    if (requiredFields.includes('leadStatus') && !addForm.status && !editingLead) missingFields.push('Status');
+    if (requiredFields.includes('assignedTo') && !addForm.staff) missingFields.push('Assigned Staff');
+    if (requiredFields.includes('priority') && !addForm.priority) missingFields.push('Priority');
+    if (requiredFields.includes('labels') && (!addForm.label || addForm.label.length === 0)) missingFields.push('Lead Labels');
+
+    if (missingFields.length > 0) {
+      toast.error(`Required fields missing: ${missingFields.join(', ')}`);
       return;
     }
 
@@ -1117,7 +1141,7 @@ export default function LeadsPage() {
           <form className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700">
-                Full Name
+                Full Name {requiredFields.includes('fullName') && <span className="text-red-500">*</span>}
               </label>
               <input
                 type="text"
@@ -1130,7 +1154,7 @@ export default function LeadsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">
-                Company Name
+                Company Name {requiredFields.includes('companyName') && <span className="text-red-500">*</span>}
               </label>
               <input
                 type="text"
@@ -1143,7 +1167,7 @@ export default function LeadsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">
-                Address
+                Address {requiredFields.includes('address') && <span className="text-red-500">*</span>}
               </label>
               <textarea
                 rows={3}
@@ -1156,7 +1180,7 @@ export default function LeadsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">
-                Phone
+                Phone {requiredFields.includes('contact') && <span className="text-red-500">*</span>}
               </label>
               <input
                 type="text"
@@ -1169,7 +1193,7 @@ export default function LeadsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">
-                Email
+                Email {requiredFields.includes('email') && <span className="text-red-500">*</span>}
               </label>
               <input
                 type="email"
@@ -1183,7 +1207,7 @@ export default function LeadsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700">
-                  Source
+                  Source {requiredFields.includes('leadSource') && <span className="text-red-500">*</span>}
                 </label>
                 <select
                   value={addForm.source}
@@ -1204,7 +1228,7 @@ export default function LeadsPage() {
               {!editingLead && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700">
-                    Status
+                    Status {requiredFields.includes('leadStatus') && <span className="text-red-500">*</span>}
                   </label>
                   <select
                     value={addForm.status}
@@ -1224,7 +1248,7 @@ export default function LeadsPage() {
               )}
               <div>
                 <label className="block text-sm font-medium text-slate-700">
-                  Assigned Staff
+                  Assigned Staff {requiredFields.includes('assignedTo') && <span className="text-red-500">*</span>}
                 </label>
                 <select
                   value={addForm.staff}
@@ -1243,7 +1267,7 @@ export default function LeadsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700">
-                  Priority
+                  Priority {requiredFields.includes('priority') && <span className="text-red-500">*</span>}
                 </label>
                 <select
                   value={addForm.priority}
@@ -1263,7 +1287,7 @@ export default function LeadsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">
-                Lead Labels
+                Lead Labels {requiredFields.includes('labels') && <span className="text-red-500">*</span>}
               </label>
 
               <Select
