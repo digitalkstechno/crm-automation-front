@@ -10,6 +10,7 @@ import { ApiLead } from './types';
 import { RefreshCw } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
 import KanbanCard from './KanbanCard';
+import Swal from 'sweetalert2';
 
 type PaginationShape = {
     currentPage: number;
@@ -283,7 +284,7 @@ export default function LeadsKanbanView({
         { key: 'contact', label: 'CONTACT', render: (v, row) => <ContactCell phone={v} email={row.email} /> },
         { key: 'wonDate', label: 'WON DATE', render: (v) => (v ? new Date(v).toLocaleDateString() : 'N/A') },
         { key: 'assignedTo', label: 'ASSIGNED TO', render: (v) => v?.fullName || '-' },
-        { key: 'amount', label: 'AMOUNT', render: (v) => (v ? `₹${v.toLocaleString()}` : '-') },
+        { key: 'paymentAmount', label: 'AMOUNT', render: (v) => (v ? `₹${v.toLocaleString()}` : '-') },
     ];
 
     return (
@@ -426,6 +427,39 @@ export default function LeadsKanbanView({
                         actions
                         onView={(row) => onView?.(row)}
                         onEdit={permissions?.update ? (row) => onEdit?.(row) : undefined}
+                        extraActions={permissions?.update ? [
+                            {
+                                label: 'Payment',
+                                icon: <span className="text-xs font-bold">₹</span>,
+                                color: 'emerald',
+                                onClick: async (row) => {
+                                    const { value: amount } = await Swal.fire({
+                                        title: 'Add Payment',
+                                        input: 'number',
+                                        inputLabel: 'Enter payment amount',
+                                        inputPlaceholder: 'e.g. 5000',
+                                        showCancelButton: true,
+                                        inputValidator: (value: any) => {
+                                            if (!value) return 'You need to write something!';
+                                            if (isNaN(value) || value < 0) return 'Please enter a valid amount';
+                                        }
+                                    });
+
+                                    if (amount) {
+                                        try {
+                                            await axios.put(`${baseUrl.updateLead}/${row._id}`, 
+                                                { paymentAmount: Number(amount) }, 
+                                                { headers: { Authorization: `Bearer ${getAuthToken()}` } }
+                                            );
+                                            Swal.fire('Success', 'Payment added successfully', 'success');
+                                            onRefresh();
+                                        } catch (err) {
+                                            Swal.fire('Error', 'Failed to add payment', 'error');
+                                        }
+                                    }
+                                }
+                            }
+                        ] : undefined}
                     />
                 </div>
             )}

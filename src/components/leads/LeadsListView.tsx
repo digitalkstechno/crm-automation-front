@@ -7,6 +7,7 @@ import { baseUrl, getAuthToken } from '@/config';
 import { ApiSource, ApiStatus, ApiUser, ApiLead } from './types';
 import DataTable, { Column } from '@/components/DataTable';
 import DeleteDialog from '@/components/DeleteDialog';
+import Swal from 'sweetalert2';
 
 // ── Debounce helper ──────────────────────────────────────────────────────────
 function useDebounce<T>(value: T, delay = 500): T {
@@ -229,6 +230,11 @@ export default function LeadsListView({
     { key: 'staff', label: 'ASSIGNED STAFF' },
     { key: 'priority', label: 'PRIORITY' },
     { key: 'lastFollowUp', label: 'LAST FOLLOW-UP' },
+    { 
+      key: 'paymentAmount', 
+      label: 'AMOUNT',
+      render: (v) => (v ? <span className="font-bold text-emerald-600">₹{v.toLocaleString()}</span> : <span className="text-gray-400">-</span>)
+    },
   ];
 
   // ── Handlers ─────────────────────────────────────────────────────────────
@@ -331,6 +337,40 @@ export default function LeadsListView({
         onView={handleView}
         onEdit={permissions?.update ? handleEdit : undefined}
         onDelete={permissions?.delete ? (row) => { setDeleteTarget(row); setShowDelete(true); } : undefined}
+        extraActions={permissions?.update ? [
+          {
+            label: 'Payment',
+            icon: <span className="text-xs font-bold">₹</span>,
+            color: 'emerald',
+            show: (row) => row.status?.toLowerCase() === 'won',
+            onClick: async (row) => {
+              const { value: amount } = await Swal.fire({
+                title: 'Add Payment',
+                input: 'number',
+                inputLabel: 'Enter payment amount',
+                inputPlaceholder: 'e.g. 5000',
+                showCancelButton: true,
+                inputValidator: (value: any) => {
+                  if (!value) return 'You need to write something!';
+                  if (isNaN(value) || value < 0) return 'Please enter a valid amount';
+                }
+              });
+
+              if (amount) {
+                try {
+                  await axios.put(`${baseUrl.updateLead}/${row.id}`, 
+                    { paymentAmount: Number(amount) }, 
+                    { headers: { Authorization: `Bearer ${getAuthToken()}` } }
+                  );
+                  Swal.fire('Success', 'Payment added successfully', 'success');
+                  onRefresh?.();
+                } catch (err) {
+                  Swal.fire('Error', 'Failed to add payment', 'error');
+                }
+              }
+            }
+          }
+        ] : undefined}
       />
 
       {/* Delete dialog */}

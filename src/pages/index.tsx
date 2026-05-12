@@ -35,6 +35,7 @@
     Mail as MailIcon,
     MessageSquare,
     PieChartIcon,
+    RefreshCw,
   } from "lucide-react";
   import axios from "axios";
   import { baseUrl, getAuthToken } from "@/config";
@@ -50,6 +51,7 @@
   interface LeadSummary {
     totalLeads: number;
     currentMonthLeads: number;
+    totalRevenue: number;
     statusWiseCounts: StatusCount[];
   }
 
@@ -66,6 +68,7 @@
     statusId?: string;
     fill?: string;
     name?: string;
+    description?: string;
   }
 
   const ITEMS_PER_PAGE = 5;
@@ -98,22 +101,34 @@
     const [tasksLoading, setTasksLoading] = useState(false);
 
     const [permissions, setPermissions] = useState<{ readAll: boolean; readOwn: boolean }>({ readAll: false, readOwn: false });
+    const [user, setUser] = useState<any>(null);
+    const [greeting, setGreeting] = useState("");
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
 
     const token =
       typeof window !== "undefined" ? getAuthToken() : null;
 
-    // Fetch permissions
+    // Fetch user info and permissions
     useEffect(() => {
       if (!token) return;
       axios.get(baseUrl.currentStaff, { headers: { Authorization: `Bearer ${token}` } })
         .then(res => {
-          const role = res.data?.data?.role || {};
+          const staff = res.data?.data || {};
+          setUser(staff);
+          const role = staff.role || {};
           const rawPerms = Array.isArray(role.permissions) ? role.permissions[0] : role.permissions || {};
           const lp = rawPerms.lead || {};
           setPermissions({
             readAll: !!lp.readAll,
             readOwn: !!lp.readOwn,
           });
+
+          // Set greeting based on time
+          const hour = new Date().getHours();
+          if (hour < 12) setGreeting("Good Morning");
+          else if (hour < 17) setGreeting("Good Afternoon");
+          else setGreeting("Good Evening");
         })
         .catch(console.error);
     }, [token]);
@@ -157,6 +172,10 @@
         const url = isMyOnly ? baseUrl.myLeadCountSummary : baseUrl.leadCountSummary;
         const res = await axios.get(url, {
           headers: { Authorization: `Bearer ${token}` },
+          params: {
+            from: fromDate || undefined,
+            to: toDate || undefined,
+          }
         });
         setSummary(res.data.data);
       } catch (err) {
@@ -291,7 +310,7 @@
           fetchStaffPerformance();
         }
       }
-    }, [token, permissions]);
+    }, [token, permissions, fromDate, toDate]);
 
     useEffect(() => {
       if (typeof window !== "undefined") {
@@ -331,11 +350,12 @@
             trend: 12.5,
             tone: "up",
             Icon: Users,
-            iconBg: "bg-blue-50",
-            iconColor: "text-blue-600",
+            iconBg: "bg-blue-500/10",
+            iconColor: "text-blue-500",
             type: "total",
-            fill: "#6b7d03ff",
-            name: "Total Leads"
+            fill: "#3B82F6",
+            name: "Total Leads",
+            description: "Leads in selected range"
           },
           {
             key: "month",
@@ -344,33 +364,96 @@
             trend: 8.2,
             tone: "up",
             Icon: TrendingUp,
-            iconBg: "bg-green-50",
-            iconColor: "text-green-600",
+            iconBg: "bg-emerald-500/10",
+            iconColor: "text-emerald-500",
             type: "month",
             subtitle: "This Month",
-            fill: "#097707ff",
-            name: "New Leads"
+            fill: "#10B981",
+            name: "New Leads",
+            description: "Leads this month"
           },
-          ...summary.statusWiseCounts
-            .filter((item) => visibleStatusNames?.includes(item.statusName))
-            .slice(0, 2)
-            .map((s, idx) => ({
-              key: `status-${s.statusId}`,
-              label: s.statusName,
-              value: s.count,
-              trend: 0,
-              tone: "neutral",
-              Icon: Star,
-              iconBg: "bg-purple-50",
-              iconColor: "text-purple-600",
-              type: "status",
-              statusId: s.statusId,
-              subtitle: "Leads",
-              fill: statusColorPalette[idx % statusColorPalette.length],
-              name: s.statusName
-            })),
+          {
+            key: "followups",
+            label: "Follow-ups",
+            value: upcomingFollowups.length,
+            trend: 0,
+            tone: "neutral",
+            Icon: PhoneCall,
+            iconBg: "bg-orange-500/10",
+            iconColor: "text-orange-500",
+            type: "custom",
+            fill: "#F59E0B",
+            name: "Follow-ups",
+            description: "Scheduled follow-ups"
+          },
+          {
+            key: "tasks",
+            label: "Tasks",
+            value: todayTasks.length,
+            trend: 0,
+            tone: "neutral",
+            Icon: CheckCircle2,
+            iconBg: "bg-purple-500/10",
+            iconColor: "text-purple-500",
+            type: "custom",
+            fill: "#8B5CF6",
+            name: "Tasks",
+            description: "Tasks for today"
+          },
+          {
+            key: "revenue",
+            label: "Total Revenue",
+            value: `₹${(summary.totalRevenue || 0).toLocaleString()}`,
+            trend: 15.4,
+            tone: "up",
+            Icon: Activity,
+            iconBg: "bg-amber-500/10",
+            iconColor: "text-amber-500",
+            type: "revenue",
+            fill: "#F59E0B",
+            name: "Revenue",
+            description: "Total from won leads"
+          }
         ]
       : [];
+
+    const statusChartData = summary?.statusWiseCounts?.map((s, idx) => ({
+      name: s.statusName,
+      value: s.count,
+      fill: statusColorPalette[idx % statusColorPalette.length]
+    })) || [];
+
+    const handleQuickFilter = (range: string) => {
+      const now = new Date();
+      let start = new Date();
+      let end = new Date();
+
+      switch (range) {
+        case 'today':
+          break;
+        case 'yesterday':
+          start.setDate(now.getDate() - 1);
+          end.setDate(now.getDate() - 1);
+          break;
+        case '7days':
+          start.setDate(now.getDate() - 7);
+          break;
+        case '30days':
+          start.setDate(now.getDate() - 30);
+          break;
+        case 'month':
+          start = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'reset':
+          setFromDate("");
+          setToDate("");
+          return;
+      }
+
+      const format = (d: Date) => d.toISOString().split("T")[0];
+      setFromDate(format(start));
+      setToDate(format(end));
+    };
 
     const handleCardClick = (card: SummaryCard) => {
       if (card.type === "total") {
@@ -597,134 +680,205 @@
     );
 
     return (
-      <div className="flex flex-col min-h-full">
-        <div className="p-0 space-y-6">
-
-          {/* Welcome Section */}
+      <div className="flex flex-col min-h-screen bg-[#f8fafc]">
+        <div className="p-6 space-y-8 max-w-[1600px] mx-auto w-full">
           
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Lead Statistics - Pie Chart */}
-            <div className="h-full">
-              <div className="bg-white rounded-md border border-gray-200 p-6 h-full flex flex-col">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Lead Statistics</h3>
-                    <p className="text-sm text-gray-500 mt-1">Distribution of lead metrics</p>
+          {/* Welcome Section */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
+                {greeting}, {user?.fullName?.split(' ')[0] || 'User'}! 👋
+              </h2>
+              <p className="text-gray-500 mt-1 flex items-center gap-2">
+                <Activity className="h-4 w-4 text-blue-500" />
+                Here's what's happening with your projects today.
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <label className="absolute -top-2 left-3 px-1 bg-white text-[9px] font-bold text-blue-500 uppercase tracking-widest">From</label>
+                    <input 
+                      type="date" 
+                      value={fromDate}
+                      onChange={(e) => setFromDate(e.target.value)}
+                      className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer"
+                    />
                   </div>
+                  <div className="relative">
+                    <label className="absolute -top-2 left-3 px-1 bg-white text-[9px] font-bold text-blue-500 uppercase tracking-widest">To</label>
+                    <input 
+                      type="date" 
+                      value={toDate}
+                      onChange={(e) => setToDate(e.target.value)}
+                      className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer"
+                    />
+                  </div>
+                </div>
+                <button 
+                  onClick={() => handleQuickFilter('reset')}
+                  className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all rounded-xl"
+                  title="Reset Filter"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+            {summaryCards.map((card) => (
+              <div
+                key={card.key}
+                onClick={() => handleCardClick(card)}
+                className="group relative overflow-hidden bg-white p-6 rounded-2xl border border-gray-200 hover:border-blue-500/50 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 cursor-pointer"
+              >
+                <div className="flex items-start justify-between">
+                  <div className={`p-3 rounded-xl ${card.iconBg} ${card.iconColor} transition-transform duration-300 group-hover:scale-110`}>
+                    <card.Icon className="h-6 w-6" />
+                  </div>
+                  {card.trend !== undefined && card.trend !== 0 && (
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                      card.tone === 'up' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                    }`}>
+                      {card.tone === 'up' ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                      {card.trend}%
+                    </div>
+                  )}
+                </div>
+                <div className="mt-4">
+                  <h3 className="text-sm font-medium text-gray-500">{card.label}</h3>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-2xl font-bold text-gray-900">{card.value}</span>
+                    {card.subtitle && <span className="text-xs text-gray-400">{card.subtitle}</span>}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">{card.description}</p>
+                </div>
+                {/* Decorative background element */}
+                <div className={`absolute -right-4 -bottom-4 h-24 w-24 rounded-full ${card.iconBg} opacity-0 group-hover:opacity-10 transition-opacity blur-3xl`}></div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Lead Statistics - Pie Chart */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Lead Status Overview</h3>
+                  <p className="text-sm text-gray-500 mt-1">Performance by status categories</p>
+                </div>
+                <div className="p-2 bg-gray-50 rounded-lg">
                   <PieChartIcon className="h-5 w-5 text-gray-400" />
                 </div>
+              </div>
 
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                  {/* Pie Chart */}
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={summaryCards}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={50}
-                          outerRadius={80}
-                          paddingAngle={5}
-                          dataKey="value"
-                          nameKey="name"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          labelLine={true}
-                        >
-                          {summaryCards.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} stroke="white" strokeWidth={2} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: 'white',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '0.5rem',
-                            padding: '8px 12px'
-                          }}
-                          formatter={(value, name) => [`${value} Leads`, name]}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div className="h-[280px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={statusChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={8}
+                        dataKey="value"
+                        nameKey="name"
+                      >
+                        {statusChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} stroke="white" strokeWidth={2} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-white border border-gray-100 p-3 rounded-xl shadow-xl">
+                                <p className="text-sm font-bold text-gray-900">{payload[0].name}</p>
+                                <p className="text-sm text-blue-600 font-semibold">{payload[0].value} Leads</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
 
-                  {/* Legend */}
-                  <div className="grid grid-cols-1 gap-3">
-                    {summaryCards.map((card, i) => (
-                      <div key={i} className="flex items-center gap-3 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: card.fill }}></div>
-                        <span className="text-sm font-medium text-gray-700 flex-1">{card.label}</span>
-                        <span className="text-sm font-bold text-gray-900">{card.value}</span>
-                        <span className="text-xs text-gray-500">
-                          ({((card.value / summaryCards.reduce((sum, item) => sum + item.value, 0)) * 100).toFixed(1)}%)
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                <div className="space-y-3">
+                  {statusChartData.map((s, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-gray-50 bg-gray-50/50 hover:bg-gray-100/50 transition-colors cursor-default">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.fill }}></div>
+                      <span className="text-sm font-semibold text-gray-700 flex-1">{s.name}</span>
+                      <span className="text-sm font-bold text-gray-900 bg-white px-2 py-0.5 rounded-lg border border-gray-100">{s.value}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
 
             {/* Leads by Source - Pie Chart */}
             {leadsBySource.length > 0 && (
-              <div className="h-full">
-                <div className="bg-white rounded-md border border-gray-200 p-6 h-full flex flex-col">
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Leads by Source</h3>
-                      <p className="text-sm text-gray-500 mt-1">Distribution of leads across different sources</p>
-                    </div>
-                    <PieChartIcon className="h-5 w-5 text-gray-400" />
+              <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Leads by Source</h3>
+                    <p className="text-sm text-gray-500 mt-1">Traffic and acquisition channels</p>
+                  </div>
+                  <div className="p-2 bg-gray-50 rounded-lg">
+                    <BarChart3 className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                  <div className="h-[280px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={leadsBySource}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={90}
+                          paddingAngle={8}
+                          dataKey="value"
+                          nameKey="name"
+                        >
+                          {leadsBySource.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} stroke="white" strokeWidth={2} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="bg-white border border-gray-100 p-3 rounded-xl shadow-xl">
+                                  <p className="text-sm font-bold text-gray-900">{payload[0].name}</p>
+                                  <p className="text-sm text-emerald-600 font-semibold">{payload[0].value} Leads</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
 
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                    {/* Pie Chart */}
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={leadsBySource}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={50}
-                            outerRadius={80}
-                            paddingAngle={5}
-                            dataKey="value"
-                            nameKey="name"
-                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                            labelLine={true}
-                          >
-                            {leadsBySource.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.fill} stroke="white" strokeWidth={2} />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: 'white',
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '0.5rem',
-                              padding: '8px 12px'
-                            }}
-                            formatter={(value, name) => [`${value} Leads`, name]}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-
-                    {/* Legend */}
-                    <div className="grid grid-cols-1 gap-3">
-                      {leadsBySource.map((s, i) => (
-                        <div key={i} className="flex items-center gap-3 bg-gray-50 px-4 py-3 rounded-lg border border-gray-100">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.fill }}></div>
-                          <span className="text-sm font-medium text-gray-700 flex-1">{s.name}</span>
-                          <span className="text-sm font-bold text-gray-900">{s.value}</span>
-                          <span className="text-xs text-gray-500">
-                            ({((s.value / leadsBySource.reduce((sum, item) => sum + item.value, 0)) * 100).toFixed(1)}%)
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                    {leadsBySource.map((s, i) => (
+                      <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-50 bg-gray-50/30">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.fill }}></div>
+                        <span className="text-sm font-medium text-gray-600 flex-1 truncate">{s.name}</span>
+                        <span className="text-sm font-bold text-gray-900">{s.value}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -732,9 +886,8 @@
           </div>
 
           {/* Follow-ups and Tasks Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Upcoming Follow-ups */}
-            <div className="h-auto min-h-[400px] lg:h-[500px]">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="h-full min-h-[450px]">
               {renderFollowupTable(
                 "Upcoming Follow-ups",
                 upcomingFollowups,
@@ -748,8 +901,7 @@
               )}
             </div>
 
-            {/* Due Follow-ups */}
-            <div className="h-auto min-h-[400px] lg:h-[500px]">
+            <div className="h-full min-h-[450px]">
               {renderFollowupTable(
                 "Overdue Follow-ups",
                 dueFollowups,
@@ -763,8 +915,7 @@
               )}
             </div>
 
-            {/* Today's Tasks */}
-            <div className="h-auto min-h-[400px] lg:h-[500px]">
+            <div className="h-full min-h-[450px]">
               {renderTodayTasksTable(todayTasks, tasksLoading)}
             </div>
           </div>
@@ -772,4 +923,4 @@
         </div>
       </div>
     );
-  }
+  }

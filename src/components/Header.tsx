@@ -117,7 +117,8 @@ export default function Header({ toggleSidebar }: HeaderProps) {
     try {
       const token = getAuthToken();
       if (!token) return;
-      const res = await axios.get(`${baseUrl.getBaseUrl}/notification/my-notifications`, {
+      const base = baseUrl.getBaseUrl?.endsWith('/') ? baseUrl.getBaseUrl.slice(0, -1) : baseUrl.getBaseUrl;
+      const res = await axios.get(`${base}/notification/my-notifications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(res.data?.data || []);
@@ -230,7 +231,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
                 try {
                   if (!notif.isRead) {
                     await axios.put(
-                      `${baseUrl.getBaseUrl}/notification/mark-read/${notif._id}`,
+                      `${baseUrl.getBaseUrl?.endsWith('/') ? baseUrl.getBaseUrl.slice(0, -1) : baseUrl.getBaseUrl}/notification/mark-read/${notif._id}`,
                       {},
                       {
                         headers: {
@@ -291,7 +292,8 @@ export default function Header({ toggleSidebar }: HeaderProps) {
     e.stopPropagation();
     try {
       const token = getAuthToken();
-      await axios.put(`${baseUrl.getBaseUrl}/notification/mark-read/${notifId}`, {}, {
+      const base = baseUrl.getBaseUrl?.endsWith('/') ? baseUrl.getBaseUrl.slice(0, -1) : baseUrl.getBaseUrl;
+      await axios.put(`${base}/notification/mark-read/${notifId}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -312,7 +314,8 @@ export default function Header({ toggleSidebar }: HeaderProps) {
     setMarkingAllRead(true);
     try {
       const token = getAuthToken();
-      await axios.put(`${baseUrl.getBaseUrl}/notification/mark-all-read`, {}, {
+      const base = baseUrl.getBaseUrl?.endsWith('/') ? baseUrl.getBaseUrl.slice(0, -1) : baseUrl.getBaseUrl;
+      await axios.put(`${base}/notification/mark-all-read`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -333,7 +336,8 @@ export default function Header({ toggleSidebar }: HeaderProps) {
     try {
       const token = getAuthToken();
       if (!notif.isRead) {
-        await axios.put(`${baseUrl.getBaseUrl}/notification/mark-read/${notif._id}`, {}, {
+        const base = baseUrl.getBaseUrl?.endsWith('/') ? baseUrl.getBaseUrl.slice(0, -1) : baseUrl.getBaseUrl;
+        await axios.put(`${base}/notification/mark-read/${notif._id}`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
