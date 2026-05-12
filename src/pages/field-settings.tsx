@@ -166,3 +166,7 @@ export function FieldSettingsContent() {
     </div>
   );
 }
+
+export default function FieldSettings() {
+  return <FieldSettingsContent />;
+}
