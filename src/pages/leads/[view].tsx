@@ -133,6 +133,7 @@ export default function LeadsPage() {
     counts,
     loading,
     refetchAll,
+    refreshCounts,
     fetchLeadsList,
     findLeadById,
     listPagination,
@@ -257,41 +258,7 @@ export default function LeadsPage() {
     );
   }
 
-  // ── Loading skeleton ──────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="flex h-full flex-col gap-4 relative overflow-hidden">
-        <div className="rounded-md border border-gray-200 bg-white px-6 py-4 transition-all duration-300">
-          <div className="flex flex-wrap items-center gap-3">
-            <div>
-              <div className="h-8 w-24 bg-gray-200 rounded-md animate-pulse" />
-            </div>
-            <div className="flex items-center gap-3 ml-auto">
-              <div className="h-10 w-24 bg-gray-200 rounded-md animate-pulse" />
-              <div className="h-10 w-20 bg-gray-200 rounded-md animate-pulse" />
-              <div className="h-10 w-32 bg-gray-200 rounded-md animate-pulse" />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-hidden">
-          {viewMode === 'list' ? (
-            <div className="bg-white rounded-md border border-gray-200 p-4">
-              <PageSkeleton />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 h-full">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <KanbanColumnSkeleton key={i} />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // ── Main render ───────────────────────────────────────────────────────────
+  // Render main content
   return (
     <div className="flex min-h-full flex-col gap-4 relative">
 
@@ -544,6 +511,7 @@ export default function LeadsPage() {
             wonPagination={wonPagination}
             // Notify parent when sub-view changes so hook fetches correct data
             onSubViewChange={setKanbanSubView}
+            onRefreshCounts={refreshCounts}
             permissions={{
               create: canCreate,
               readAll: canReadAll,

@@ -51,6 +51,7 @@ interface Props {
     lostPagination?: PaginationShape;
     wonPagination?: PaginationShape;
     onSubViewChange?: (subView: 'board' | 'lost' | 'won') => void;
+    onRefreshCounts?: () => void;
 }
 
 type SubView = 'board' | 'lost' | 'won';
@@ -63,6 +64,7 @@ export default function LeadsKanbanView({
     lostPagination,
     wonPagination,
     onSubViewChange,
+    onRefreshCounts,
 }: Props) {
     const [subView, setSubView] = useState<SubView>('board');
     const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -148,16 +150,57 @@ export default function LeadsKanbanView({
         [scope, filters]
     );
 
+    const fetchAllKanbanData = useCallback(async () => {
+        setLoadingMoreMap({}); // Reset loading states
+        // We set loading for all visible columns
+        const visibleStatuses = statuses.filter(s => kanbanVisibleStatusNames.length === 0 || kanbanVisibleStatusNames.includes(s.name));
+        const initialLoadingState: Record<string, boolean> = {};
+        visibleStatuses.forEach(s => { initialLoadingState[s._id] = true; });
+        setColumnLoading(initialLoadingState);
+
+        try {
+            const res = await axios.get(baseUrl.getKanbanData, {
+                headers: { Authorization: `Bearer ${token()}` },
+                params: {
+                    my: scope === 'my' || undefined,
+                    search: filters.search || undefined,
+                    source: filters.source || undefined,
+                    staff: filters.staff || undefined,
+                    date: filters.date || undefined,
+                    status: filters.status || undefined,
+                },
+            });
+
+            const data = res.data?.data || [];
+            const newBoardLeads: Record<string, ApiLead[]> = {};
+            const newColumnCounts: Record<string, number> = {};
+            const newHasMoreMap: Record<string, boolean> = {};
+            const newPageMap: Record<string, number> = {};
+
+            data.forEach((item: any) => {
+                newBoardLeads[item.statusId] = item.leads || [];
+                newColumnCounts[item.statusId] = item.leads?.length || 0; // Backend returns first 10
+                newHasMoreMap[item.statusId] = (item.leads?.length || 0) === 10; // Assume more if we hit limit
+                newPageMap[item.statusId] = 1;
+            });
+
+            setBoardLeads(newBoardLeads);
+            setColumnCounts(newColumnCounts);
+            setHasMoreMap(newHasMoreMap);
+            setPageMap(newPageMap);
+        } catch (error) {
+            console.error("Failed to fetch all kanban data:", error);
+            toast.error("Failed to load kanban board");
+        } finally {
+            setColumnLoading({});
+        }
+    }, [scope, filters, statuses, kanbanVisibleStatusNames]);
+
     // Initial fetch and re-fetch on filter change
     useEffect(() => {
         if (subView !== 'board') return;
-        statuses.forEach((s) => {
-            const isVisible = kanbanVisibleStatusNames.length === 0 || kanbanVisibleStatusNames.includes(s.name);
-            if (isVisible) {
-                fetchStatusLeads(s._id, 1);
-            }
-        });
-    }, [subView, statuses, kanbanVisibleStatusNames, scope, filters, fetchStatusLeads]);
+        fetchAllKanbanData();
+    }, [subView, scope, filters, fetchAllKanbanData]);
 
     const loadMore = useCallback(
         async (statusId: string) => {
@@ -219,7 +262,11 @@ export default function LeadsKanbanView({
             fetchStatusLeads(sourceStatusId, 1, false, true);
             fetchStatusLeads(newStatusId, 1, false, true);
             
-            onRefresh();
+            if (onRefreshCounts) {
+                onRefreshCounts();
+            } else {
+                onRefresh();
+            }
         } catch {
             toast.error('Failed to update lead status');
             // Re-fetch with loader to show the revert

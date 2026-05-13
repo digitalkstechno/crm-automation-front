@@ -193,41 +193,6 @@ export default function TasksPage() {
   const isInitialLoad = (loading && tasks.length === 0) || (kanbanLoading && kanbanData.length === 0);
   const isRefreshing = (loading && tasks.length > 0) || (kanbanLoading && kanbanData.length > 0);
 
-  // Show skeleton loader only on initial load
-  if (isInitialLoad) {
-    return (
-      <div className="space-y-6">
-        {/* Page Header Skeleton */}
-        <div className="rounded-md border border-gray-200 bg-white px-6 py-4 transition-all duration-300">
-          <div className="flex flex-wrap items-center gap-3">
-            <div>
-              <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" />
-            </div>
-            <div className="flex items-center gap-3 ml-auto">
-              <div className="h-10 w-20 bg-gray-200 rounded-md animate-pulse" />
-              <div className="h-10 w-32 bg-gray-200 rounded-md animate-pulse" />
-            </div>
-          </div>
-        </div>
-
-        {/* Content Skeleton */}
-        <div className="flex-1 overflow-hidden">
-          {viewMode === 'list' ? (
-            <div className="bg-white rounded-md border border-gray-200 p-4">
-              <PageSkeleton />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 h-full">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <KanbanColumnSkeleton key={i} />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>

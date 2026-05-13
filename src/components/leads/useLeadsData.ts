@@ -275,18 +275,23 @@ export function useLeadsData(
     const { activeTab: tab, filters: f, viewMode: vm, kanbanSubView: ksv,
             listPage: lp, lostPage: lsp, wonPage: wp } = stateRef.current;
 
+    const calls: Promise<void>[] = [fetchCounts(tab, f)];
+
     if (vm === 'list') {
-      await Promise.all([fetchLeadsList(tab, f, lp), fetchCounts(tab, f)]);
+      calls.push(fetchLeadsList(tab, f, lp));
     } else {
-      const calls: Promise<void>[] = [
-        fetchKanbanLeads(tab, f),
-        fetchCounts(tab, f),
-      ];
+      // In Kanban board, the component manages its own Board data.
+      // We only fetch lost/won leads if those sub-views are active.
       if (ksv === 'lost') calls.push(fetchLostLeads(tab, f, lsp));
       if (ksv === 'won') calls.push(fetchWonLeads(tab, f, wp));
-      await Promise.all(calls);
     }
-  }, [fetchLeadsList, fetchKanbanLeads, fetchLostLeads, fetchWonLeads, fetchCounts]);
+    await Promise.all(calls);
+  }, [fetchLeadsList, fetchLostLeads, fetchWonLeads, fetchCounts]);
+
+  const refreshCounts = useCallback(async () => {
+    const { activeTab: tab, filters: f } = stateRef.current;
+    await fetchCounts(tab, f);
+  }, [fetchCounts]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // EFFECTS
@@ -391,7 +396,7 @@ export function useLeadsData(
     lostLeads, wonLeads,
     sources, statuses, staffMembers, leadLabels,
     counts, loading, permissions,
-    refetchAll,
+    refetchAll, refreshCounts,
     fetchLeadsList,
     fetchKanbanLeads,
     findLeadById,
