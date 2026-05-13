@@ -327,6 +327,7 @@ export default function LeadsListView({
         columns={columns}
         loading={loading}
         pagination
+        searchable={false}
         currentPage={pagination?.currentPage || 1}
         totalPages={pagination?.totalPages || 1}
         totalRecords={pagination?.totalItems || 0}

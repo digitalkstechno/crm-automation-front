@@ -115,23 +115,38 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
   const [requiredFields, setRequiredFields] = useState<string[]>([]);
 
   useEffect(() => {
-    const loadRequiredFields = () => {
-      const saved = localStorage.getItem('taskRequiredFields');
-      if (saved) {
-        try {
-          setRequiredFields(JSON.parse(saved));
-        } catch (e) {
+    const loadRequiredFields = async () => {
+      try {
+        const res = await axios.get(`${baseUrl.getBaseUrl}/settings`, {
+          headers: { Authorization: `Bearer ${getAuthToken()}` }
+        });
+        const data = res.data?.data || {};
+        if (data.taskRequiredFields) {
+          setRequiredFields(data.taskRequiredFields);
+        } else {
           setRequiredFields(['subject', 'status', 'priority']);
         }
-      } else {
-        setRequiredFields(['subject', 'status', 'priority']);
+      } catch (e) {
+        console.error('Failed to load required fields from API:', e);
+        const saved = localStorage.getItem('taskRequiredFields');
+        if (saved) {
+          try {
+            setRequiredFields(JSON.parse(saved));
+          } catch (e) {
+            setRequiredFields(['subject', 'status', 'priority']);
+          }
+        } else {
+          setRequiredFields(['subject', 'status', 'priority']);
+        }
       }
     };
 
-    loadRequiredFields();
+    if (isOpen) {
+      loadRequiredFields();
+    }
     window.addEventListener('fieldSettingsUpdated', loadRequiredFields);
     return () => window.removeEventListener('fieldSettingsUpdated', loadRequiredFields);
-  }, []);
+  }, [isOpen]);
 
   const TaskValidationSchema = useMemo(() => {
     let shape: any = {

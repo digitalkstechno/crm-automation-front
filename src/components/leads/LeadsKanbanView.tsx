@@ -431,6 +431,7 @@ export default function LeadsKanbanView({
                         data={lostLeads}
                         columns={lostLeadsColumns}
                         loading={false}
+                        searchable={false}
                         pagination
                         currentPage={lostPagination?.currentPage ?? 1}
                         totalPages={lostPagination?.totalPages ?? 1}
@@ -464,6 +465,7 @@ export default function LeadsKanbanView({
                         data={wonLeads}
                         columns={wonLeadsColumns}
                         loading={false}
+                        searchable={false}
                         pagination
                         currentPage={wonPagination?.currentPage ?? 1}
                         totalPages={wonPagination?.totalPages ?? 1}

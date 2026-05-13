@@ -55,23 +55,38 @@ export default function LeadAddDialog({
   const [requiredFields, setRequiredFields] = useState<string[]>([]);
 
   useEffect(() => {
-    const loadRequiredFields = () => {
-      const saved = localStorage.getItem('leadRequiredFields');
-      if (saved) {
-        try {
-          setRequiredFields(JSON.parse(saved));
-        } catch (e) {
+    const loadRequiredFields = async () => {
+      try {
+        const res = await axios.get(`${baseUrl.getBaseUrl}/settings`, {
+          headers: { Authorization: `Bearer ${getAuthToken()}` }
+        });
+        const data = res.data?.data || {};
+        if (data.leadRequiredFields) {
+          setRequiredFields(data.leadRequiredFields);
+        } else {
           setRequiredFields(['fullName', 'contact', 'email', 'leadSource', 'leadStatus', 'assignedTo']);
         }
-      } else {
-        setRequiredFields(['fullName', 'contact', 'email', 'leadSource', 'leadStatus', 'assignedTo']);
+      } catch (e) {
+        console.error('Failed to load required fields from API:', e);
+        const saved = localStorage.getItem('leadRequiredFields');
+        if (saved) {
+          try {
+            setRequiredFields(JSON.parse(saved));
+          } catch (e) {
+            setRequiredFields(['fullName', 'contact', 'email', 'leadSource', 'leadStatus', 'assignedTo']);
+          }
+        } else {
+          setRequiredFields(['fullName', 'contact', 'email', 'leadSource', 'leadStatus', 'assignedTo']);
+        }
       }
     };
 
-    loadRequiredFields();
+    if (isOpen) {
+      loadRequiredFields();
+    }
     window.addEventListener('fieldSettingsUpdated', loadRequiredFields);
     return () => window.removeEventListener('fieldSettingsUpdated', loadRequiredFields);
-  }, []);
+  }, [isOpen]);
 
   const leadValidationSchema = useMemo(() => {
     let shape: any = {

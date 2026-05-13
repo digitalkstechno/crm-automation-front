@@ -28,35 +28,47 @@ const TASK_FIELDS = [
   { id: 'assignedUsers', label: 'Assign Users' },
 ];
 
+import axios from 'axios';
+import { baseUrl, getAuthToken } from '@/config';
+
 export function FieldSettingsContent() {
   const [requiredLeads, setRequiredLeads] = useState<string[]>([]);
   const [requiredTasks, setRequiredTasks] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const getHeaders = () => ({ Authorization: `Bearer ${getAuthToken()}` });
 
   useEffect(() => {
-    const savedLeads = localStorage.getItem('leadRequiredFields');
-    const savedTasks = localStorage.getItem('taskRequiredFields');
-
-    if (savedLeads) {
+    const fetchSettings = async () => {
+      setLoading(true);
       try {
-        setRequiredLeads(JSON.parse(savedLeads));
-      } catch (e) {
-        setRequiredLeads(['fullName', 'contact', 'email', 'leadSource', 'leadStatus', 'assignedTo']);
-      }
-    } else {
-      // Defaults
-      setRequiredLeads(['fullName', 'contact', 'email', 'leadSource', 'leadStatus', 'assignedTo']);
-    }
+        const res = await axios.get(`${baseUrl.getBaseUrl}/settings`, { headers: getHeaders() });
+        const data = res.data?.data || {};
+        
+        if (data.leadRequiredFields) {
+          setRequiredLeads(data.leadRequiredFields);
+        } else {
+          setRequiredLeads(['fullName', 'contact', 'email', 'leadSource', 'leadStatus', 'assignedTo']);
+        }
 
-    if (savedTasks) {
-      try {
-        setRequiredTasks(JSON.parse(savedTasks));
+        if (data.taskRequiredFields) {
+          setRequiredTasks(data.taskRequiredFields);
+        } else {
+          setRequiredTasks(['subject', 'status', 'priority']);
+        }
       } catch (e) {
-        setRequiredTasks(['subject', 'status', 'priority']);
+        console.error('Failed to fetch settings:', e);
+        // Fallback to localStorage or defaults
+        const savedLeads = localStorage.getItem('leadRequiredFields');
+        const savedTasks = localStorage.getItem('taskRequiredFields');
+        if (savedLeads) setRequiredLeads(JSON.parse(savedLeads));
+        if (savedTasks) setRequiredTasks(JSON.parse(savedTasks));
+      } finally {
+        setLoading(false);
       }
-    } else {
-      // Defaults
-      setRequiredTasks(['subject', 'status', 'priority']);
-    }
+    };
+
+    fetchSettings();
   }, []);
 
   const handleToggleLead = (id: string) => {
@@ -71,13 +83,27 @@ export function FieldSettingsContent() {
     );
   };
 
-  const handleSave = () => {
-    localStorage.setItem('leadRequiredFields', JSON.stringify(requiredLeads));
-    localStorage.setItem('taskRequiredFields', JSON.stringify(requiredTasks));
-    toast.success('Field requirements saved successfully');
-    
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new Event('fieldSettingsUpdated'));
+  const handleSave = async () => {
+    try {
+      await axios.post(`${baseUrl.getBaseUrl}/settings`, {
+        settings: {
+          leadRequiredFields: requiredLeads,
+          taskRequiredFields: requiredTasks
+        }
+      }, { headers: getHeaders() });
+      
+      // Also update localStorage for immediate offline access if needed
+      localStorage.setItem('leadRequiredFields', JSON.stringify(requiredLeads));
+      localStorage.setItem('taskRequiredFields', JSON.stringify(requiredTasks));
+      
+      toast.success('Field requirements saved successfully');
+      
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new Event('fieldSettingsUpdated'));
+    } catch (e) {
+      console.error('Failed to save settings:', e);
+      toast.error('Failed to save settings');
+    }
   };
 
   return (
