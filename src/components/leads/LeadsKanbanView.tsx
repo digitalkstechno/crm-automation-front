@@ -201,7 +201,7 @@ export default function LeadsKanbanView({
             if (leadIndex > -1) {
                 const [lead] = sourceLeads.splice(leadIndex, 1);
                 next[sourceStatusId] = sourceLeads;
-                next[newStatusId] = [lead, ...(next[newStatusId] || [])];
+                next[newStatusId] = [...(next[newStatusId] || []), lead];
                 lead.leadStatus = targetStatus;
             }
             return next;
