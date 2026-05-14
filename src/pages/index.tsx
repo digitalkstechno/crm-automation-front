@@ -537,7 +537,11 @@
                   <div
                     key={lead._id || lead.id || index}
                     className="p-4 hover:bg-blue-50/20 transition-all cursor-pointer group"
-                    onClick={() => router.push(`/leads/list`)}
+                    onClick={() => {
+                      const leadId = lead.lead?._id || lead._id;
+                      const searchName = lead.lead?.fullName || lead.fullName;
+                      router.push(`/leads/list?search=${encodeURIComponent(searchName)}&id=${leadId}`);
+                    }}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">

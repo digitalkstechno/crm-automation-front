@@ -151,6 +151,28 @@ export default function LeadsPage() {
     }
   }, [viewParam]);
 
+  // ── Sync search from URL query ───────────────────────────────────────────
+  useEffect(() => {
+    if (router.isReady && router.query.search) {
+      setSearch(router.query.search as string);
+    }
+  }, [router.isReady, router.query.search]);
+
+  // ── Open lead detail if ID is present in URL ──────────────────────────────
+  useEffect(() => {
+    const leadId = router.query.id as string;
+    if (leadId && (leadsList.length > 0 || leads.length > 0)) {
+      const found = findLeadById(leadId);
+      if (found) {
+        setViewingLead(found);
+        
+        // Remove id and search from query string after opening
+        const { id, search, ...rest } = router.query;
+        router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+      }
+    }
+  }, [router.query.id, leadsList, leads, findLeadById, router]);
+
   const switchView = (mode: ViewMode) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('leadsView', mode);
@@ -546,7 +568,10 @@ export default function LeadsPage() {
       <LeadViewDialog
         lead={viewingLead}
         statuses={statuses}
-        onClose={() => setViewingLead(null)}
+        onClose={() => {
+          setViewingLead(null);
+          setSearch('');
+        }}
         onRefresh={refetchAll}
       />
 
