@@ -1,5 +1,5 @@
 // components/leads/LeadBulkImportDialog.tsx
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import {
   Upload, Download, X, FileSpreadsheet,
@@ -30,6 +30,9 @@ export default function LeadBulkImportDialog({ isOpen, onClose, onImported }: Pr
   const [step, setStep] = useState<Step>('idle');
   const [result, setResult] = useState<ImportResult | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
+  const [staff, setStaff] = useState<any[]>([]);
+  const [loadingStaff, setLoadingStaff] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reset = useCallback(() => {
@@ -37,6 +40,7 @@ export default function LeadBulkImportDialog({ isOpen, onClose, onImported }: Pr
     setStep('idle');
     setResult(null);
     setErrorMsg('');
+    setAssignedTo('');
   }, []);
 
   const handleClose = useCallback(() => {
@@ -68,6 +72,26 @@ export default function LeadBulkImportDialog({ isOpen, onClose, onImported }: Pr
     const f = e.dataTransfer.files?.[0] ?? null;
     if (f) validateAndSetFile(f);
   }, [validateAndSetFile]);
+
+  // Fetch staff members
+  useEffect(() => {
+    if (isOpen) {
+      const fetchStaff = async () => {
+        setLoadingStaff(true);
+        try {
+          const res = await axios.get(baseUrl.getAllStaff, {
+            headers: { Authorization: `Bearer ${getAuthToken()}` },
+          });
+          setStaff(res.data?.data || []);
+        } catch (error) {
+          console.error('Failed to fetch staff', error);
+        } finally {
+          setLoadingStaff(false);
+        }
+      };
+      fetchStaff();
+    }
+  }, [isOpen]);
 
   // ── Early return AFTER all hooks ──────────────────────────────────────────
   if (!isOpen) return null;
@@ -109,6 +133,9 @@ export default function LeadBulkImportDialog({ isOpen, onClose, onImported }: Pr
     try {
       const formData = new FormData();
       formData.append('file', file);
+      if (assignedTo) {
+        formData.append('assignedTo', assignedTo);
+      }
 
       const res = await axios.post(baseUrl.bulkImportLeads, formData, {
         headers: {
@@ -123,7 +150,7 @@ export default function LeadBulkImportDialog({ isOpen, onClose, onImported }: Pr
 
       if (contentType.includes('spreadsheetml')) {
         const imported = parseInt(res.headers['x-import-imported'] || '0', 10);
-        const failed   = parseInt(res.headers['x-import-failed']   || '0', 10);
+        const failed = parseInt(res.headers['x-import-failed'] || '0', 10);
         const blob = new Blob([res.data], {
           type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         });
@@ -374,11 +401,10 @@ export default function LeadBulkImportDialog({ isOpen, onClose, onImported }: Pr
                   onDragLeave={onDragLeave}
                   onDrop={onDrop}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed cursor-pointer transition-all p-6 ${
-                    dragging ? 'border-indigo-500 bg-indigo-50'
-                    : file    ? 'border-green-400 bg-green-50'
-                    :           'border-gray-300 bg-white hover:border-indigo-400 hover:bg-indigo-50/40'
-                  }`}
+                  className={`relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed cursor-pointer transition-all p-6 ${dragging ? 'border-indigo-500 bg-indigo-50'
+                    : file ? 'border-green-400 bg-green-50'
+                      : 'border-gray-300 bg-white hover:border-indigo-400 hover:bg-indigo-50/40'
+                    }`}
                 >
                   <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFileChange} />
                   {file ? (
@@ -405,6 +431,31 @@ export default function LeadBulkImportDialog({ isOpen, onClose, onImported }: Pr
                   <span>Use only the downloaded template. Custom Excel files may fail to parse correctly.</span>
                 </div>
               </div>
+
+              {/* Step 3 – Assign To */}
+              {file && (
+                <div className="rounded-xl border border-purple-100 bg-purple-50 p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-600 text-white text-xs font-bold">3</span>
+                    <h3 className="font-semibold text-purple-900">Assign To (Optional)</h3>
+                  </div>
+                  <p className="text-sm text-purple-700 leading-relaxed">
+                    Select a staff member to assign all imported leads to. If left empty, leads will remain unassigned.
+                  </p>
+                  <select
+                    value={assignedTo}
+                    onChange={(e) => setAssignedTo(e.target.value)}
+                    className="w-full rounded-lg border border-purple-200 bg-white px-3 py-2.5 text-sm text-gray-700 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                  >
+                    <option value="">— Unassigned —</option>
+                    {staff.map((s) => (
+                      <option key={s._id} value={s._id}>
+                        {s.fullName || s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Footer */}
