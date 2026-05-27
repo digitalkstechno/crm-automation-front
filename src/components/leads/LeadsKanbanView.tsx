@@ -69,7 +69,7 @@ export default function LeadsKanbanView({
     const [subView, setSubView] = useState<SubView>('board');
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
-    
+
     // Board state
     const [boardLeads, setBoardLeads] = useState<Record<string, ApiLead[]>>({});
     const [columnLoading, setColumnLoading] = useState<Record<string, boolean>>({});
@@ -231,11 +231,11 @@ export default function LeadsKanbanView({
 
         const targetStatus = statuses.find((s) => s._id === newStatusId);
         if (!targetStatus) return;
-        
+
         const currentDropId = draggingId;
         setDraggingId(null);
         setUpdatingId(currentDropId);
-        
+
         // Optimistic UI update
         setBoardLeads(prev => {
             const next = { ...prev };
@@ -257,11 +257,11 @@ export default function LeadsKanbanView({
                 { headers: { Authorization: `Bearer ${token()}` } }
             );
             toast.success(`Lead moved to ${targetStatus.name}`);
-            
+
             // SILENT RE-FETCH: sync counts/order etc in background without showing loaders
             fetchStatusLeads(sourceStatusId, 1, false, true);
             fetchStatusLeads(newStatusId, 1, false, true);
-            
+
             if (onRefreshCounts) {
                 onRefreshCounts();
             } else {
@@ -342,11 +342,10 @@ export default function LeadsKanbanView({
                         <button
                             key={v}
                             onClick={() => handleSubViewChange(v)}
-                            className={`rounded-lg cursor-pointer px-4 py-1.5 text-sm font-medium capitalize transition-colors ${
-                                subView === v
+                            className={`rounded-lg cursor-pointer px-4 py-1.5 text-sm font-medium capitalize transition-colors ${subView === v
                                     ? v === 'lost' ? 'bg-red-600 text-white' : v === 'won' ? 'bg-green-600 text-white' : 'bg-secondary text-white'
                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
+                                }`}
                         >
                             {v === 'board' ? 'Board View' : v === 'lost' ? 'Lost Leads' : 'Won Leads'}
                         </button>
@@ -496,8 +495,8 @@ export default function LeadsKanbanView({
 
                                     if (amount) {
                                         try {
-                                            await axios.put(`${baseUrl.updateLead}/${row._id}`, 
-                                                { paymentAmount: Number(amount) }, 
+                                            await axios.put(`${baseUrl.updateLead}/${row._id}`,
+                                                { paymentAmount: Number(amount) },
                                                 { headers: { Authorization: `Bearer ${getAuthToken()}` } }
                                             );
                                             Swal.fire('Success', 'Payment added successfully', 'success');
@@ -519,7 +518,7 @@ export default function LeadsKanbanView({
 function ContactCell({ phone, email }: { phone: string; email: string }) {
     return (
         <div className="space-y-0.5 text-sm text-gray-600">
-            <div className="flex items-center gap-1.5"><FiPhone className="h-3.5 w-3.5 text-gray-400" />{phone}</div>
+            <div className="flex items-center gap-1.5"><FiPhone className="h-3.5 w-3.5 text-gray-400" />{phone ? (phone.startsWith('+') ? phone : `+${phone}`) : '-'}</div>
             <div className="flex items-center gap-1.5"><FiMail className="h-3.5 w-3.5 text-gray-400" />{email}</div>
         </div>
     );

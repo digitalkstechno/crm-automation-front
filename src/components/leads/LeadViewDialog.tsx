@@ -522,7 +522,7 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
   const filteredFollowUps = useMemo(() => {
     if (!followUpSearch.trim()) return localFollowUps;
     const search = followUpSearch.toLowerCase();
-    return localFollowUps.filter(f => 
+    return localFollowUps.filter(f =>
       (f.note?.toLowerCase() || '').includes(search) ||
       (f.date?.toLowerCase() || '').includes(search) ||
       (f.time?.toLowerCase() || '').includes(search) ||
@@ -698,7 +698,7 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
             {/* Info grid */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <InfoCard label="Company" value={lead.companyName} />
-              <InfoCard label="Phone" value={lead.contact} />
+              <InfoCard label="Phone" value={lead.contact ? (lead.contact.startsWith('+') ? lead.contact : `+${lead.contact}`) : '-'} />
               <InfoCard label="Email" value={lead.email} />
               <InfoCard label="Source" value={lead.leadSource?.name} />
               <InfoCard label="Assigned Staff" value={lead.assignedTo?.fullName} />
@@ -822,7 +822,7 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
                       </p>
                     )}
                   </div>
-                  
+
                   {/* Table */}
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">

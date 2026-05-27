@@ -39,9 +39,8 @@ export default function KanbanCard({
         <div
             draggable={!isUpdating}
             onDragStart={!isUpdating ? onDragStart : undefined}
-            className={`relative rounded-xl bg-white p-3 shadow-sm transition-shadow ${
-                isUpdating ? "opacity-60 pointer-events-none" : "cursor-move hover:shadow-md"
-            }`}
+            className={`relative rounded-xl bg-white p-3 shadow-sm transition-shadow ${isUpdating ? "opacity-60 pointer-events-none" : "cursor-move hover:shadow-md"
+                }`}
         >
             {isUpdating && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/40">
@@ -76,7 +75,7 @@ export default function KanbanCard({
             <div className="mt-2 space-y-1.5 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
                     <FiPhone className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span className="truncate">{lead.contact}</span>
+                    <span className="truncate">{lead.contact ? (lead.contact.startsWith('+') ? lead.contact : `+${lead.contact}`) : '-'}</span>
                 </div>
                 <div className="flex items-center gap-2 min-w-0">
                     <FiMail className="h-3.5 w-3.5 flex-shrink-0" />
