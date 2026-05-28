@@ -202,7 +202,7 @@ export default function LeadsListView({
         </div>
       ),
     },
-    { key: 'source', label: 'SOURCE' },
+    { key: 'source', label: 'SOURCE', className: 'hidden xl:table-cell' },
     { key: 'status', label: 'STATUS' },
     {
       key: 'leadLabel',
@@ -227,9 +227,9 @@ export default function LeadsListView({
         );
       },
     },
-    { key: 'staff', label: 'ASSIGNED STAFF' },
-    { key: 'priority', label: 'PRIORITY' },
-    { key: 'lastFollowUp', label: 'LAST FOLLOW-UP' },
+    { key: 'staff', label: 'ASSIGNED STAFF', className: 'hidden lg:table-cell' },
+    { key: 'priority', label: 'PRIORITY', className: 'hidden md:table-cell' },
+    { key: 'lastFollowUp', label: 'LAST FOLLOW-UP', className: 'hidden lg:table-cell' },
     {
       key: 'paymentAmount',
       label: 'AMOUNT',
@@ -343,7 +343,7 @@ export default function LeadsListView({
             label: 'Payment',
             icon: <span className="text-xs font-bold">₹</span>,
             color: 'emerald',
-            show: (row) => row.status?.toLowerCase() === 'won',
+            show: (row: TableLead) => row.status?.toLowerCase() === 'won',
             onClick: async (row) => {
               const { value: amount } = await Swal.fire({
                 title: 'Add Payment',

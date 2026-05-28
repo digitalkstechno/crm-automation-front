@@ -55,7 +55,8 @@ interface DataTableProps<T> {
     label: string;
     onClick: (row: T) => void;
     icon?: React.ReactNode;
-    color?: 'blue' | 'green' | 'red' | 'orange' | 'purple';
+    color?: 'blue' | 'green' | 'red' | 'orange' | 'purple' | 'emerald';
+    show?: (row: T) => boolean;
   }[];
 }
 
@@ -227,143 +228,268 @@ export default function DataTable<T extends Record<string, any>>({
       </div>
 
       {/* Table - Modern Design */}
-      <div className="border-t border-gray-100 overflow-x-auto">
-        <table className="w-full divide-y divide-gray-100">
-          <thead className="bg-gray-100">
-            <tr>
-              {columns.map((column) => (
-                <th
-                  key={String(column.key)}
-                  className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 whitespace-nowrap ${column.className || ''}`}
-                >
-                  {column.label}
-                </th>
-              ))}
-              {actions && (onView || onEdit || onDelete || extraActions) && (
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 whitespace-nowrap">
-                  Actions
-                </th>
-              )}
-            </tr>
-          </thead>
+      <div className="border-t border-gray-100">
+        {/* Desktop View */}
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full divide-y divide-gray-100">
+            <thead className="bg-gray-100">
+              <tr>
+                {columns.map((column) => (
+                  <th
+                    key={String(column.key)}
+                    className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 whitespace-nowrap ${column.className || ''}`}
+                  >
+                    {column.label}
+                  </th>
+                ))}
+                {actions && (onView || onEdit || onDelete || extraActions) && (
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 whitespace-nowrap">
+                    Actions
+                  </th>
+                )}
+              </tr>
+            </thead>
 
-          <tbody className="divide-y divide-gray-50 bg-white">
-            {loading ? (
-              <tr>
-                <td colSpan={columns.length + (actions ? 1 : 0)} className="px-6 py-16 text-center">
-                  <div className="flex flex-col items-center justify-center gap-4">
-                    <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-200 border-r-blue-600"></div>
-                    <p className="text-sm font-medium text-gray-600">Loading your data...</p>
-                  </div>
-                </td>
-              </tr>
-            ) : data.length === 0 ? (
-              <tr>
-                <td colSpan={columns.length + (actions ? 1 : 0)} className="px-3 py-16 text-center">
-                  <div className="flex flex-col items-center justify-center gap-3">
-                    <div className="rounded-full bg-gray-50 p-4">
-                      <FiSearch className="h-8 w-8 text-gray-400" />
+            <tbody className="divide-y divide-gray-50 bg-white">
+              {loading ? (
+                <tr>
+                  <td colSpan={columns.length + (actions ? 1 : 0)} className="px-6 py-16 text-center">
+                    <div className="flex flex-col items-center justify-center gap-4">
+                      <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-200 border-r-blue-600"></div>
+                      <p className="text-sm font-medium text-gray-600">Loading your data...</p>
                     </div>
-                    <p className="text-sm font-medium text-gray-600">No records found</p>
-                    <p className="text-xs text-gray-400">Try adjusting your search or filters</p>
-                    {addButton && (
-                      <button
-                        onClick={addButton.onClick}
-                        className="mt-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
-                      >
-                        + Add your first record
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              data.map((row, index) => (
-                <tr
-                  key={index}
-                  onMouseEnter={() => setHoveredRow(index)}
-                  onMouseLeave={() => setHoveredRow(null)}
-                  className={`
+                  </td>
+                </tr>
+              ) : data.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length + (actions ? 1 : 0)} className="px-3 py-16 text-center">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <div className="rounded-full bg-gray-50 p-4">
+                        <FiSearch className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <p className="text-sm font-medium text-gray-600">No records found</p>
+                      <p className="text-xs text-gray-400">Try adjusting your search or filters</p>
+                      {addButton && (
+                        <button
+                          onClick={addButton.onClick}
+                          className="mt-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                        >
+                          + Add your first record
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                data.map((row, index) => (
+                  <tr
+                    key={index}
+                    onMouseEnter={() => setHoveredRow(index)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    className={`
                     transition-all duration-200
                     ${striped && index % 2 === 1 ? 'bg-gray-50/50' : 'bg-white'}
                     ${hoveredRow === index ? 'bg-blue-50/30' : ''}
                     border-b border-gray-50 last:border-0
                   `}
-                >
-                  {columns.map((column) => (
-                    <td
-                      key={String(column.key)}
-                      className={`px-6 py-4 text-sm text-gray-700 whitespace-nowrap ${column.className || ''}`}
-                    >
-                      {renderCell(column, row)}
-                    </td>
-                  ))}
+                  >
+                    {columns.map((column) => (
+                      <td
+                        key={String(column.key)}
+                        className={`px-6 py-4 text-sm text-gray-700 whitespace-nowrap ${column.className || ''}`}
+                      >
+                        {renderCell(column, row)}
+                      </td>
+                    ))}
 
-                  {actions && (onView || onEdit || onDelete || extraActions) && (
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                    {actions && (onView || onEdit || onDelete || extraActions) && (
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
 
-                        {/* VIEW */}
-                        {onView && (
-                          <button
-                            onClick={() => onView(row)}
-                            className="group h-9 w-9 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition-all duration-200 hover:bg-[#0a2352] hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:scale-95"
-                          >
-                            <FiEye className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                        )}
-
-                        {/* EDIT */}
-                        {onEdit && (!canEdit || canEdit(row)) && (
-                          <button
-                            onClick={() => onEdit(row)}
-                            className="group h-9 w-9 flex items-center justify-center rounded-lg bg-gray-100 text-green-600 transition-all duration-200 hover:bg-green-600 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 active:scale-95"
-                          >
-                            <FiEdit className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                        )}
-
-                        {/* DELETE */}
-                        {onDelete && (!canDelete || canDelete(row)) && (
-                          <button
-                            onClick={() => onDelete(row)}
-                            className="group h-9 w-9 flex items-center justify-center rounded-lg bg-gray-100 text-red-600 transition-all duration-200 hover:bg-red-500 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 active:scale-95"
-                          >
-                            <FiTrash2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                          </button>
-                        )}
-
-                        {/* EXTRA ACTIONS */}
-                        {extraActions?.map((act, idx) => {
-                          const colors: Record<string, string> = {
-                            blue: 'text-blue-600 hover:bg-blue-600 focus:ring-blue-500',
-                            green: 'text-green-600 hover:bg-green-600 focus:ring-green-500',
-                            red: 'text-red-600 hover:bg-red-500 focus:ring-red-500',
-                            orange: 'text-orange-600 hover:bg-orange-500 focus:ring-orange-500',
-                            purple: 'text-purple-600 hover:bg-purple-600 focus:ring-purple-500',
-                          };
-                          const colorClass = colors[act.color || 'blue'];
-                          return (
+                          {/* VIEW */}
+                          {onView && (
                             <button
-                              key={idx}
-                              onClick={() => act.onClick(row)}
-                              className={`group h-9 min-w-[36px] flex items-center justify-center rounded-lg bg-gray-100 ${colorClass} hover:text-white px-3 transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-95`}
-                              title={act.label}
+                              onClick={() => onView(row)}
+                              className="group h-9 w-9 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition-all duration-200 hover:bg-[#0a2352] hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:scale-95"
                             >
-                              {act.icon && <span className={act.label ? 'mr-1.5' : ''}>{act.icon}</span>}
-                              {act.label && <span className="text-xs font-semibold">{act.label}</span>}
+                              <FiEye className="h-4 w-4 group-hover:scale-110 transition-transform" />
                             </button>
-                          );
-                        })}
+                          )}
 
+                          {/* EDIT */}
+                          {onEdit && (!canEdit || canEdit(row)) && (
+                            <button
+                              onClick={() => onEdit(row)}
+                              className="group h-9 w-9 flex items-center justify-center rounded-lg bg-gray-100 text-green-600 transition-all duration-200 hover:bg-green-600 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 active:scale-95"
+                            >
+                              <FiEdit className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                            </button>
+                          )}
+
+                          {/* DELETE */}
+                          {onDelete && (!canDelete || canDelete(row)) && (
+                            <button
+                              onClick={() => onDelete(row)}
+                              className="group h-9 w-9 flex items-center justify-center rounded-lg bg-gray-100 text-red-600 transition-all duration-200 hover:bg-red-500 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 active:scale-95"
+                            >
+                              <FiTrash2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                            </button>
+                          )}
+
+                          {/* EXTRA ACTIONS */}
+                          {extraActions?.map((act, idx) => {
+                            const colors: Record<string, string> = {
+                              blue: 'text-blue-600 hover:bg-blue-600 focus:ring-blue-500',
+                              green: 'text-green-600 hover:bg-green-600 focus:ring-green-500',
+                              red: 'text-red-600 hover:bg-red-500 focus:ring-red-500',
+                              orange: 'text-orange-600 hover:bg-orange-500 focus:ring-orange-500',
+                              purple: 'text-purple-600 hover:bg-purple-600 focus:ring-purple-500',
+                              emerald: 'text-emerald-600 hover:bg-emerald-600 focus:ring-emerald-500',
+                            };
+                            const colorClass = colors[act.color || 'blue'];
+                            if (act.show && !act.show(row)) return null;
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => act.onClick(row)}
+                                className={`group h-9 min-w-[36px] flex items-center justify-center rounded-lg bg-gray-100 ${colorClass} hover:text-white px-3 transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-95`}
+                                title={act.label}
+                              >
+                                {act.icon && <span className={act.label ? 'mr-1.5' : ''}>{act.icon}</span>}
+                                {act.label && <span className="text-xs font-semibold">{act.label}</span>}
+                              </button>
+                            );
+                          })}
+
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile/Tablet Card View - Premium List Style */}
+        <div className="lg:hidden border-t border-gray-100 bg-gray-50/50 p-3 space-y-3">
+          {loading ? (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+              <div className="flex flex-col items-center justify-center gap-4">
+                <div className="inline-block h-10 w-10 animate-spin rounded-full border-3 border-solid border-blue-100 border-r-blue-600"></div>
+                <p className="text-sm font-medium text-gray-500">Loading data...</p>
+              </div>
+            </div>
+          ) : data.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+              <div className="flex flex-col items-center justify-center gap-3">
+                <div className="rounded-full bg-gray-50 p-4">
+                  <FiSearch className="h-6 w-6 text-gray-400" />
+                </div>
+                <p className="text-sm font-medium text-gray-600">No records found</p>
+              </div>
+            </div>
+          ) : (
+            data.map((row, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden active:scale-[0.99] transition-all duration-200"
+              >
+                <div className="p-4 space-y-4">
+                  {/* Primary Identity Header */}
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] uppercase tracking-widest font-bold text-blue-500/70">
+                        {columns[0].label}
+                      </span>
+                      <div className="text-base font-bold text-gray-900 leading-tight">
+                        {renderCell(columns[0], row)}
                       </div>
-                    </td>
+                    </div>
+                    {/* Quick Indicator if any? Fallback to index */}
+                    <div className="h-8 w-8 rounded-full bg-gray-50 flex items-center justify-center text-[10px] font-bold text-gray-400 border border-gray-100">
+                      #{index + 1}
+                    </div>
+                  </div>
+
+                  {/* Detail Grid */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                    {columns.slice(1).map((column) => (
+                      <div key={String(column.key)} className="space-y-1">
+                        <span className="text-[9px] uppercase tracking-wider font-bold text-gray-400 flex items-center gap-1">
+                          <span className="h-1 w-1 rounded-full bg-gray-300"></span>
+                          {column.label}
+                        </span>
+                        <div className="text-xs font-medium text-gray-700 break-words line-clamp-2">
+                          {renderCell(column, row)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Modern Action Bar */}
+                  {actions && (onView || onEdit || onDelete || extraActions) && (
+                    <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-gray-50">
+                      {onView && (
+                        <button
+                          onClick={() => onView(row)}
+                          className="flex-1 flex items-center justify-center gap-1.5 h-10 min-w-10 rounded-lg bg-gray-50 text-gray-700 text-xs font-bold hover:bg-[#0a2352] hover:text-white transition-all border border-gray-100 active:bg-gray-200"
+                          title="View Details"
+                        >
+                          <FiEye className="h-3.5 w-3.5" />
+                          <span className="sm:inline">View</span>
+                        </button>
+                      )}
+                      {onEdit && (!canEdit || canEdit(row)) && (
+                        <button
+                          onClick={() => onEdit(row)}
+                          className="flex-1 flex items-center justify-center gap-1.5 h-10 min-w-10 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100 active:bg-emerald-100"
+                          title="Edit Record"
+                        >
+                          <FiEdit className="h-3.5 w-3.5" />
+                          <span className="sm:inline">Edit</span>
+                        </button>
+                      )}
+                      {onDelete && (!canDelete || canDelete(row)) && (
+                        <button
+                          onClick={() => onDelete(row)}
+                          className="flex-1 flex items-center justify-center gap-1.5 h-10 min-w-10 rounded-lg bg-red-50 text-red-700 text-xs font-bold hover:bg-red-600 hover:text-white transition-all border border-red-100 active:bg-red-100"
+                          title="Delete Record"
+                        >
+                          <FiTrash2 className="h-3.5 w-3.5" />
+                          <span className="sm:inline">Delete</span>
+                        </button>
+                      )}
+
+                      {/* Extra Actions Rendering */}
+                      {extraActions?.map((act, idx) => {
+                        if (act.show && !act.show(row)) return null;
+                        const colors: Record<string, string> = {
+                          blue: 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-600',
+                          green: 'bg-green-50 text-green-700 border-green-100 hover:bg-green-600',
+                          red: 'bg-red-50 text-red-700 border-red-100 hover:bg-red-600',
+                          orange: 'bg-orange-50 text-orange-700 border-orange-100 hover:bg-orange-500',
+                          purple: 'bg-purple-50 text-purple-700 border-purple-100 hover:bg-purple-600',
+                          emerald: 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-600',
+                        };
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => act.onClick(row)}
+                            className={`flex-[1.5] flex items-center justify-center gap-1.5 h-10 min-w-[80px] rounded-lg ${colors[act.color || 'blue']} text-xs font-extrabold hover:text-white transition-all border active:scale-95`}
+                          >
+                            {act.icon}
+                            {act.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Pagination - Modern Design */}
