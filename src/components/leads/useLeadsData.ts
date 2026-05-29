@@ -50,7 +50,9 @@ export function useLeadsData(
   const [wonTotalPages, setWonTotalPages] = useState(1);
   const [wonTotalItems, setWonTotalItems] = useState(0);
 
-  const LIMIT = 10;
+  const [listLimit, setListLimit] = useState(10);
+  const [lostLimit, setLostLimit] = useState(10);
+  const [wonLimit, setWonLimit] = useState(10);
 
   const getHeaders = () => ({ Authorization: `Bearer ${getAuthToken()}` });
 
@@ -58,11 +60,13 @@ export function useLeadsData(
   const stateRef = useRef({
     activeTab, filters, viewMode, kanbanSubView,
     listPage, lostPage, wonPage,
+    listLimit, lostLimit, wonLimit,
   });
   useEffect(() => {
     stateRef.current = {
       activeTab, filters, viewMode, kanbanSubView,
       listPage, lostPage, wonPage,
+      listLimit, lostLimit, wonLimit,
     };
   });
 
@@ -88,7 +92,7 @@ export function useLeadsData(
             staff: f.staff || undefined,
             from: f.from || undefined,
             to: f.to || undefined,
-            limit: LIMIT,
+            limit: 100,
           },
         });
 
@@ -128,7 +132,8 @@ export function useLeadsData(
   const fetchLeadsList = useCallback(async (
     tab = stateRef.current.activeTab,
     f: Filters = stateRef.current.filters,
-    page = stateRef.current.listPage
+    page = stateRef.current.listPage,
+    limit = stateRef.current.listLimit
   ) => {
     try {
       const url = tab === 'my' ? baseUrl.myLeads : baseUrl.getAllLeads;
@@ -142,14 +147,14 @@ export function useLeadsData(
           from: f.from || undefined,
           to: f.to || undefined,
           page,
-          limit: LIMIT,
+          limit,
         },
       });
       const arr = res.data?.data || [];
       const p = res.data?.pagination || {};
       setLeadsList(arr);
       setListTotalItems(p.totalRecords ?? p.total ?? p.count ?? arr.length);
-      setListTotalPages(p.totalPages ?? (p.totalRecords ? Math.ceil(p.totalRecords / LIMIT) : 1));
+      setListTotalPages(p.totalPages ?? (p.totalRecords ? Math.ceil(p.totalRecords / limit) : 1));
     } catch (e) {
       console.error('fetchLeadsList error:', e);
       setLeadsList([]);
@@ -159,7 +164,8 @@ export function useLeadsData(
   const fetchLostLeads = useCallback(async (
     tab = stateRef.current.activeTab,
     f: Filters = stateRef.current.filters,
-    page = stateRef.current.lostPage
+    page = stateRef.current.lostPage,
+    limit = stateRef.current.lostLimit
   ) => {
     try {
       const res = await axios.get(baseUrl.getLostLeads, {
@@ -173,7 +179,7 @@ export function useLeadsData(
           from: f.from || undefined,
           to: f.to || undefined,
           page,
-          limit: LIMIT,
+          limit,
         },
       });
       const raw = res.data?.data;
@@ -181,7 +187,7 @@ export function useLeadsData(
       const p = res.data?.pagination || {};
       setLostLeads(arr);
       setLostTotalItems(p.totalRecords ?? p.total ?? p.count ?? arr.length);
-      setLostTotalPages(p.totalPages ?? (p.totalRecords ? Math.ceil(p.totalRecords / LIMIT) : 1));
+      setLostTotalPages(p.totalPages ?? (p.totalRecords ? Math.ceil(p.totalRecords / limit) : 1));
     } catch (e) {
       console.error('fetchLostLeads error:', e);
       setLostLeads([]);
@@ -191,7 +197,8 @@ export function useLeadsData(
   const fetchWonLeads = useCallback(async (
     tab = stateRef.current.activeTab,
     f: Filters = stateRef.current.filters,
-    page = stateRef.current.wonPage
+    page = stateRef.current.wonPage,
+    limit = stateRef.current.wonLimit
   ) => {
     try {
       const res = await axios.get(baseUrl.getWonLeads, {
@@ -205,7 +212,7 @@ export function useLeadsData(
           from: f.from || undefined,
           to: f.to || undefined,
           page,
-          limit: LIMIT,
+          limit,
         },
       });
       const raw = res.data?.data;
@@ -213,7 +220,7 @@ export function useLeadsData(
       const p = res.data?.pagination || {};
       setWonLeads(arr);
       setWonTotalItems(p.totalRecords ?? p.total ?? p.count ?? arr.length);
-      setWonTotalPages(p.totalPages ?? (p.totalRecords ? Math.ceil(p.totalRecords / LIMIT) : 1));
+      setWonTotalPages(p.totalPages ?? (p.totalRecords ? Math.ceil(p.totalRecords / limit) : 1));
     } catch (e) {
       console.error('fetchWonLeads error:', e);
       setWonLeads([]);
@@ -273,17 +280,18 @@ export function useLeadsData(
   // ─────────────────────────────────────────────────────────────────────────
   const refetchAll = useCallback(async () => {
     const { activeTab: tab, filters: f, viewMode: vm, kanbanSubView: ksv,
-            listPage: lp, lostPage: lsp, wonPage: wp } = stateRef.current;
+      listPage: lp, lostPage: lsp, wonPage: wp,
+      listLimit, lostLimit, wonLimit } = stateRef.current;
 
     const calls: Promise<void>[] = [fetchCounts(tab, f)];
 
     if (vm === 'list') {
-      calls.push(fetchLeadsList(tab, f, lp));
+      calls.push(fetchLeadsList(tab, f, lp, listLimit));
     } else {
       // In Kanban board, the component manages its own Board data.
       // We only fetch lost/won leads if those sub-views are active.
-      if (ksv === 'lost') calls.push(fetchLostLeads(tab, f, lsp));
-      if (ksv === 'won') calls.push(fetchWonLeads(tab, f, wp));
+      if (ksv === 'lost') calls.push(fetchLostLeads(tab, f, lsp, lostLimit));
+      if (ksv === 'won') calls.push(fetchWonLeads(tab, f, wp, wonLimit));
     }
     await Promise.all(calls);
   }, [fetchLeadsList, fetchLostLeads, fetchWonLeads, fetchCounts]);
@@ -306,14 +314,14 @@ export function useLeadsData(
     const init = async () => {
       setLoading(true);
       if (viewMode === 'list') {
-        await Promise.all([fetchLeadsList(activeTab, filters, 1), fetchCounts(activeTab, filters)]);
+        await Promise.all([fetchLeadsList(activeTab, filters, 1, listLimit), fetchCounts(activeTab, filters)]);
       } else {
         const calls: Promise<void>[] = [
           // Global Kanban fetch removed - component now fetches status-wise
           fetchCounts(activeTab, filters),
         ];
-        if (kanbanSubView === 'lost') calls.push(fetchLostLeads(activeTab, filters, 1));
-        if (kanbanSubView === 'won') calls.push(fetchWonLeads(activeTab, filters, 1));
+        if (kanbanSubView === 'lost') calls.push(fetchLostLeads(activeTab, filters, 1, lostLimit));
+        if (kanbanSubView === 'won') calls.push(fetchWonLeads(activeTab, filters, 1, wonLimit));
         await Promise.all(calls);
       }
       if (!cancelled) setLoading(false);
@@ -334,13 +342,13 @@ export function useLeadsData(
     setWonPage(1);
 
     if (viewMode === 'list') {
-      fetchLeadsList(activeTab, filters, 1);
+      fetchLeadsList(activeTab, filters, 1, listLimit);
       fetchCounts(activeTab, filters);
     } else {
       // fetchKanbanLeads(activeTab, filters); // Status-wise fetching handled by component
       fetchCounts(activeTab, filters);
-      if (kanbanSubView === 'lost') fetchLostLeads(activeTab, filters, 1);
-      if (kanbanSubView === 'won') fetchWonLeads(activeTab, filters, 1);
+      if (kanbanSubView === 'lost') fetchLostLeads(activeTab, filters, 1, lostLimit);
+      if (kanbanSubView === 'won') fetchWonLeads(activeTab, filters, 1, wonLimit);
     }
   }, [viewMode, activeTab, filters]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -351,8 +359,8 @@ export function useLeadsData(
     prevSubView.current = kanbanSubView;
     if (viewMode !== 'kanban') return;
     // if (kanbanSubView === 'board') fetchKanbanLeads(activeTab, filters); // Handled by component
-    if (kanbanSubView === 'lost') fetchLostLeads(activeTab, filters, lostPage);
-    if (kanbanSubView === 'won') fetchWonLeads(activeTab, filters, wonPage);
+    if (kanbanSubView === 'lost') fetchLostLeads(activeTab, filters, lostPage, lostLimit);
+    if (kanbanSubView === 'won') fetchWonLeads(activeTab, filters, wonPage, wonLimit);
   }, [kanbanSubView]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 5. List page change
@@ -360,7 +368,7 @@ export function useLeadsData(
   useEffect(() => {
     if (prevListPage.current === listPage) return;
     prevListPage.current = listPage;
-    if (viewMode === 'list') fetchLeadsList(activeTab, filters, listPage);
+    if (viewMode === 'list') fetchLeadsList(activeTab, filters, listPage, listLimit);
   }, [listPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 6. Lost page change
@@ -368,7 +376,7 @@ export function useLeadsData(
   useEffect(() => {
     if (prevLostPage.current === lostPage) return;
     prevLostPage.current = lostPage;
-    if (viewMode === 'kanban' && kanbanSubView === 'lost') fetchLostLeads(activeTab, filters, lostPage);
+    if (viewMode === 'kanban' && kanbanSubView === 'lost') fetchLostLeads(activeTab, filters, lostPage, lostLimit);
   }, [lostPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 7. Won page change
@@ -376,8 +384,18 @@ export function useLeadsData(
   useEffect(() => {
     if (prevWonPage.current === wonPage) return;
     prevWonPage.current = wonPage;
-    if (viewMode === 'kanban' && kanbanSubView === 'won') fetchWonLeads(activeTab, filters, wonPage);
+    if (viewMode === 'kanban' && kanbanSubView === 'won') fetchWonLeads(activeTab, filters, wonPage, wonLimit);
   }, [wonPage]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 8. Limit change
+  useEffect(() => {
+    if (viewMode === 'list') {
+      fetchLeadsList(activeTab, filters, 1, listLimit);
+    } else {
+      if (kanbanSubView === 'lost') fetchLostLeads(activeTab, filters, 1, lostLimit);
+      if (kanbanSubView === 'won') fetchWonLeads(activeTab, filters, 1, wonLimit);
+    }
+  }, [listLimit, lostLimit, wonLimit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -403,35 +421,35 @@ export function useLeadsData(
 
     listPagination: {
       currentPage: listPage,
-      rowsPerPage: LIMIT,
+      rowsPerPage: listLimit,
       totalPages: listTotalPages,
       totalItems: listTotalItems,
       handlePageChange: (p: number) => setListPage(p),
-      handleRowsPerPageChange: (_: number) => setListPage(1),
+      handleRowsPerPageChange: (l: number) => { setListLimit(l); setListPage(1); },
     },
     lostPagination: {
       currentPage: lostPage,
-      rowsPerPage: LIMIT,
+      rowsPerPage: lostLimit,
       totalPages: lostTotalPages,
       totalItems: lostTotalItems,
       handlePageChange: (p: number) => setLostPage(p),
-      handleRowsPerPageChange: (_: number) => setLostPage(1),
+      handleRowsPerPageChange: (l: number) => { setLostLimit(l); setLostPage(1); },
     },
     wonPagination: {
       currentPage: wonPage,
-      rowsPerPage: LIMIT,
+      rowsPerPage: wonLimit,
       totalPages: wonTotalPages,
       totalItems: wonTotalItems,
       handlePageChange: (p: number) => setWonPage(p),
-      handleRowsPerPageChange: (_: number) => setWonPage(1),
+      handleRowsPerPageChange: (l: number) => { setWonLimit(l); setWonPage(1); },
     },
     pagination: {
       currentPage: listPage,
-      rowsPerPage: LIMIT,
+      rowsPerPage: listLimit,
       totalPages: listTotalPages,
       totalItems: listTotalItems,
       handlePageChange: (p: number) => setListPage(p),
-      handleRowsPerPageChange: (_: number) => setListPage(1),
+      handleRowsPerPageChange: (l: number) => { setListLimit(l); setListPage(1); },
     },
   };
 }

@@ -354,6 +354,7 @@ interface FormInputProps {
   className?: string;
   checked?: boolean; // For checkbox
   checkboxColor?: string; // Custom color for checkbox
+  [key: string]: any;
 }
 
 const FormInput: React.FC<FormInputProps> = ({
@@ -375,6 +376,7 @@ const FormInput: React.FC<FormInputProps> = ({
   className = "",
   checked,
   checkboxColor = "#1e40af", // Default dark blue color
+  ...rest
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -643,6 +645,7 @@ const FormInput: React.FC<FormInputProps> = ({
             placeholder={placeholder}
             disabled={disabled}
             className={getInputClasses()}
+            {...rest}
           />
         )}
 

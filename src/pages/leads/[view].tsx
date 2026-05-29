@@ -165,7 +165,7 @@ export default function LeadsPage() {
       const found = findLeadById(leadId);
       if (found) {
         setViewingLead(found);
-        
+
         // Remove id and search from query string after opening
         const { id, search, ...rest } = router.query;
         router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
@@ -246,7 +246,7 @@ export default function LeadsPage() {
   const canReadOwn = !!leadPermissions?.readOwn;
   const canUpdate = !!leadPermissions?.update;
   const canDelete = !!leadPermissions?.delete;
-  const canAssign = !!leadPermissions?.assign;
+  const canAssign = !!leadPermissions?.assign || !!leadPermissions?.update;
   const canTransfer = !!leadPermissions?.transfer;
   const canConvert = !!leadPermissions?.convert;
 
@@ -289,7 +289,7 @@ export default function LeadsPage() {
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <div className="flex items-center justify-between">
             <h1 className="text-xl md:text-2xl font-bold text-gray-900">Leads</h1>
-            
+
             {/* Mobile View Toggle */}
             <div className="md:hidden relative flex items-center bg-gray-100 p-1 rounded-md w-fit">
               <button
@@ -343,11 +343,10 @@ export default function LeadsPage() {
             {/* Advanced Filter Button */}
             <button
               onClick={() => setShowFilterDrawer(!showFilterDrawer)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs md:text-sm font-medium transition-all cursor-pointer ${
-                showFilterDrawer || hasActiveFilters
+              className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs md:text-sm font-medium transition-all cursor-pointer ${showFilterDrawer || hasActiveFilters
                   ? 'bg-primary-50 text-primary-600 border border-primary-200 hover:bg-primary-100'
                   : 'bg-gray-100 text-gray-700 border border-transparent hover:bg-gray-200'
-              }`}
+                }`}
             >
               <Filter className="h-4 w-4" />
               <span className="hidden sm:inline">Filters</span>
@@ -412,11 +411,10 @@ export default function LeadsPage() {
 
         {/* ── Filter Section (Inline Expandable) ────────────────────────────── */}
         <div
-          className={`grid transition-all duration-300 ease-in-out ${
-            showFilterDrawer
+          className={`grid transition-all duration-300 ease-in-out ${showFilterDrawer
               ? 'grid-rows-[1fr] opacity-100 mt-4 pt-4 border-t border-gray-100'
               : 'grid-rows-[0fr] opacity-0 overflow-hidden'
-          }`}
+            }`}
         >
           <div className="overflow-hidden">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">

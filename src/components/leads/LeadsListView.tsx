@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { Phone, Mail } from 'lucide-react';
+import { Phone, Mail, UserPlus, X } from 'lucide-react';
 import { baseUrl, getAuthToken } from '@/config';
 import { ApiSource, ApiStatus, ApiUser, ApiLead } from './types';
 import DataTable, { Column } from '@/components/DataTable';
@@ -77,6 +77,7 @@ interface Props {
     handlePageChange: (page: number) => void;
     handleRowsPerPageChange: (rows: number) => void;
   };
+  fetchLeadsList?: (tab?: 'all' | 'my', filters?: any, page?: number) => void;
 }
 
 function mapLead(item: any): TableLead {
@@ -119,6 +120,9 @@ export default function LeadsListView({
   const [showDelete, setShowDelete] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TableLead | null>(null);
   const [localLoading, setLocalLoading] = useState(false);
+  const [selectedLeads, setSelectedLeads] = useState<TableLead[]>([]);
+  const [assigning, setAssigning] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState('');
 
   // Use loading from prop or local state
   const loading = loadingProp !== undefined ? loadingProp : localLoading;
@@ -288,6 +292,29 @@ export default function LeadsListView({
     }
   };
 
+  const handleBulkAssign = async () => {
+    if (!selectedStaff || selectedLeads.length === 0) return;
+
+    setAssigning(true);
+    try {
+      await axios.put(baseUrl.bulkAssignLeads, {
+        leadIds: selectedLeads.map(l => l.id),
+        staffId: selectedStaff
+      }, {
+        headers: { Authorization: `Bearer ${getAuthToken()}` }
+      });
+
+      toast.success(`Successfully assigned ${selectedLeads.length} leads`);
+      setSelectedLeads([]);
+      setSelectedStaff('');
+      onRefresh?.();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to assign leads');
+    } finally {
+      setAssigning(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
@@ -321,12 +348,59 @@ export default function LeadsListView({
 
   return (
     <div className="space-y-4">
+      {/* Bulk Actions Bar */}
+      {selectedLeads.length > 0 && (permissions?.assign || permissions?.update) && (
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-blue-50 border border-blue-100 p-4 rounded-lg animate-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+              <UserPlus className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900">{selectedLeads.length} leads selected</p>
+              <p className="text-xs text-gray-500">Choose a staff member to assign these leads in bulk</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <select
+              value={selectedStaff}
+              onChange={(e) => setSelectedStaff(e.target.value)}
+              className="flex-1 md:w-64 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">Select Staff Member</option>
+              {staffMembers.map(staff => (
+                <option key={staff._id} value={staff._id}>{staff.fullName}</option>
+              ))}
+            </select>
+
+            <button
+              onClick={handleBulkAssign}
+              disabled={assigning || !selectedStaff}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {assigning ? 'Assigning...' : 'Assign Now'}
+            </button>
+
+            <button
+              onClick={() => setSelectedLeads([])}
+              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              title="Clear Selection"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Data table */}
       <DataTable
         data={leads}
         columns={columns}
         loading={loading}
         pagination
+        selectable={permissions?.assign || permissions?.update}
+        selectedRows={selectedLeads}
+        onSelectionChange={setSelectedLeads}
         searchable={false}
         currentPage={pagination?.currentPage || 1}
         totalPages={pagination?.totalPages || 1}

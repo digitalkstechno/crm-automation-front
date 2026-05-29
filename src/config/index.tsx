@@ -38,6 +38,7 @@ export const baseUrl = {
   exportLeads: `${API}lead/export`,
   importLeadsTemplate: `${API}lead/import-template`,
   bulkImportLeads: `${API}lead/bulk-import`,
+  bulkAssignLeads: `${API}lead/bulk-assign`,
   teams: `${API}team`,
   organizations: `${API}organization`,
   myTasks: `${API}task/my`,

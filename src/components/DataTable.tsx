@@ -58,6 +58,9 @@ interface DataTableProps<T> {
     color?: 'blue' | 'green' | 'red' | 'orange' | 'purple' | 'emerald';
     show?: (row: T) => boolean;
   }[];
+  selectable?: boolean;
+  selectedRows?: T[];
+  onSelectionChange?: (selectedRows: T[]) => void;
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -86,6 +89,9 @@ export default function DataTable<T extends Record<string, any>>({
   onRefresh,
   onExport,
   extraActions,
+  selectable,
+  selectedRows = [],
+  onSelectionChange,
 }: DataTableProps<T>) {
   const [searchValue, setSearchValue] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -234,6 +240,29 @@ export default function DataTable<T extends Record<string, any>>({
           <table className="w-full divide-y divide-gray-100">
             <thead className="bg-gray-100">
               <tr>
+                {selectable && (
+                  <th className="px-6 py-4 text-left">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      checked={data.length > 0 && data.every(item => selectedRows.some(r => (r.id || r._id) === (item.id || item._id)))}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          const newSelected = [...selectedRows];
+                          data.forEach(item => {
+                            if (!newSelected.some(r => (r.id || r._id) === (item.id || item._id))) {
+                              newSelected.push(item);
+                            }
+                          });
+                          onSelectionChange?.(newSelected);
+                        } else {
+                          const newSelected = selectedRows.filter(r => !data.some(item => (r.id || r._id) === (item.id || item._id)));
+                          onSelectionChange?.(newSelected);
+                        }
+                      }}
+                    />
+                  </th>
+                )}
                 {columns.map((column) => (
                   <th
                     key={String(column.key)}
@@ -293,6 +322,22 @@ export default function DataTable<T extends Record<string, any>>({
                     border-b border-gray-50 last:border-0
                   `}
                   >
+                    {selectable && (
+                      <td className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          checked={selectedRows.some(r => (r.id || r._id) === (row.id || row._id))}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              onSelectionChange?.([...selectedRows, row]);
+                            } else {
+                              onSelectionChange?.(selectedRows.filter(r => (r.id || r._id) !== (row.id || row._id)));
+                            }
+                          }}
+                        />
+                      </td>
+                    )}
                     {columns.map((column) => (
                       <td
                         key={String(column.key)}
@@ -398,12 +443,28 @@ export default function DataTable<T extends Record<string, any>>({
                 <div className="p-4 space-y-4">
                   {/* Primary Identity Header */}
                   <div className="flex items-start justify-between">
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] uppercase tracking-widest font-bold text-blue-500/70">
-                        {columns[0].label}
-                      </span>
-                      <div className="text-base font-bold text-gray-900 leading-tight">
-                        {renderCell(columns[0], row)}
+                    <div className="flex items-start gap-3">
+                      {selectable && (
+                        <input
+                          type="checkbox"
+                          className="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          checked={selectedRows.some(r => (r.id || r._id) === (row.id || row._id))}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              onSelectionChange?.([...selectedRows, row]);
+                            } else {
+                              onSelectionChange?.(selectedRows.filter(r => (r.id || r._id) !== (row.id || row._id)));
+                            }
+                          }}
+                        />
+                      )}
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] uppercase tracking-widest font-bold text-blue-500/70">
+                          {columns[0].label}
+                        </span>
+                        <div className="text-base font-bold text-gray-900 leading-tight">
+                          {renderCell(columns[0], row)}
+                        </div>
                       </div>
                     </div>
                     {/* Quick Indicator if any? Fallback to index */}
