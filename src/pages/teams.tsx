@@ -10,8 +10,14 @@ import axios from 'axios';
 import { baseUrl, getAuthToken } from '@/config';
 import { toast } from 'react-toastify';
 import FormInput from '@/components/ui/Input';
+import FormSelect from '@/components/ui/FormSelect';
 
-type Team = { _id: string; name: string; createdAt?: string };
+type Team = { 
+  _id: string; 
+  name: string; 
+  teamLeader?: { _id: string; fullName: string; email: string };
+  createdAt?: string; 
+};
 
 function useDebounce<T>(value: T, delay = 500): T {
   const [dv, setDv] = useState(value);
@@ -29,6 +35,7 @@ const validationSchema = Yup.object({
     .min(2, 'Team name must be at least 2 characters')
     .max(100, 'Team name must be at most 100 characters')
     .matches(/^[a-zA-Z0-9\s&-]+$/, 'Team name can only contain letters, numbers, spaces, &, and -'),
+  teamLeader: Yup.string().nullable(),
 });
 
 export function TeamsContent() {
@@ -44,6 +51,7 @@ export function TeamsContent() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [toDelete, setToDelete] = useState<Team | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [staffOptions, setStaffOptions] = useState<{ label: string; value: string }[]>([]);
 
   const token = typeof window !== 'undefined' ? getAuthToken() : null;
   const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
@@ -60,6 +68,7 @@ export function TeamsContent() {
     initialValues: {
       _id: '',
       name: '',
+      teamLeader: '',
     },
     validationSchema,
     validateOnChange: true,
@@ -88,6 +97,22 @@ export function TeamsContent() {
       });
   }, [token]);
 
+  useEffect(() => {
+    if (!token) return;
+    axios
+      .get(baseUrl.getAllStaff, { headers })
+      .then((res) => {
+        const staffList = res.data?.data || [];
+        setStaffOptions(
+          staffList.map((s: any) => ({
+            label: `${s.fullName} (${s.email})`,
+            value: s._id,
+          }))
+        );
+      })
+      .catch((err) => console.error("Failed to fetch staff list", err));
+  }, [token]);
+
   const fetchData = async () => {
     try {
       const res = await axios.get(baseUrl.teams, {
@@ -105,14 +130,15 @@ export function TeamsContent() {
 
   useEffect(() => { fetchData(); }, [debouncedSearch, currentPage, pageSize]);
 
-  const handleSave = async (values: { _id?: string; name: string }) => {
+  const handleSave = async (values: { _id?: string; name: string; teamLeader?: string }) => {
     setIsSubmitting(true);
     try {
+      const payload = { name: values.name, teamLeader: values.teamLeader || undefined };
       if (values._id) {
-        await axios.put(`${baseUrl.teams}/${values._id}`, { name: values.name }, { headers });
+        await axios.put(`${baseUrl.teams}/${values._id}`, payload, { headers });
         toast.success('Team updated successfully');
       } else {
-        await axios.post(baseUrl.teams, { name: values.name }, { headers });
+        await axios.post(baseUrl.teams, payload, { headers });
         toast.success('Team created successfully');
       }
       await fetchData();
@@ -154,6 +180,7 @@ export function TeamsContent() {
     formik.setValues({
       _id: row._id,
       name: row.name,
+      teamLeader: row.teamLeader?._id || '',
     });
     setIsDialogOpen(true);
   };
@@ -175,6 +202,11 @@ export function TeamsContent() {
       label: 'Team Name', 
       render: (v) => <span className="font-semibold text-gray-900">{v}</span> 
     },
+    {
+      key: 'teamLeader',
+      label: 'Team Leader',
+      render: (v: any) => v?.fullName ? <span className="text-gray-700">{v.fullName}</span> : <span className="text-gray-400 italic">Not Assigned</span>
+    }
   ];
 
   const canCreate = setupPermissions?.create !== false;
@@ -299,6 +331,16 @@ export function TeamsContent() {
             error={formik.touched.name && formik.errors.name ? formik.errors.name : undefined}
             required
             placeholder="Enter team name"
+            disabled={isSubmitting}
+          />
+
+          <FormSelect
+            label="Team Leader (Optional)"
+            name="teamLeader"
+            value={formik.values.teamLeader || ''}
+            onChange={(val) => formik.setFieldValue("teamLeader", val)}
+            options={[{ label: 'None', value: '' }, ...staffOptions]}
+            placeholder="Select a team leader"
             disabled={isSubmitting}
           />
 
