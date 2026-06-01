@@ -491,7 +491,7 @@ export default function LeadAddDialog({
                 value={formik.values.priority}
                 onChange={(val) => { formik.setFieldValue('priority', val); formik.setFieldTouched('priority', true, false); }}
                 onBlur={() => formik.setFieldTouched('priority')}
-                options={priorities.map((p) => ({ value: p.name!, label: p.name! }))}
+                options={priorities.map((p) => ({ value: p._id, label: p.name! }))}
                 error={getFieldError('priority')}
                 placeholder="— Select Priority —"
                 required={requiredFields.includes('priority')}
