@@ -28,8 +28,8 @@ export default function RoleForm({
   initialData,
 }: RoleFormProps) {
   // FIXED: Use lowercase for feature keys to match backend expectations
-  type Feature = 'lead' | 'task' | 'taskStatus' | 'staff' | 'role' | 'leadStatus' | 'leadSource' | 'leadLabel' | 'teams' | 'organizations';
-  const features: Feature[] = ['lead', 'task', 'taskStatus', 'staff', 'role', 'leadStatus', 'leadSource', 'leadLabel', 'teams', 'organizations'];
+  type Feature = 'lead' | 'task' | 'taskStatus' | 'staff' | 'role' | 'leadStatus' | 'leadSource' | 'leadLabel' | 'teams' | 'organizations' | 'product';
+  const features: Feature[] = ['lead', 'task', 'taskStatus', 'staff', 'role', 'leadStatus', 'leadSource', 'leadLabel', 'teams', 'organizations', 'product'];
 
   const featureLabels: Record<Feature, string> = {
     lead: 'Leads',
@@ -42,6 +42,7 @@ export default function RoleForm({
     leadLabel: 'Lead Labels',
     teams: 'Teams',
     organizations: 'Organizations',
+    product: 'Products',
   };
 
   const defaultCaps: CapabilitySet = {

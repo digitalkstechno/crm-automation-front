@@ -16,12 +16,13 @@ import { OrganizationsContent } from './organizations';
 import { TaskStatusContent } from './task-status';
 import { useRouter } from 'next/router';
 import { FieldSettingsContent } from './field-settings';
+import { ProductsContent } from './products';
 
 
 export default function Setup() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<
-    'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations' | 'Task Status' | 'Field Settings'
+    'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations' | 'Task Status' | 'Field Settings' | 'Products'
   >('Role Management');
   const token = typeof window !== 'undefined' ? getAuthToken() : null;
   const [permissions, setPermissions] = useState<any>(null);
@@ -31,7 +32,7 @@ export default function Setup() {
   useEffect(() => {
     if (router.query.tab) {
       const tab = router.query.tab as string;
-      const validTabs = ['Role Management', 'Staff Management', 'Lead Sources', 'Lead Status', 'Kanban Status', 'Lead Labels', 'Teams', 'Organizations', 'Task Status', 'Field Settings'];
+      const validTabs = ['Role Management', 'Staff Management', 'Lead Sources', 'Lead Status', 'Kanban Status', 'Lead Labels', 'Teams', 'Organizations', 'Task Status', 'Field Settings', 'Products'];
       if (validTabs.includes(tab)) {
         setActiveTab(tab as any);
       }
@@ -39,7 +40,7 @@ export default function Setup() {
   }, [router.query.tab]);
 
   // Handle tab change and update URL
-  const handleTabChange = (tab: 'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations' | 'Task Status' | 'Field Settings') => {
+  const handleTabChange = (tab: 'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations' | 'Task Status' | 'Field Settings' | 'Products') => {
     setActiveTab(tab);
     router.push({
       pathname: router.pathname,
@@ -207,6 +208,7 @@ export default function Setup() {
       { name: "Teams", icon: UsersRound, visible: canViewTeams },
       { name: "Organizations", icon: Building2, visible: canViewOrgs },
       { name: "Field Settings", icon: Settings2, visible: true },
+      { name: "Products", icon: Settings, visible: true },
     ];
     return items.filter(i => i.visible);
   }, [canViewRole, canViewStaff, canViewLeadSource, canViewLeadStatus, canViewLeadLabel, canViewTeams, canViewOrgs, canViewTaskStatus]);
@@ -283,6 +285,7 @@ export default function Setup() {
               {activeTab === 'Organizations' && <OrganizationsContent />}
               {activeTab === 'Task Status' && <TaskStatusContent />}
               {activeTab === 'Field Settings' && <FieldSettingsContent />}
+              {activeTab === 'Products' && <ProductsContent />}
               {activeTab === 'Kanban Status' && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">

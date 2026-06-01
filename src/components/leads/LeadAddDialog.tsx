@@ -42,6 +42,7 @@ export default function LeadAddDialog({
   const [statuses, setStatuses] = useState<DropdownItem[]>([]);
   const [staff, setStaff] = useState<DropdownItem[]>([]);
   const [labels, setLabels] = useState<LeadLabel[]>([]);
+  const [products, setProducts] = useState<DropdownItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [attachmentsFiles, setAttachmentsFiles] = useState<File[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
@@ -139,6 +140,7 @@ export default function LeadAddDialog({
       labels: [] as string[],
       priority: 'medium' as 'high' | 'medium' | 'low',
       isActive: true,
+      products: [] as string[],
     },
     validationSchema: leadValidationSchema,
     validateOnChange: true,
@@ -159,6 +161,7 @@ export default function LeadAddDialog({
           leadLabel: values.labels,
           priority: values.priority,
           isActive: values.isActive,
+          products: values.products,
         };
 
         const headers = {
@@ -209,16 +212,18 @@ export default function LeadAddDialog({
       setLoading(true);
       try {
         const headers = { Authorization: `Bearer ${token()}` };
-        const [srcRes, stRes, staffRes, labRes] = await Promise.all([
+        const [srcRes, stRes, staffRes, labRes, prodRes] = await Promise.all([
           axios.get(baseUrl.leadSources, { headers }),
           axios.get(baseUrl.leadStatuses, { headers }),
           axios.get(baseUrl.getAllStaff, { headers }),
           axios.get(baseUrl.leadLabels, { headers }),
+          axios.get(baseUrl.products, { headers }),
         ]);
         setSources(srcRes.data?.data || []);
         setStatuses(stRes.data?.data || []);
         setStaff(staffRes.data?.data || []);
         setLabels(labRes.data?.data || []);
+        setProducts(prodRes.data?.data || []);
       } catch {
         formik.setStatus('Failed to load options');
       } finally {
@@ -243,6 +248,7 @@ export default function LeadAddDialog({
         labels: labelIds,
         priority: ((initialData.priority || 'medium').toLowerCase()) as 'high' | 'medium' | 'low',
         isActive: initialData.isActive ?? true,
+        products: (initialData.products || []).map((p: any) => typeof p === 'string' ? p : p._id),
       });
       setExistingAttachments(initialData.attachments || []);
       setAttachmentsFiles([]);
@@ -254,7 +260,7 @@ export default function LeadAddDialog({
       setDeletingAttachmentIds(new Set());
     }
     formik.setStatus(null);
-  }, [isOpen, mode, initialData]);
+  }, [isOpen, mode, initialData]); // eslint-disable-line
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -505,6 +511,17 @@ export default function LeadAddDialog({
               error={getFieldError('labels')}
               placeholder="Select labels..."
               required={requiredFields.includes('labels')}
+            />
+
+            {/* Products — Single Select */}
+            <FormSelect
+              label="Products"
+              name="products"
+              value={formik.values.products[0] || ''}
+              onChange={(val) => { formik.setFieldValue('products', val ? [val] : []); formik.setFieldTouched('products', true, false); }}
+              onBlur={() => formik.setFieldTouched('products')}
+              options={products.map((p) => ({ value: p._id, label: p.name! }))}
+              placeholder="— Select Product —"
             />
 
             {/* Last Follow-Up */}
