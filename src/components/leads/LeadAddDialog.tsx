@@ -42,6 +42,7 @@ export default function LeadAddDialog({
   const [statuses, setStatuses] = useState<DropdownItem[]>([]);
   const [staff, setStaff] = useState<DropdownItem[]>([]);
   const [labels, setLabels] = useState<LeadLabel[]>([]);
+  const [priorities, setPriorities] = useState<DropdownItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [attachmentsFiles, setAttachmentsFiles] = useState<File[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
@@ -106,8 +107,9 @@ export default function LeadAddDialog({
       leadStatus: Yup.string(),
       assignedTo: Yup.string(),
       labels: Yup.array().of(Yup.string()),
-      priority: Yup.string().oneOf(['high', 'medium', 'low']),
+      priority: Yup.string(),
       isActive: Yup.boolean(),
+      amountBudget: Yup.string(),
     };
 
     if (requiredFields.includes('fullName')) shape.fullName = shape.fullName.required('Full Name is required');
@@ -137,8 +139,9 @@ export default function LeadAddDialog({
       leadStatus: '',
       assignedTo: '',
       labels: [] as string[],
-      priority: 'medium' as 'high' | 'medium' | 'low',
+      priority: 'medium' as string,
       isActive: true,
+      amountBudget: '',
     },
     validationSchema: leadValidationSchema,
     validateOnChange: true,
@@ -159,6 +162,7 @@ export default function LeadAddDialog({
           leadLabel: values.labels,
           priority: values.priority,
           isActive: values.isActive,
+          amountBudget: values.amountBudget,
         };
 
         const headers = {
@@ -209,16 +213,18 @@ export default function LeadAddDialog({
       setLoading(true);
       try {
         const headers = { Authorization: `Bearer ${token()}` };
-        const [srcRes, stRes, staffRes, labRes] = await Promise.all([
+        const [srcRes, stRes, staffRes, labRes, priRes] = await Promise.all([
           axios.get(baseUrl.leadSources, { headers }),
           axios.get(baseUrl.leadStatuses, { headers }),
           axios.get(baseUrl.getAllStaff, { headers }),
           axios.get(baseUrl.leadLabels, { headers }),
+          axios.get(baseUrl.leadPriorities, { headers }),
         ]);
         setSources(srcRes.data?.data || []);
         setStatuses(stRes.data?.data || []);
         setStaff(staffRes.data?.data || []);
         setLabels(labRes.data?.data || []);
+        setPriorities(priRes.data?.data || []);
       } catch {
         formik.setStatus('Failed to load options');
       } finally {
@@ -241,8 +247,9 @@ export default function LeadAddDialog({
         leadStatus: initialData.leadStatus?._id || '',
         assignedTo: initialData.assignedTo?._id || '',
         labels: labelIds,
-        priority: ((initialData.priority || 'medium').toLowerCase()) as 'high' | 'medium' | 'low',
+        priority: (initialData.priority || 'medium').toLowerCase(),
         isActive: initialData.isActive ?? true,
+        amountBudget: initialData.amountBudget || '',
       });
       setExistingAttachments(initialData.attachments || []);
       setAttachmentsFiles([]);
@@ -484,31 +491,24 @@ export default function LeadAddDialog({
                 value={formik.values.priority}
                 onChange={(val) => { formik.setFieldValue('priority', val); formik.setFieldTouched('priority', true, false); }}
                 onBlur={() => formik.setFieldTouched('priority')}
-                options={[
-                  { value: 'high', label: 'High' },
-                  { value: 'medium', label: 'Medium' },
-                  { value: 'low', label: 'Low' },
-                ]}
+                options={priorities.map((p) => ({ value: p.name!, label: p.name! }))}
                 error={getFieldError('priority')}
+                placeholder="— Select Priority —"
                 required={requiredFields.includes('priority')}
               />
             </div>
 
-            {/* Labels — MultiSelect */}
-            <FormMultiSelect
-              label="Lead Labels"
-              name="labels"
-              value={formik.values.labels}
-              onChange={(vals) => { formik.setFieldValue('labels', vals); formik.setFieldTouched('labels', true, false); }}
-              onBlur={() => formik.setFieldTouched('labels')}
-              options={labelOptions}
-              error={getFieldError('labels')}
-              placeholder="Select labels..."
-              required={requiredFields.includes('labels')}
+            {/* Amount Budget */}
+            <FormInput
+              label="Amount Budget"
+              name="amountBudget"
+              type="text"
+              value={formik.values.amountBudget}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={getFieldError('amountBudget')}
+              placeholder="Enter budget amount"
             />
-
-            {/* Last Follow-Up */}
-
 
             {/* Attachments */}
             <div>

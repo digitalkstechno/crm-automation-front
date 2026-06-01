@@ -66,6 +66,7 @@ export type ApiLead = {
   lostDate?: string;
   wonDate?: string;
   amountDate?: string;
+  amountBudget?: string;
 };
 
 export type AddLeadForm = {

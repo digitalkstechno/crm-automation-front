@@ -23,7 +23,6 @@ import {
 
 // ── Hooks / Config ───────────────────────────────────────────────────────────
 import { useLeadsData } from '@/components/leads/useLeadsData';
-import FormInput from '@/components/ui/Input';
 import { FormMultiSelect } from '@/components/ui/FormSelect';
 
 export type ViewMode = 'list' | 'kanban';
@@ -55,8 +54,8 @@ export default function LeadsPage() {
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [sourceFilter, setSourceFilter] = useState<string[]>([]);
   const [staffFilter, setStaffFilter] = useState<string[]>([]);
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [amountBudgetFilter, setAmountBudgetFilter] = useState<string[]>([]);
+  const [amountBudgetOptions, setAmountBudgetOptions] = useState<string[]>([]);
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
 
   const debouncedSearch = useDebounce(search, 500);
@@ -109,16 +108,30 @@ export default function LeadsPage() {
     fetchPermissions();
   }, [token]);
 
+  // Fetch distinct amountBudget values
+  useEffect(() => {
+    if (!token) return;
+    axios.get(baseUrl.getAllLeads, {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { limit: 1000 },
+    }).then(res => {
+      const leads = res.data?.data || [];
+      const vals: string[] = Array.from(
+        new Set(leads.map((l: any) => l.amountBudget).filter(Boolean))
+      );
+      setAmountBudgetOptions(vals);
+    }).catch(() => {});
+  }, [token]);
+
   const filters = useMemo(
     () => ({
       search: debouncedSearch,
       status: statusFilter.length > 0 ? statusFilter.join(',') : '',
       source: sourceFilter.length > 0 ? sourceFilter.join(',') : '',
       staff: staffFilter.length > 0 ? staffFilter.join(',') : '',
-      from: fromDate,
-      to: toDate,
+      amountBudget: amountBudgetFilter.length > 0 ? amountBudgetFilter.join(',') : '',
     }),
-    [debouncedSearch, statusFilter, sourceFilter, staffFilter, fromDate, toDate]
+    [debouncedSearch, statusFilter, sourceFilter, staffFilter, amountBudgetFilter]
   );
 
   // ── Data — pass kanbanSubView so hook fetches only what's needed ──────────
@@ -254,8 +267,7 @@ export default function LeadsPage() {
     setStatusFilter([]);
     setSourceFilter([]);
     setStaffFilter([]);
-    setFromDate('');
-    setToDate('');
+    setAmountBudgetFilter([]);
     setSearch('');
   };
 
@@ -263,8 +275,7 @@ export default function LeadsPage() {
     statusFilter.length > 0 ||
     sourceFilter.length > 0 ||
     staffFilter.length > 0 ||
-    fromDate ||
-    toDate ||
+    amountBudgetFilter.length > 0 ||
     search
   );
 
@@ -362,7 +373,7 @@ export default function LeadsPage() {
               title="Export to Excel"
               className="flex items-center gap-2 px-3 py-2 rounded-md text-xs md:text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-all cursor-pointer disabled:opacity-60"
             >
-              <Download className="h-4 w-4" />
+              <Upload className="h-4 w-4" />
               <span className="hidden sm:inline">{exporting ? '...' : 'Export'}</span>
             </button>
 
@@ -373,7 +384,7 @@ export default function LeadsPage() {
                 title="Bulk Import Leads"
                 className="flex items-center gap-2 px-3 py-2 rounded-md text-xs md:text-sm font-medium bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 transition-all cursor-pointer"
               >
-                <Upload className="h-4 w-4" />
+                <Download className="h-4 w-4" />
                 <span className="hidden sm:inline">Import</span>
               </button>
             )}
@@ -417,7 +428,7 @@ export default function LeadsPage() {
             }`}
         >
           <div className="overflow-hidden">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <FormMultiSelect
                   label="Lead Status"
@@ -446,25 +457,11 @@ export default function LeadsPage() {
               </div>
 
               <div className="space-y-2">
-                <FormInput
-                  label="From Date"
-                  name="fromDate"
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="bg-white"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <FormInput
-                  label="To Date"
-                  name="toDate"
-                  type="date"
-                  value={toDate}
-                  min={fromDate || undefined}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="bg-white"
+                <FormMultiSelect
+                  label="Amount Budget"
+                  value={amountBudgetFilter}
+                  onChange={(e) => setAmountBudgetFilter(e)}
+                  options={amountBudgetOptions.map((v) => ({ value: v, label: v }))}
                 />
               </div>
             </div>

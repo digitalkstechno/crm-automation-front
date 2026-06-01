@@ -10,8 +10,7 @@ type Filters = {
   status?: string;
   source?: string;
   staff?: string;
-  from?: string;
-  to?: string;
+  amountBudget?: string;
 };
 
 export function useLeadsData(
@@ -90,8 +89,7 @@ export function useLeadsData(
             status: f.status || undefined,
             source: f.source || undefined,
             staff: f.staff || undefined,
-            from: f.from || undefined,
-            to: f.to || undefined,
+            amountBudget: f.amountBudget || undefined,
             limit: 100,
           },
         });
@@ -116,8 +114,7 @@ export function useLeadsData(
             status: f.status || undefined,
             source: f.source || undefined,
             staff: f.staff || undefined,
-            from: f.from || undefined,
-            to: f.to || undefined,
+            amountBudget: f.amountBudget || undefined,
             limit: 100,
           },
         });
@@ -144,8 +141,7 @@ export function useLeadsData(
           status: f.status || undefined,
           source: f.source || undefined,
           staff: f.staff || undefined,
-          from: f.from || undefined,
-          to: f.to || undefined,
+          amountBudget: f.amountBudget || undefined,
           page,
           limit,
         },
@@ -176,8 +172,7 @@ export function useLeadsData(
           status: f.status || undefined,
           source: f.source || undefined,
           staff: f.staff || undefined,
-          from: f.from || undefined,
-          to: f.to || undefined,
+          amountBudget: f.amountBudget || undefined,
           page,
           limit,
         },
@@ -209,8 +204,7 @@ export function useLeadsData(
           status: f.status || undefined,
           source: f.source || undefined,
           staff: f.staff || undefined,
-          from: f.from || undefined,
-          to: f.to || undefined,
+          amountBudget: f.amountBudget || undefined,
           page,
           limit,
         },
@@ -240,8 +234,7 @@ export function useLeadsData(
           status: f.status || undefined,
           source: f.source || undefined,
           staff: f.staff || undefined,
-          from: f.from || undefined,
-          to: f.to || undefined,
+          amountBudget: f.amountBudget || undefined,
         },
       });
       setCounts(res.data?.data || null);

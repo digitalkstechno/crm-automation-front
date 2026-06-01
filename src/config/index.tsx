@@ -33,6 +33,7 @@ export const baseUrl = {
   leadDueFollowups: `${API}lead/followups/due`,
   leadDueFollowupsMy: `${API}lead/followups/due/my`,
   leadLabels: `${API}leadlabel`,
+  leadPriorities: `${API}leadpriority`,
   getWonLeads: `${API}lead/won`,
   getLostLeads: `${API}lead/lost`,
   exportLeads: `${API}lead/export`,

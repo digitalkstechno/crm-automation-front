@@ -11,6 +11,7 @@ import { LeadSourcesContent } from './lead-sources';
 import { LeadStatusContent } from './lead-status';
 import { Settings, Users, Link2, Flag, Tag, Building2, UsersRound, Settings2 } from 'lucide-react';
 import { LeadLabelsContent } from './lead-labels';
+import { LeadPriorityContent } from './lead-priority';
 import { TeamsContent } from './teams';
 import { OrganizationsContent } from './organizations';
 import { TaskStatusContent } from './task-status';
@@ -21,7 +22,7 @@ import { FieldSettingsContent } from './field-settings';
 export default function Setup() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<
-    'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations' | 'Task Status' | 'Field Settings'
+    'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Lead Priority' | 'Teams' | 'Organizations' | 'Task Status' | 'Field Settings'
   >('Role Management');
   const token = typeof window !== 'undefined' ? getAuthToken() : null;
   const [permissions, setPermissions] = useState<any>(null);
@@ -31,7 +32,7 @@ export default function Setup() {
   useEffect(() => {
     if (router.query.tab) {
       const tab = router.query.tab as string;
-      const validTabs = ['Role Management', 'Staff Management', 'Lead Sources', 'Lead Status', 'Kanban Status', 'Lead Labels', 'Teams', 'Organizations', 'Task Status', 'Field Settings'];
+      const validTabs = ['Role Management', 'Staff Management', 'Lead Sources', 'Lead Status', 'Kanban Status', 'Lead Labels', 'Lead Priority', 'Teams', 'Organizations', 'Task Status', 'Field Settings'];
       if (validTabs.includes(tab)) {
         setActiveTab(tab as any);
       }
@@ -39,7 +40,7 @@ export default function Setup() {
   }, [router.query.tab]);
 
   // Handle tab change and update URL
-  const handleTabChange = (tab: 'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations' | 'Task Status' | 'Field Settings') => {
+  const handleTabChange = (tab: 'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Lead Priority' | 'Teams' | 'Organizations' | 'Task Status' | 'Field Settings') => {
     setActiveTab(tab);
     router.push({
       pathname: router.pathname,
@@ -203,6 +204,7 @@ export default function Setup() {
       { name: "Lead Status", icon: Flag, visible: canViewLeadStatus },
       { name: "Kanban Status", icon: Settings2, visible: true },
       { name: "Lead Labels", icon: Tag, visible: canViewLeadLabel },
+      { name: "Lead Priority", icon: Flag, visible: true },
       { name: "Task Status", icon: Settings, visible: canViewTaskStatus },
       { name: "Teams", icon: UsersRound, visible: canViewTeams },
       { name: "Organizations", icon: Building2, visible: canViewOrgs },
@@ -279,6 +281,7 @@ export default function Setup() {
               {activeTab === 'Lead Sources' && <LeadSourcesContent />}
               {activeTab === 'Lead Status' && <LeadStatusContent />}
               {activeTab === 'Lead Labels' && <LeadLabelsContent />}
+              {activeTab === 'Lead Priority' && <LeadPriorityContent />}
               {activeTab === 'Teams' && <TeamsContent />}
               {activeTab === 'Organizations' && <OrganizationsContent />}
               {activeTab === 'Task Status' && <TaskStatusContent />}

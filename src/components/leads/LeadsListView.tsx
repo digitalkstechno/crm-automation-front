@@ -208,29 +208,6 @@ export default function LeadsListView({
     },
     { key: 'source', label: 'SOURCE', className: 'hidden xl:table-cell' },
     { key: 'status', label: 'STATUS' },
-    {
-      key: 'leadLabel',
-      label: 'LABEL',
-      render: (_: any, row: TableLead) => {
-        if (!row.leadLabel || row.leadLabel.length === 0) {
-          return <span className="text-gray-400">-</span>;
-        }
-
-        return (
-          <div className="flex flex-wrap gap-1 whitespace-nowrap">
-            {row.leadLabel.map((label) => (
-              <span
-                key={label._id}
-                className="rounded-full px-2 py-0.5 text-xs font-medium text-white"
-                style={{ backgroundColor: label.color }}
-              >
-                {label.name}
-              </span>
-            ))}
-          </div>
-        );
-      },
-    },
     { key: 'staff', label: 'ASSIGNED STAFF', className: 'hidden lg:table-cell' },
     { key: 'priority', label: 'PRIORITY', className: 'hidden md:table-cell' },
     { key: 'lastFollowUp', label: 'LAST FOLLOW-UP', className: 'hidden lg:table-cell' },
