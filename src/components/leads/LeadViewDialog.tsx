@@ -475,7 +475,7 @@ import { toast } from 'react-toastify';
 import Dialog, { CenterDialog } from '@/components/Dialog';
 import { baseUrl, getAuthToken } from '@/config';
 import { ApiLead, ApiStatus } from './types';
-import { Eye, Download, FileText, Image, File, FileSpreadsheet, Search } from 'lucide-react';
+import { Eye, Download, Search, Pencil, Trash2 } from 'lucide-react';
 import { getFileIcon } from '@/utills/utill';
 
 interface Props {
@@ -509,6 +509,10 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
   const [localFollowUps, setLocalFollowUps] = useState<FollowUp[]>([]);
   const [staffInfo, setStaffInfo] = useState<any>(null);
   const [followUpSearch, setFollowUpSearch] = useState('');
+  const [editingFollowUp, setEditingFollowUp] = useState<FollowUp | null>(null);
+  const [editFollowUpData, setEditFollowUpData] = useState({ date: '', time: '', note: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingFollowUpId, setDeletingFollowUpId] = useState<string | null>(null);
 
   useEffect(() => {
     if (lead) {
@@ -623,6 +627,56 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
       toast.error(e?.response?.data?.message || 'Failed to add follow-up');
     } finally {
       setAddingFollowup(false);
+    }
+  };
+
+  const handleEditFollowUp = (f: FollowUp) => {
+    setEditingFollowUp(f);
+    setEditFollowUpData({ date: f.date ? f.date.split('T')[0] : '', time: f.time || '', note: f.note });
+  };
+
+  const handleSaveEditFollowUp = async () => {
+    if (!lead || !editingFollowUp?._id) return;
+    setSavingEdit(true);
+    try {
+      const updatedFollowUps = localFollowUps.map(f =>
+        f._id === editingFollowUp._id
+          ? { ...f, date: editFollowUpData.date, time: editFollowUpData.time, note: editFollowUpData.note }
+          : f
+      );
+      const res = await axios.put(
+        `${baseUrl.updateLead}/${lead._id}`,
+        { followUps: updatedFollowUps.map(f => ({ _id: f._id, date: f.date, time: f.time, note: f.note, staff: f.staff?._id })) },
+        { headers: { Authorization: `Bearer ${getAuthToken()}` } }
+      );
+      setLocalFollowUps(res.data?.data?.followUps || updatedFollowUps);
+      setEditingFollowUp(null);
+      toast.success('Follow-up updated');
+      onRefresh();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to update follow-up');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteFollowUp = async (followUpId: string) => {
+    if (!lead) return;
+    setDeletingFollowUpId(followUpId);
+    try {
+      const updatedFollowUps = localFollowUps.filter(f => f._id !== followUpId);
+      const res = await axios.put(
+        `${baseUrl.updateLead}/${lead._id}`,
+        { followUps: updatedFollowUps.map(f => ({ _id: f._id, date: f.date, time: f.time, note: f.note, staff: f.staff?._id })) },
+        { headers: { Authorization: `Bearer ${getAuthToken()}` } }
+      );
+      setLocalFollowUps(res.data?.data?.followUps || updatedFollowUps);
+      toast.success('Follow-up deleted');
+      onRefresh();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to delete follow-up');
+    } finally {
+      setDeletingFollowUpId(null);
     }
   };
 
@@ -831,6 +885,7 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
                           <th className="px-4 py-3 font-semibold text-gray-600">Date & Time</th>
                           <th className="px-4 py-3 font-semibold text-gray-600">Note</th>
                           <th className="px-4 py-3 font-semibold text-gray-600">Staff</th>
+                          <th className="px-4 py-3 font-semibold text-gray-600">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -863,6 +918,29 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
                                 </div>
                                 <span className="text-gray-600">{f.staff?.fullName || staffInfo?.fullName || 'Current User'}</span>
                               </div>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              {!f._id?.startsWith('temp_') && (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleEditFollowUp(f)}
+                                    className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
+                                    title="Edit"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteFollowUp(f._id!)}
+                                    disabled={deletingFollowUpId === f._id}
+                                    className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
+                                    title="Delete"
+                                  >
+                                    {deletingFollowUpId === f._id
+                                      ? <span className="h-3.5 w-3.5 block animate-spin rounded-full border-2 border-red-400 border-t-transparent" />
+                                      : <Trash2 className="h-3.5 w-3.5" />}
+                                  </button>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -1019,6 +1097,45 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
               >
                 <Download className="h-5 w-5 text-gray-700" />
               </a>
+            </div>
+          </div>
+        </CenterDialog>
+      )}
+      {/* Edit Follow-up Modal */}
+      {editingFollowUp && (
+        <CenterDialog isOpen={true} onClose={() => setEditingFollowUp(null)}>
+          <div className="space-y-4 p-1">
+            <h3 className="text-base font-semibold text-gray-800">Edit Follow-up</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-500">Date</label>
+                <input type="date" value={editFollowUpData.date}
+                  onChange={e => setEditFollowUpData(p => ({ ...p, date: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-500" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-500">Time</label>
+                <input type="time" value={editFollowUpData.time}
+                  onChange={e => setEditFollowUpData(p => ({ ...p, time: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-500" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-500">Note</label>
+              <textarea value={editFollowUpData.note}
+                onChange={e => setEditFollowUpData(p => ({ ...p, note: e.target.value }))}
+                rows={3}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-500 resize-none" />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setEditingFollowUp(null)}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">
+                Cancel
+              </button>
+              <button onClick={handleSaveEditFollowUp} disabled={savingEdit || !editFollowUpData.date || !editFollowUpData.note}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+                {savingEdit ? 'Saving...' : 'Save'}
+              </button>
             </div>
           </div>
         </CenterDialog>
