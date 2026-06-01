@@ -96,6 +96,7 @@ function mapLead(item: any): TableLead {
       ? new Date(item.updatedAt).toLocaleDateString()
       : '-',
     isActive: item.isActive,
+    amountBudget: item.amountBudget || '',
     leadLabel: item.leadLabel || [],
     _raw: item,
   };
@@ -212,9 +213,9 @@ export default function LeadsListView({
     { key: 'priority', label: 'PRIORITY', className: 'hidden md:table-cell' },
     { key: 'lastFollowUp', label: 'LAST FOLLOW-UP', className: 'hidden lg:table-cell' },
     {
-      key: 'paymentAmount',
-      label: 'AMOUNT',
-      render: (v) => (v ? <span className="font-bold text-emerald-600">₹{v.toLocaleString()}</span> : <span className="text-gray-400">-</span>)
+      key: 'amountBudget',
+      label: 'AMOUNT BUDGET',
+      render: (v) => (v ? <span className="font-semibold text-blue-600">{v}</span> : <span className="text-gray-400">-</span>)
     },
   ];
 
