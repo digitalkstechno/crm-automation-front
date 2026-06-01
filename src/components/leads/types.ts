@@ -44,7 +44,7 @@ export type ApiLead = {
   leadLabel?: LeadLabel[];
   leadStatus?: ApiStatus;
   assignedTo?: ApiUser;
-  priority?: 'High' | 'Medium' | 'Low' | 'high' | 'medium' | 'low';
+  priority?: { _id: string; name: string } | string;
   lastFollowUp?: string;
   nextFollowupDate?: string;
   nextFollowupTime?: string;

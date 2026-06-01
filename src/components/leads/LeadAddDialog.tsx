@@ -139,7 +139,7 @@ export default function LeadAddDialog({
       leadStatus: '',
       assignedTo: '',
       labels: [] as string[],
-      priority: 'medium' as string,
+      priority: '',
       isActive: true,
       amountBudget: '',
     },
@@ -247,7 +247,7 @@ export default function LeadAddDialog({
         leadStatus: initialData.leadStatus?._id || '',
         assignedTo: initialData.assignedTo?._id || '',
         labels: labelIds,
-        priority: (initialData.priority || 'medium').toLowerCase(),
+        priority: initialData.priority?._id || (initialData.priority as any) || '',
         isActive: initialData.isActive ?? true,
         amountBudget: initialData.amountBudget || '',
       });
