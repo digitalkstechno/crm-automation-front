@@ -40,6 +40,8 @@ export const baseUrl = {
   importLeadsTemplate: `${API}lead/import-template`,
   bulkImportLeads: `${API}lead/bulk-import`,
   bulkAssignLeads: `${API}lead/bulk-assign`,
+  amountBudgetOptions: `${API}lead/amount-budget-options`,
+  amountBudgetOptionsMy: `${API}lead/amount-budget-options/my`,
   teams: `${API}team`,
   organizations: `${API}organization`,
   myTasks: `${API}task/my`,

@@ -108,20 +108,14 @@ export default function LeadsPage() {
     fetchPermissions();
   }, [token]);
 
-  // Fetch distinct amountBudget values
+  // Fetch distinct amountBudget values — scope-aware, refreshes on tab change
   useEffect(() => {
     if (!token) return;
-    axios.get(baseUrl.getAllLeads, {
-      headers: { Authorization: `Bearer ${token}` },
-      params: { limit: 1000 },
-    }).then(res => {
-      const leads = res.data?.data || [];
-      const vals: string[] = Array.from(
-        new Set(leads.map((l: any) => l.amountBudget).filter(Boolean))
-      );
-      setAmountBudgetOptions(vals);
-    }).catch(() => {});
-  }, [token]);
+    const url = activeTab === 'my' ? baseUrl.amountBudgetOptionsMy : baseUrl.amountBudgetOptions;
+    axios.get(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => setAmountBudgetOptions(res.data?.data || []))
+      .catch(() => {});
+  }, [token, activeTab]);
 
   const filters = useMemo(
     () => ({
