@@ -463,6 +463,19 @@ export default function LeadsPage() {
                   onChange={(e) => setAmountBudgetFilter(e)}
                   options={amountBudgetOptions.map((v) => ({ value: v, label: v }))}
                 />
+                {amountBudgetOptions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      amountBudgetFilter.length === amountBudgetOptions.length
+                        ? setAmountBudgetFilter([])
+                        : setAmountBudgetFilter(amountBudgetOptions)
+                    }
+                    className="text-xs text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
+                  >
+                    {amountBudgetFilter.length === amountBudgetOptions.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                )}
               </div>
             </div>
 
