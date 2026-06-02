@@ -91,7 +91,7 @@ function mapLead(item: any): TableLead {
     source: item.leadSource?.name || item.source?.name || '-',
     status: item.leadStatus?.name || item.status?.name || '-',
     staff: item.assignedTo?.fullName || '-',
-    priority: (typeof item.priority === 'object' && item.priority !== null ? item.priority?.name : item.priority) || '-',
+    priority: item.priority?.name || '-',
     lastFollowUp: item.updatedAt
       ? new Date(item.updatedAt).toLocaleDateString()
       : '-',

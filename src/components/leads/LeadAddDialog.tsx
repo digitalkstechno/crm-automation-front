@@ -247,7 +247,7 @@ export default function LeadAddDialog({
         leadStatus: initialData.leadStatus?._id || '',
         assignedTo: initialData.assignedTo?._id || '',
         labels: labelIds,
-        priority: initialData.priority?._id || (initialData.priority as any) || '',
+        priority: initialData.priority?._id || '',
         isActive: initialData.isActive ?? true,
         amountBudget: initialData.amountBudget || '',
       });
