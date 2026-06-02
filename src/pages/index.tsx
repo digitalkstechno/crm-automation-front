@@ -556,7 +556,7 @@
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-3 text-xs">
+                        <div className="flex items-center gap-3 text-xs flex-wrap">
                           <span
                             className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${getStatusColor(
                               lead.lead?.leadStatus?.name || lead.leadStatus?.name || "",
@@ -570,6 +570,12 @@
                               ? moment(lead.nextFollowupDate).format("DD MMM, YYYY")
                               : "-"}
                           </span>
+                          {(lead.lead?.assignedTo?.fullName || lead.assignedTo?.fullName) && (
+                            <span className="text-gray-500 flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {lead.lead?.assignedTo?.fullName || lead.assignedTo?.fullName}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <ChevronRight className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
