@@ -137,7 +137,12 @@ export default function LeadAddDialog({
         leadStatus: initialData.status || '',
         assignedTo: initialData.staff || '',
         labels: labelIds,
-        priority: (initialData.priority || 'medium').toLowerCase() as 'high' | 'medium' | 'low',
+        priority: (typeof initialData.priority === 'string'
+          ? initialData.priority
+          : typeof initialData.priority === 'object' && initialData.priority && 'name' in initialData.priority
+          ? (initialData.priority as any).name
+          : 'medium'
+        ).toLowerCase() as 'high' | 'medium' | 'low',
         nextFollowupDate: initialData.nextFollowupDate || '',
         nextFollowupTime: initialData.nextFollowupTime || '',
         note: initialData.note || '',

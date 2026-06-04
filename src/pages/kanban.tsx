@@ -441,7 +441,7 @@ export default function LeadsPage() {
       label: labelIds,
       status: lead.leadStatus?._id || "",
       staff: lead.assignedTo?._id || "",
-      priority: lead.priority || "Medium",
+      priority: (typeof lead.priority === 'string' ? lead.priority : (lead.priority as any)?.name) || "Medium",
       lastFollowUp: lead.lastFollowUp || new Date().toISOString().split("T")[0],
       nextFollowupDate: lead.nextFollowupDate || "",
       nextFollowupTime: lead.nextFollowupTime || "",
@@ -828,9 +828,15 @@ export default function LeadsPage() {
 
                                   {/* Priority Right */}
                                   {lead.priority && (
-                                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-600 capitalize whitespace-nowrap">
-                                      {lead.priority}
-                                    </span>
+                                    (() => {
+                                      const priorityStr = typeof lead.priority === 'string' ? lead.priority : (lead.priority as any)?.name;
+                                      if (!priorityStr) return null;
+                                      return (
+                                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-600 capitalize whitespace-nowrap">
+                                          {priorityStr}
+                                        </span>
+                                      );
+                                    })()
                                   )}
                                 </div>
                               </div>

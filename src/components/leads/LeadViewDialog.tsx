@@ -760,14 +760,19 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
                 label="Priority"
                 value={
                   lead.priority ? (
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${lead.priority.toLowerCase() === 'high'
-                      ? 'bg-red-100 text-red-600'
-                      : lead.priority.toLowerCase() === 'medium'
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-green-100 text-green-700'
-                      }`}>
-                      {lead.priority}
-                    </span>
+                    (() => {
+                      const priorityStr = (typeof lead.priority === 'string' ? lead.priority : (lead.priority as any)?.name) || '';
+                      return (
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${priorityStr.toLowerCase() === 'high'
+                          ? 'bg-red-100 text-red-600'
+                          : priorityStr.toLowerCase() === 'medium'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-green-100 text-green-700'
+                          }`}>
+                          {priorityStr}
+                        </span>
+                      );
+                    })()
                   ) : '-'
                 }
               />

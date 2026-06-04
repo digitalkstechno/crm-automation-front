@@ -93,14 +93,20 @@ export default function KanbanCard({
                         <span className="truncate text-xs">{lead.assignedTo?.fullName || 'Unassigned'}</span>
                     </div>
                     {lead.priority && (
-                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full flex-shrink-0 ${lead.priority.toLowerCase() === 'high'
-                            ? 'bg-red-100 text-red-600'
-                            : lead.priority.toLowerCase() === 'medium'
-                                ? 'bg-yellow-100 text-yellow-700'
-                                : 'bg-green-100 text-green-700'
-                            }`}>
-                            {lead.priority}
-                        </span>
+                        (() => {
+                            const priorityStr = (typeof lead.priority === 'string' ? lead.priority : (lead.priority as any)?.name) || '';
+                            if (!priorityStr) return null;
+                            return (
+                                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full flex-shrink-0 ${priorityStr.toLowerCase() === 'high'
+                                    ? 'bg-red-100 text-red-600'
+                                    : priorityStr.toLowerCase() === 'medium'
+                                        ? 'bg-yellow-100 text-yellow-700'
+                                        : 'bg-green-100 text-green-700'
+                                    }`}>
+                                    {priorityStr}
+                                </span>
+                            );
+                        })()
                     )}
                 </div>
             </div>
