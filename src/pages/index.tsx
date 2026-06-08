@@ -103,8 +103,8 @@
     const [permissions, setPermissions] = useState<{ readAll: boolean; readOwn: boolean }>({ readAll: false, readOwn: false });
     const [user, setUser] = useState<any>(null);
     const [greeting, setGreeting] = useState("");
-    const [fromDate, setFromDate] = useState("");
-    const [toDate, setToDate] = useState("");
+    const [fromDate, setFromDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [toDate, setToDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [staffList, setStaffList] = useState<any[]>([]);
     const [selectedStaff, setSelectedStaff] = useState<string>("");
 
@@ -237,8 +237,10 @@
         const isMyOnly = !permissions.readAll && permissions.readOwn;
         const url = isMyOnly ? baseUrl.leadUpcomingFollowupsMy : baseUrl.leadUpcomingFollowups;
         const staffParam = selectedStaff ? `&staff=${selectedStaff}` : "";
+        const fromParam = fromDate ? `&from=${fromDate}` : "";
+        const toParam = toDate ? `&to=${toDate}` : "";
         const res = await axios.get(
-          `${url}?page=${page}&limit=${ITEMS_PER_PAGE}${staffParam}`,
+          `${url}?page=${page}&limit=${ITEMS_PER_PAGE}${staffParam}${fromParam}${toParam}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           },
@@ -262,8 +264,10 @@
         const isMyOnly = !permissions.readAll && permissions.readOwn;
         const url = isMyOnly ? baseUrl.leadDueFollowupsMy : baseUrl.leadDueFollowups;
         const staffParam = selectedStaff ? `&staff=${selectedStaff}` : "";
+        const fromParam = fromDate ? `&from=${fromDate}` : "";
+        const toParam = toDate ? `&to=${toDate}` : "";
         const res = await axios.get(
-          `${url}?page=${page}&limit=${ITEMS_PER_PAGE}${staffParam}`,
+          `${url}?page=${page}&limit=${ITEMS_PER_PAGE}${staffParam}${fromParam}${toParam}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           },
@@ -284,8 +288,13 @@
       if (!token) return;
       setTasksLoading(true);
       try {
-        const staffParam = selectedStaff ? `?staff=${selectedStaff}` : "";
-        const res = await axios.get(`${baseUrl.todayTasks}${staffParam}`, {
+        const staffParam = selectedStaff ? `staff=${selectedStaff}&` : "";
+        const fromParam = fromDate ? `from=${fromDate}&` : "";
+        const toParam = toDate ? `to=${toDate}&` : "";
+        const params = `${staffParam}${fromParam}${toParam}`.replace(/&$/, '');
+        const queryStr = params ? `?${params}` : "";
+
+        const res = await axios.get(`${baseUrl.todayTasks}${queryStr}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setTodayTasks(res.data?.data || []);
