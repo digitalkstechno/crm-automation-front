@@ -105,6 +105,8 @@
     const [greeting, setGreeting] = useState("");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
+    const [staffList, setStaffList] = useState<any[]>([]);
+    const [selectedStaff, setSelectedStaff] = useState<string>("");
 
     const token =
       typeof window !== "undefined" ? getAuthToken() : null;
@@ -221,6 +223,7 @@
         const res = await axios.get(baseUrl.getAllStaff, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        setStaffList(res.data.data || []);
         const chartData = (res.data.data ?? []).map((staff: any) => ({
           name: staff.fullName || "Unknown",
           converted: staff.status?.toLowerCase() === "active" ? 1 : 0,
@@ -239,8 +242,9 @@
       try {
         const isMyOnly = !permissions.readAll && permissions.readOwn;
         const url = isMyOnly ? baseUrl.leadUpcomingFollowupsMy : baseUrl.leadUpcomingFollowups;
+        const staffParam = selectedStaff ? `&staff=${selectedStaff}` : "";
         const res = await axios.get(
-          `${url}?page=${page}&limit=${ITEMS_PER_PAGE}`,
+          `${url}?page=${page}&limit=${ITEMS_PER_PAGE}${staffParam}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           },
@@ -263,8 +267,9 @@
       try {
         const isMyOnly = !permissions.readAll && permissions.readOwn;
         const url = isMyOnly ? baseUrl.leadDueFollowupsMy : baseUrl.leadDueFollowups;
+        const staffParam = selectedStaff ? `&staff=${selectedStaff}` : "";
         const res = await axios.get(
-          `${url}?page=${page}&limit=${ITEMS_PER_PAGE}`,
+          `${url}?page=${page}&limit=${ITEMS_PER_PAGE}${staffParam}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           },
@@ -285,7 +290,8 @@
       if (!token) return;
       setTasksLoading(true);
       try {
-        const res = await axios.get(baseUrl.todayTasks, {
+        const staffParam = selectedStaff ? `?staff=${selectedStaff}` : "";
+        const res = await axios.get(`${baseUrl.todayTasks}${staffParam}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setTodayTasks(res.data?.data || []);
@@ -310,7 +316,7 @@
           fetchStaffPerformance();
         }
       }
-    }, [token, permissions, fromDate, toDate]);
+    }, [token, permissions, fromDate, toDate, selectedStaff]);
 
     useEffect(() => {
       if (typeof window !== "undefined") {
@@ -705,34 +711,49 @@
               </p>
             </div>
             
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <label className="absolute -top-2 left-3 px-1 bg-white text-[9px] font-bold text-blue-500 uppercase tracking-widest">From</label>
+            <div className="flex flex-wrap items-center gap-4 w-full md:w-auto mt-4 md:mt-0">
+              <div className="flex flex-wrap items-center gap-3 bg-gray-50/50 p-3 md:p-2 rounded-2xl border border-gray-100 w-full md:w-auto">
+                {permissions.readAll && staffList.length > 0 && (
+                  <div className="relative w-full sm:w-auto">
+                    <label className="absolute -top-2 left-3 px-1 bg-white text-[9px] font-bold text-blue-500 uppercase tracking-widest z-10">Staff</label>
+                    <select
+                      value={selectedStaff}
+                      onChange={(e) => setSelectedStaff(e.target.value)}
+                      className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer w-full sm:w-[150px] appearance-none"
+                    >
+                      <option value="">All Staff</option>
+                      {staffList.map((s) => (
+                        <option key={s._id} value={s._id}>{s.fullName}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div className="flex items-center gap-3 w-full sm:w-auto grid grid-cols-2 sm:flex">
+                  <div className="relative w-full">
+                    <label className="absolute -top-2 left-3 px-1 bg-white text-[9px] font-bold text-blue-500 uppercase tracking-widest z-10">From</label>
                     <input 
                       type="date" 
                       value={fromDate}
                       onChange={(e) => setFromDate(e.target.value)}
-                      className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer"
+                      className="px-2 sm:px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs sm:text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer w-full"
                     />
                   </div>
-                  <div className="relative">
-                    <label className="absolute -top-2 left-3 px-1 bg-white text-[9px] font-bold text-blue-500 uppercase tracking-widest">To</label>
+                  <div className="relative w-full">
+                    <label className="absolute -top-2 left-3 px-1 bg-white text-[9px] font-bold text-blue-500 uppercase tracking-widest z-10">To</label>
                     <input 
                       type="date" 
                       value={toDate}
                       onChange={(e) => setToDate(e.target.value)}
-                      className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer"
+                      className="px-2 sm:px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs sm:text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer w-full"
                     />
                   </div>
                 </div>
                 <button 
-                  onClick={() => handleQuickFilter('reset')}
-                  className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all rounded-xl"
+                  onClick={() => { handleQuickFilter('reset'); setSelectedStaff(""); }}
+                  className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all rounded-xl flex-shrink-0 mx-auto sm:mx-0"
                   title="Reset Filter"
                 >
-                  <RefreshCw className="h-4 w-4" />
+                  <RefreshCw className="h-5 w-5 sm:h-4 sm:w-4" />
                 </button>
               </div>
             </div>
