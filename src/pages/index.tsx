@@ -177,21 +177,14 @@
           params: {
             from: fromDate || undefined,
             to: toDate || undefined,
+            staff: selectedStaff || undefined,
           }
         });
-        setSummary(res.data.data);
-      } catch (err) {
-        console.error("Lead summary error:", err);
-      }
-    };
+        
+        const data = res.data.data;
+        setSummary(data);
 
-    const fetchLeadsBySource = async () => {
-      if (!token) return;
-      try {
-        const res = await axios.get(baseUrl.leadSources, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
+        // Use sourceWiseCounts from summary for dynamic Leads by Source chart
         const colorPalette = [
           "#3B82F6", // blue-500
           "#10B981", // emerald-500
@@ -205,15 +198,16 @@
           "#6366F1", // indigo-500
         ];
 
-        const chartData = (res.data.data ?? []).map((item: any, idx: number) => ({
+        const chartData = (data.sourceWiseCounts ?? []).map((item: any, idx: number) => ({
           name: item.name,
           value: item.count || 0,
           fill: colorPalette[idx % colorPalette.length],
         }));
 
         setLeadsBySource(chartData);
+
       } catch (err) {
-        console.error("Leads by source error:", err);
+        console.error("Lead summary error:", err);
       }
     };
 
@@ -312,7 +306,6 @@
 
         // Only fetch staff stats if they have readAll
         if (permissions.readAll) {
-          fetchLeadsBySource();
           fetchStaffPerformance();
         }
       }

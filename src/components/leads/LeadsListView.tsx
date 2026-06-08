@@ -92,9 +92,12 @@ function mapLead(item: any): TableLead {
     status: item.leadStatus?.name || item.status?.name || '-',
     staff: item.assignedTo?.fullName || '-',
     priority: (typeof item.priority === 'string' ? item.priority : item.priority?.name) || '-',
-    lastFollowUp: item.updatedAt
-      ? new Date(item.updatedAt).toLocaleDateString()
-      : '-',
+   lastFollowUp:
+  item.followUps && item.followUps.length > 0
+    ? new Date(
+        item.followUps[item.followUps.length - 1].createdAt
+      ).toLocaleDateString()
+    : "-",
     isActive: item.isActive,
     amountBudget: item.amountBudget || '',
     leadLabel: item.leadLabel || [],
