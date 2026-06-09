@@ -313,10 +313,8 @@
         fetchDueFollowups(1);
         fetchTodayTasks();
 
-        // Only fetch staff stats if they have readAll
-        if (permissions.readAll) {
-          fetchStaffPerformance();
-        }
+        // Fetch staff stats for filtering. The backend handles returning only the staffs they are allowed to see.
+        fetchStaffPerformance();
       }
     }, [token, permissions, fromDate, toDate, selectedStaff]);
 
@@ -715,7 +713,7 @@
             
             <div className="flex flex-wrap items-center gap-4 w-full md:w-auto mt-4 md:mt-0">
               <div className="flex flex-wrap items-center gap-3 bg-gray-50/50 p-3 md:p-2 rounded-2xl border border-gray-100 w-full md:w-auto">
-                {permissions.readAll && staffList.length > 0 && (
+                {staffList.length > 1 && (
                   <div className="relative w-full sm:w-auto">
                     <label className="absolute -top-2 left-3 px-1 bg-white text-[9px] font-bold text-blue-500 uppercase tracking-widest z-10">Staff</label>
                     <select
@@ -956,4 +954,4 @@
         </div>
       </div>
     );
-  }
+  }
