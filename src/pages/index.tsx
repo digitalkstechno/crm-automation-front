@@ -103,8 +103,8 @@
     const [permissions, setPermissions] = useState<{ readAll: boolean; readOwn: boolean }>({ readAll: false, readOwn: false });
     const [user, setUser] = useState<any>(null);
     const [greeting, setGreeting] = useState("");
-    const [fromDate, setFromDate] = useState(() => new Date().toISOString().split('T')[0]);
-    const [toDate, setToDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
     const [staffList, setStaffList] = useState<any[]>([]);
     const [selectedStaff, setSelectedStaff] = useState<string>("");
 
