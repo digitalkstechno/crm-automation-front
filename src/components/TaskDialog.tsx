@@ -345,7 +345,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
     const token = getAuthToken();
     const headers = { Authorization: `Bearer ${token}` };
     Promise.all([
-      axios.get(`${baseUrl.getAllStaff}?limit=1000`, { headers }),
+      axios.get(`${baseUrl.getAllStaff}?all=true&limit=1000`, { headers }),
       axios.get(baseUrl.teams, { headers }),
       axios.get(baseUrl.taskStatuses, { headers }),
     ])

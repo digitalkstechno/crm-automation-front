@@ -79,7 +79,7 @@ export default function LeadBulkImportDialog({ isOpen, onClose, onImported }: Pr
       const fetchStaff = async () => {
         setLoadingStaff(true);
         try {
-          const res = await axios.get(baseUrl.getAllStaff, {
+          const res = await axios.get(`${baseUrl.getAllStaff}?all=true`, {
             headers: { Authorization: `Bearer ${getAuthToken()}` },
           });
           setStaff(res.data?.data || []);

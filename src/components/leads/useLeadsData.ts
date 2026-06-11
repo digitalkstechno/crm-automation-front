@@ -11,6 +11,8 @@ type Filters = {
   source?: string;
   staff?: string;
   amountBudget?: string;
+  from?: string;
+  to?: string;
 };
 
 export function useLeadsData(
@@ -90,6 +92,8 @@ export function useLeadsData(
             source: f.source || undefined,
             staff: f.staff || undefined,
             amountBudget: f.amountBudget || undefined,
+            from: f.from || undefined,
+            to: f.to || undefined,
             limit: 100,
           },
         });
@@ -115,6 +119,8 @@ export function useLeadsData(
             source: f.source || undefined,
             staff: f.staff || undefined,
             amountBudget: f.amountBudget || undefined,
+            from: f.from || undefined,
+            to: f.to || undefined,
             limit: 100,
           },
         });
@@ -142,6 +148,8 @@ export function useLeadsData(
           source: f.source || undefined,
           staff: f.staff || undefined,
           amountBudget: f.amountBudget || undefined,
+          from: f.from || undefined,
+          to: f.to || undefined,
           page,
           limit,
         },
@@ -173,6 +181,8 @@ export function useLeadsData(
           source: f.source || undefined,
           staff: f.staff || undefined,
           amountBudget: f.amountBudget || undefined,
+          from: f.from || undefined,
+          to: f.to || undefined,
           page,
           limit,
         },
@@ -205,6 +215,8 @@ export function useLeadsData(
           source: f.source || undefined,
           staff: f.staff || undefined,
           amountBudget: f.amountBudget || undefined,
+          from: f.from || undefined,
+          to: f.to || undefined,
           page,
           limit,
         },
@@ -235,6 +247,8 @@ export function useLeadsData(
           source: f.source || undefined,
           staff: f.staff || undefined,
           amountBudget: f.amountBudget || undefined,
+          from: f.from || undefined,
+          to: f.to || undefined,
         },
       });
       setCounts(res.data?.data || null);
@@ -248,7 +262,7 @@ export function useLeadsData(
       const [srcRes, stRes, staffRes, labelsRes, meRes] = await Promise.all([
         axios.get(baseUrl.leadSources, { headers: getHeaders() }),
         axios.get(baseUrl.leadStatuses, { headers: getHeaders() }),
-        axios.get(baseUrl.getAllStaff, { headers: getHeaders() }),
+        axios.get(`${baseUrl.getAllStaff}?all=true`, { headers: getHeaders() }),
         axios.get(baseUrl.leadLabels, { headers: getHeaders() }),
         axios.get(baseUrl.currentStaff, { headers: getHeaders() }),
       ]);

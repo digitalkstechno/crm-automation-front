@@ -216,7 +216,7 @@ export default function LeadAddDialog({
         const [srcRes, stRes, staffRes, labRes, priRes] = await Promise.all([
           axios.get(baseUrl.leadSources, { headers }),
           axios.get(baseUrl.leadStatuses, { headers }),
-          axios.get(baseUrl.getAllStaff, { headers }),
+          axios.get(`${baseUrl.getAllStaff}?all=true`, { headers }),
           axios.get(baseUrl.leadLabels, { headers }),
           axios.get(baseUrl.leadPriorities, { headers }),
         ]);
@@ -247,7 +247,7 @@ export default function LeadAddDialog({
         leadStatus: initialData.leadStatus?._id || '',
         assignedTo: initialData.assignedTo?._id || '',
         labels: labelIds,
-        priority: initialData.priority?._id || '',
+        priority: (typeof initialData.priority === 'object' && initialData.priority) ? initialData.priority._id : (initialData.priority || ''),
         isActive: initialData.isActive ?? true,
         amountBudget: initialData.amountBudget || '',
       });

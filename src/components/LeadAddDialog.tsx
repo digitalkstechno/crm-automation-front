@@ -99,7 +99,7 @@ export default function LeadAddDialog({
         const [sourcesRes, statusRes, staffRes, labelsRes] = await Promise.all([
           axios.get(baseUrl.leadSources, { headers: { Authorization: `Bearer ${token}` } }),
           axios.get(baseUrl.leadStatuses, { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get(baseUrl.getAllStaff, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${baseUrl.getAllStaff}?all=true`, { headers: { Authorization: `Bearer ${token}` } }),
           axios.get(baseUrl.leadLabels, { headers: { Authorization: `Bearer ${token}` } }), // Fetch labels
         ]);
 

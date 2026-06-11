@@ -37,6 +37,7 @@ type TableLead = {
   note?: string;
   isActive?: boolean;
   attachments?: { name: string; url?: string }[];
+  amountBudget?: string;
   leadLabel?: Array<{ _id: string; name: string; color: string }>;
   _raw?: any;
 };

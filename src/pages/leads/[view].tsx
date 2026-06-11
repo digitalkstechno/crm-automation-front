@@ -4,7 +4,7 @@
 
 import { useRouter } from 'next/router';
 import { useEffect, useState, useMemo } from 'react';
-import { ListCollapse, Plus, Filter, Kanban, Search, Download, Upload } from 'lucide-react';
+import { ListCollapse, Plus, Filter, Kanban, Search, Download, Upload, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import { baseUrl, getAuthToken } from '@/config';
 
@@ -55,6 +55,8 @@ export default function LeadsPage() {
   const [sourceFilter, setSourceFilter] = useState<string[]>([]);
   const [staffFilter, setStaffFilter] = useState<string[]>([]);
   const [amountBudgetFilter, setAmountBudgetFilter] = useState<string[]>([]);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [amountBudgetOptions, setAmountBudgetOptions] = useState<string[]>([]);
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
 
@@ -124,8 +126,10 @@ export default function LeadsPage() {
       source: sourceFilter.length > 0 ? sourceFilter.join(',') : '',
       staff: staffFilter.length > 0 ? staffFilter.join(',') : '',
       amountBudget: amountBudgetFilter.length > 0 ? amountBudgetFilter.join(',') : '',
+      from: fromDate,
+      to: toDate,
     }),
-    [debouncedSearch, statusFilter, sourceFilter, staffFilter, amountBudgetFilter]
+    [debouncedSearch, statusFilter, sourceFilter, staffFilter, amountBudgetFilter, fromDate, toDate]
   );
 
   // ── Data — pass kanbanSubView so hook fetches only what's needed ──────────
@@ -160,10 +164,20 @@ export default function LeadsPage() {
 
   // ── Sync search from URL query ───────────────────────────────────────────
   useEffect(() => {
-    if (router.isReady && router.query.search) {
-      setSearch(router.query.search as string);
+    if (router.isReady) {
+      if (router.query.search) {
+        setSearch(router.query.search as string);
+      }
+      if (router.query.from) {
+        setFromDate(router.query.from as string);
+        setShowFilterDrawer(true);
+      }
+      if (router.query.to) {
+        setToDate(router.query.to as string);
+        setShowFilterDrawer(true);
+      }
     }
-  }, [router.isReady, router.query.search]);
+  }, [router.isReady, router.query.search, router.query.from, router.query.to]);
 
   // ── Open lead detail if ID is present in URL ──────────────────────────────
   useEffect(() => {
@@ -256,6 +270,8 @@ export default function LeadsPage() {
     setStaffFilter([]);
     setAmountBudgetFilter([]);
     setSearch('');
+    setFromDate('');
+    setToDate('');
   };
 
   const hasActiveFilters = !!(
@@ -263,7 +279,9 @@ export default function LeadsPage() {
     sourceFilter.length > 0 ||
     staffFilter.length > 0 ||
     amountBudgetFilter.length > 0 ||
-    search
+    search ||
+    fromDate ||
+    toDate
   );
 
   // ── Access denied ─────────────────────────────────────────────────────────
@@ -415,7 +433,7 @@ export default function LeadsPage() {
             }`}
         >
           <div className="overflow-hidden">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
               <div className="space-y-2">
                 <FormMultiSelect
                   label="Lead Status"
@@ -463,6 +481,37 @@ export default function LeadsPage() {
                     {amountBudgetFilter.length === amountBudgetOptions.length ? 'Deselect All' : 'Select All'}
                   </button>
                 )}
+              </div>
+
+              <div className="space-y-2 sm:col-span-2 lg:col-span-2">
+                <label className="mb-1 block text-sm font-semibold text-gray-700">Date Range</label>
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="relative flex-1">
+                    <label className="absolute -top-2 left-3 px-1 bg-white text-[9px] font-bold text-blue-500 uppercase tracking-widest z-10">From</label>
+                    <input 
+                      type="date" 
+                      value={fromDate}
+                      onChange={(e) => setFromDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer h-[42px]"
+                    />
+                  </div>
+                  <div className="relative flex-1">
+                    <label className="absolute -top-2 left-3 px-1 bg-white text-[9px] font-bold text-blue-500 uppercase tracking-widest z-10">To</label>
+                    <input 
+                      type="date" 
+                      value={toDate}
+                      onChange={(e) => setToDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer h-[42px]"
+                    />
+                  </div>
+                  <button 
+                    onClick={() => { setFromDate(''); setToDate(''); }}
+                    className="p-2.5 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all rounded-xl border border-gray-200 hover:border-red-200 h-[42px] flex items-center justify-center bg-white cursor-pointer"
+                    title="Reset Dates"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
 

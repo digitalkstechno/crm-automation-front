@@ -47,6 +47,8 @@ interface Props {
         source?: string;
         staff?: string;
         date?: string;
+        from?: string;
+        to?: string;
     };
     lostPagination?: PaginationShape;
     wonPagination?: PaginationShape;
@@ -121,6 +123,8 @@ export default function LeadsKanbanView({
                         source: filters.source || undefined,
                         staff: filters.staff || undefined,
                         date: filters.date || undefined,
+                        from: filters.from || undefined,
+                        to: filters.to || undefined,
                     },
                 });
 
@@ -168,6 +172,8 @@ export default function LeadsKanbanView({
                     staff: filters.staff || undefined,
                     date: filters.date || undefined,
                     status: filters.status || undefined,
+                    from: filters.from || undefined,
+                    to: filters.to || undefined,
                 },
             });
 
