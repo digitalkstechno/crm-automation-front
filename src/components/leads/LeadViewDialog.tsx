@@ -776,7 +776,20 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
                   ) : '-'
                 }
               />
-              <InfoCard label="Next Follow-Up" value={lead.lastFollowUp} />
+              <InfoCard
+                label="Next Follow-Up"
+                value={
+                  lead.followUps && lead.followUps.length > 0 && lead.followUps[lead.followUps.length - 1].date
+                    ? (() => {
+                        const d = new Date(lead.followUps[lead.followUps.length - 1].date);
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const year = d.getFullYear();
+                        return `${day}/${month}/${year}`;
+                      })()
+                    : "-"
+                }
+              />
               <InfoCard label="Active" value={lead.isActive ? 'Yes' : 'No'} />
             </div>
 

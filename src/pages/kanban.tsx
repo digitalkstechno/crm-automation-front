@@ -1493,7 +1493,25 @@ export default function LeadsPage() {
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="text-sm text-gray-600">Next Follow-Up</div>
-                  <div>{viewLead.lastFollowUp || "-"}</div>
+                  <div>
+                    {viewLead.followUps && viewLead.followUps.length > 0 && viewLead.followUps[viewLead.followUps.length - 1].date
+                      ? (() => {
+                          const d = new Date(viewLead.followUps[viewLead.followUps.length - 1].date);
+                          const day = String(d.getDate()).padStart(2, '0');
+                          const month = String(d.getMonth() + 1).padStart(2, '0');
+                          const year = d.getFullYear();
+                          return `${day}/${month}/${year}`;
+                        })()
+                      : (viewLead.nextFollowupDate
+                          ? (() => {
+                              const d = new Date(viewLead.nextFollowupDate);
+                              const day = String(d.getDate()).padStart(2, '0');
+                              const month = String(d.getMonth() + 1).padStart(2, '0');
+                              const year = d.getFullYear();
+                              return `${day}/${month}/${year}`;
+                            })()
+                          : "-")}
+                  </div>
                 </div>
               </div>
               {/* Editable Next Follow-up */}
