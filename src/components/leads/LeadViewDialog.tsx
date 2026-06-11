@@ -186,7 +186,7 @@
 //                   ) : '-'
 //                 }
 //               />
-//               <InfoCard label="Last Follow-Up" value={lead.lastFollowUp} />
+//               <InfoCard label="Next Follow-Up" value={lead.lastFollowUp} />
 //               <InfoCard label="Active" value={lead.isActive ? 'Yes' : 'No'} />
 //             </div>
 
@@ -776,7 +776,7 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
                   ) : '-'
                 }
               />
-              <InfoCard label="Last Follow-Up" value={lead.lastFollowUp} />
+              <InfoCard label="Next Follow-Up" value={lead.lastFollowUp} />
               <InfoCard label="Active" value={lead.isActive ? 'Yes' : 'No'} />
             </div>
 

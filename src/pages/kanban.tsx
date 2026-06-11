@@ -1319,7 +1319,7 @@ export default function LeadsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">
-                Last Follow-Up
+                Next Follow-Up
               </label>
               <input
                 type="date"
@@ -1492,7 +1492,7 @@ export default function LeadsPage() {
                   <div>{viewLead.priority || "-"}</div>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="text-sm text-gray-600">Last Follow-Up</div>
+                  <div className="text-sm text-gray-600">Next Follow-Up</div>
                   <div>{viewLead.lastFollowUp || "-"}</div>
                 </div>
               </div>

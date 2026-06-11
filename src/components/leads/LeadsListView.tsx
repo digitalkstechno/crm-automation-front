@@ -214,7 +214,7 @@ export default function LeadsListView({
     { key: 'status', label: 'STATUS' },
     { key: 'staff', label: 'ASSIGNED STAFF', className: 'hidden lg:table-cell' },
     { key: 'priority', label: 'PRIORITY', className: 'hidden md:table-cell' },
-    { key: 'lastFollowUp', label: 'LAST FOLLOW-UP', className: 'hidden lg:table-cell' },
+    { key: 'lastFollowUp', label: 'NEXT FOLLOW-UP', className: 'hidden lg:table-cell' },
     {
       key: 'amountBudget',
       label: 'AMOUNT BUDGET',

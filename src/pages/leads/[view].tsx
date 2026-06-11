@@ -216,13 +216,6 @@ export default function LeadsPage() {
     try {
       const token = getAuthToken();
       const params: Record<string, string> = {};
-      if (filters.search) params.search = filters.search;
-      if (filters.status) params.status = filters.status;
-      if (filters.source) params.source = filters.source;
-      if (filters.staff) params.staff = filters.staff;
-      if (filters.from) params.from = filters.from;
-      if (filters.to) params.to = filters.to;
-      if (activeTab === 'my') params.my = 'true';
 
       const res = await axios.get(baseUrl.exportLeads, {
         headers: { Authorization: `Bearer ${token}` },
