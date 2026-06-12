@@ -467,6 +467,40 @@ export function WhatsappSettingsContent() {
               {editingIndex !== null ? '✏️ Edit Keyword Reply Rule' : '🆕 Add Keyword Reply Rule'}
             </h2>
 
+            {/* Toggle Tabs between Synced and Custom Templates */}
+            <div className="flex border-b border-gray-200 mb-5">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsManual(false);
+                  setNewRule(prev => ({ ...prev, template: '', lang: 'en', bodyText: '' }));
+                  setSelectedTemplateName('');
+                  setParamValues([]);
+                  setCustomParamCount(0);
+                }}
+                className={`flex-1 pb-2.5 text-center text-sm font-semibold cursor-pointer border-b-2 transition-colors ${!isManual 
+                  ? 'border-blue-600 text-blue-600' 
+                  : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+              >
+                📲 Synced Meta Templates
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsManual(true);
+                  setNewRule(prev => ({ ...prev, template: '', lang: 'en', bodyText: '' }));
+                  setSelectedTemplateName('custom');
+                  setParamValues([]);
+                  setCustomParamCount(0);
+                }}
+                className={`flex-1 pb-2.5 text-center text-sm font-semibold cursor-pointer border-b-2 transition-colors ${isManual 
+                  ? 'border-blue-600 text-blue-600' 
+                  : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+              >
+                ✏️ Custom Manual Templates
+              </button>
+            </div>
+
             {/* Add/Edit Rule Form */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 border border-slate-200 p-4 rounded-lg mb-6">
               <FormInput
@@ -477,25 +511,30 @@ export function WhatsappSettingsContent() {
                 placeholder="e.g. price"
               />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Select WhatsApp Template</label>
-                <select
-                  value={isManual ? 'custom' : selectedTemplateName}
-                  onChange={e => handleTemplateSelect(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
-                >
-                  <option value="">-- Choose Template --</option>
-                  <option value="custom">✨ Custom Template (Manual Setup)</option>
-                  {templates.map((t, index) => (
-                    <option key={`${t.name}-${index}`} value={t.name}>
-                      {t.name} ({t.language})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Render custom configuration details if selected manual template */}
-              {isManual && (
+              {!isManual ? (
+                /* Synced Template Mode */
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Select WhatsApp Template</label>
+                  <select
+                    value={selectedTemplateName}
+                    onChange={e => handleTemplateSelect(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="">-- Choose Template --</option>
+                    {templates.map((t, index) => (
+                      <option key={`${t.name}-${index}`} value={t.name}>
+                        {t.name} ({t.language})
+                      </option>
+                    ))}
+                  </select>
+                  {templates.length === 0 && (
+                    <p className="text-[10px] text-amber-600 mt-1">
+                      ⚠️ No synced templates found. Check credentials or use the Custom Manual Templates tab.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                /* Custom/Manual Template Mode */
                 <>
                   <FormInput
                     label="Custom Template Name"
