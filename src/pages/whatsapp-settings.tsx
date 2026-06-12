@@ -18,6 +18,7 @@ type Rule = {
 type WhatsappConfig = {
   apiBaseUrl: string;
   phoneNumberId: string;
+  wabaId: string;
   accessToken: string;
   verifyToken: string;
 };
@@ -31,6 +32,7 @@ export function WhatsappSettingsContent() {
   const [config, setConfig] = useState<WhatsappConfig>({
     apiBaseUrl: 'https://crmapi.crmbot.in/api/meta/v19.0',
     phoneNumberId: '730141010176205',
+    wabaId: '',
     accessToken: 'YOUR_CRMBOT_AUTHORIZATION_TOKEN_HERE',
     verifyToken: 'MySecretToken123',
   });
@@ -41,6 +43,7 @@ export function WhatsappSettingsContent() {
   // Synced Templates state
   const [templates, setTemplates] = useState<any[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [templateError, setTemplateError] = useState<string>('');
   const [isManual, setIsManual] = useState(false);
   const [selectedTemplateName, setSelectedTemplateName] = useState<string>('');
   const [customParamCount, setCustomParamCount] = useState<number>(0);
@@ -104,13 +107,18 @@ export function WhatsappSettingsContent() {
   const fetchTemplates = async () => {
     try {
       setLoadingTemplates(true);
+      setTemplateError('');
       const getBaseUrl = baseUrl.getBaseUrl || '';
       const res = await axios.get(`${getBaseUrl}whatsapp-webhook/templates`, { headers });
       if (res.data?.success) {
         setTemplates(res.data.templates || []);
+        if (res.data.isFallback && res.data.error) {
+          setTemplateError(res.data.error);
+        }
       }
     } catch (err: any) {
       console.error('Failed to sync templates:', err);
+      setTemplateError('Failed to communicate with the WhatsApp settings backend.');
     } finally {
       setLoadingTemplates(false);
     }
@@ -151,7 +159,7 @@ export function WhatsappSettingsContent() {
     try {
       const rulesPayload: Record<string, { template: string; lang: string; parameters: string[]; bodyText: string }> = {};
       updatedRules.forEach(rule => {
-        rulesPayload[rule.keyword.trim().toLowerCase()] = {
+        rulesPayload[rule.keyword.trim()] = {
           template: rule.template.trim(),
           lang: rule.lang.trim() || 'en',
           parameters: rule.parameters,
@@ -256,7 +264,7 @@ export function WhatsappSettingsContent() {
 
   // Add or Update rule helper
   const handleAddRule = async () => {
-    const kw = newRule.keyword.trim().toLowerCase();
+    const kw = newRule.keyword.trim();
     let tplName = isManual ? newRule.template.trim() : selectedTemplateName;
     let tplLang = isManual ? (newRule.lang.trim() || 'en') : 'en';
     let tplBodyText = "";
@@ -276,8 +284,8 @@ export function WhatsappSettingsContent() {
       return;
     }
 
-    // Check duplicate (exclude current editing index)
-    const duplicateIndex = rules.findIndex(r => r.keyword === kw);
+    // Check duplicate case-insensitively (exclude current editing index)
+    const duplicateIndex = rules.findIndex(r => r.keyword.trim().toLowerCase() === kw.toLowerCase());
     if (duplicateIndex !== -1 && duplicateIndex !== editingIndex) {
       toast.warn(`Rule for keyword "${kw}" already exists.`);
       return;
@@ -415,6 +423,13 @@ export function WhatsappSettingsContent() {
                 required
                 placeholder="730141010176205"
               />
+              <FormInput
+                label="WhatsApp Business Account ID (WABA ID) - Optional"
+                name="wabaId"
+                value={config.wabaId || ''}
+                onChange={e => setConfig({ ...config, wabaId: e.target.value })}
+                placeholder="Enter WABA ID if auto-sync fails (e.g. 234123456789012)"
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Authorization Access Token</label>
                 <textarea
@@ -447,17 +462,7 @@ export function WhatsappSettingsContent() {
             </form>
           </div>
 
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-5 text-sm text-blue-950">
-            <h3 className="font-semibold text-blue-900 mb-2">💡 Meta Webhook Setup Instructions</h3>
-            <p className="mb-2">In the Facebook App / Meta Developer Portal:</p>
-            <ol className="list-decimal pl-4 space-y-1">
-              <li>Navigate to **WhatsApp** &rarr; **Configuration**.</li>
-              <li>Click **Edit** Webhook URL.</li>
-              <li>Set Callback URL to: <br /><code className="bg-white px-1.5 py-0.5 rounded font-mono text-xs border border-blue-200">https://yourdomain.com/v1/api/whatsapp-webhook/webhook</code></li>
-              <li>Set Verify Token to: <br /><code className="bg-white px-1.5 py-0.5 rounded font-mono text-xs border border-blue-200">{config.verifyToken || 'MySecretToken123'}</code></li>
-              <li>Under Webhook Fields, subscribe to **`messages`**.</li>
-            </ol>
-          </div>
+          {/* Webhook Setup Instructions block removed per user request */}
         </div>
 
         {/* Right column: Reply Rules List */}
@@ -467,39 +472,7 @@ export function WhatsappSettingsContent() {
               {editingIndex !== null ? '✏️ Edit Keyword Reply Rule' : '🆕 Add Keyword Reply Rule'}
             </h2>
 
-            {/* Toggle Tabs between Synced and Custom Templates */}
-            <div className="flex border-b border-gray-200 mb-5">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsManual(false);
-                  setNewRule(prev => ({ ...prev, template: '', lang: 'en', bodyText: '' }));
-                  setSelectedTemplateName('');
-                  setParamValues([]);
-                  setCustomParamCount(0);
-                }}
-                className={`flex-1 pb-2.5 text-center text-sm font-semibold cursor-pointer border-b-2 transition-colors ${!isManual 
-                  ? 'border-blue-600 text-blue-600' 
-                  : 'border-transparent text-gray-400 hover:text-gray-600'}`}
-              >
-                📲 Synced Meta Templates
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsManual(true);
-                  setNewRule(prev => ({ ...prev, template: '', lang: 'en', bodyText: '' }));
-                  setSelectedTemplateName('custom');
-                  setParamValues([]);
-                  setCustomParamCount(0);
-                }}
-                className={`flex-1 pb-2.5 text-center text-sm font-semibold cursor-pointer border-b-2 transition-colors ${isManual 
-                  ? 'border-blue-600 text-blue-600' 
-                  : 'border-transparent text-gray-400 hover:text-gray-600'}`}
-              >
-                ✏️ Custom Manual Templates
-              </button>
-            </div>
+            {/* Tabs selection removed to prioritize Synced Meta Templates */}
 
             {/* Add/Edit Rule Form */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 border border-slate-200 p-4 rounded-lg mb-6">
@@ -527,11 +500,15 @@ export function WhatsappSettingsContent() {
                       </option>
                     ))}
                   </select>
-                  {templates.length === 0 && (
+                  {templateError ? (
+                    <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-2 text-[10px] mt-1.5 leading-relaxed">
+                      ⚠️ <strong>Sync Warning:</strong> {templateError}
+                    </div>
+                  ) : templates.length === 0 ? (
                     <p className="text-[10px] text-amber-600 mt-1">
-                      ⚠️ No synced templates found. Check credentials or use the Custom Manual Templates tab.
+                      ⚠️ No synced templates found. Please check your credentials configuration.
                     </p>
-                  )}
+                  ) : null}
                 </div>
               ) : (
                 /* Custom/Manual Template Mode */
@@ -572,12 +549,16 @@ export function WhatsappSettingsContent() {
               )}
 
               {/* Template Text / Structure Preview */}
-              {(selectedTemplateName || (isManual && newRule.template)) && (
-                <div className="md:col-span-2 bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-900">
-                  <span className="font-semibold block mb-1">Template Message Preview:</span>
-                  <pre className="whitespace-pre-wrap font-sans bg-white border border-blue-200 p-2.5 rounded text-slate-800 leading-relaxed max-h-48 overflow-y-auto">
+              {(selectedTemplateName || (isManual && newRule.template)) ? (
+                <div className="md:col-span-2 bg-blue-50 border border-blue-100 rounded-lg p-4 text-xs text-blue-900 shadow-sm">
+                  <span className="font-bold text-sm block mb-2 text-blue-950">Template Message Preview:</span>
+                  <pre className="whitespace-pre-wrap font-sans bg-white border border-blue-200 p-3 rounded-md text-slate-800 leading-relaxed max-h-48 overflow-y-auto shadow-inner text-sm">
                     {getPreviewText()}
                   </pre>
+                </div>
+              ) : (
+                <div className="md:col-span-2 border border-dashed border-slate-300 rounded-lg p-6 text-center text-slate-400 text-sm">
+                  Please select a WhatsApp template from the dropdown above to view the message preview and configure parameters.
                 </div>
               )}
 
@@ -619,6 +600,14 @@ export function WhatsappSettingsContent() {
                           className="px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-semibold transition-colors cursor-pointer"
                         >
                           Phone Number
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertVar(idx, '{{orderId}}')}
+                          className="px-2 py-0.5 rounded bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-semibold transition-colors cursor-pointer"
+                          title="Generate a random Order ID (e.g. ORD-123456)"
+                        >
+                          Order ID (Random)
                         </button>
                       </div>
                     </div>
