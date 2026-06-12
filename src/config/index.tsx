@@ -56,6 +56,7 @@ export const baseUrl = {
   todayTasks: `${API}task/today`,
   getBaseUrl: API,
   products: `${API}product`,
+  settings: `${API}settings`,
 };
 
 const TOKEN_COOKIE_NAME = "crm_token";

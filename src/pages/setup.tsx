@@ -9,7 +9,7 @@ import { RolesContent } from './roles';
 import { StaffManagementContent } from './staff-management';
 import { LeadSourcesContent } from './lead-sources';
 import { LeadStatusContent } from './lead-status';
-import { Settings, Users, Link2, Flag, Tag, Building2, UsersRound, Settings2 } from 'lucide-react';
+import { Settings, Users, Link2, Flag, Tag, Building2, UsersRound, Settings2, MessageSquare } from 'lucide-react';
 import { LeadLabelsContent } from './lead-labels';
 import { TeamsContent } from './teams';
 import { OrganizationsContent } from './organizations';
@@ -17,12 +17,13 @@ import { TaskStatusContent } from './task-status';
 import { useRouter } from 'next/router';
 import { FieldSettingsContent } from './field-settings';
 import { ProductsContent } from './products';
+import { WhatsappSettingsContent } from './whatsapp-settings';
 
 
 export default function Setup() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<
-    'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations' | 'Task Status' | 'Field Settings' | 'Products'
+    'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations' | 'Task Status' | 'Field Settings' | 'Products' | 'WhatsApp Settings'
   >('Role Management');
   const token = typeof window !== 'undefined' ? getAuthToken() : null;
   const [permissions, setPermissions] = useState<any>(null);
@@ -32,7 +33,7 @@ export default function Setup() {
   useEffect(() => {
     if (router.query.tab) {
       const tab = router.query.tab as string;
-      const validTabs = ['Role Management', 'Staff Management', 'Lead Sources', 'Lead Status', 'Kanban Status', 'Lead Labels', 'Teams', 'Organizations', 'Task Status', 'Field Settings', 'Products'];
+      const validTabs = ['Role Management', 'Staff Management', 'Lead Sources', 'Lead Status', 'Kanban Status', 'Lead Labels', 'Teams', 'Organizations', 'Task Status', 'Field Settings', 'Products', 'WhatsApp Settings'];
       if (validTabs.includes(tab)) {
         setActiveTab(tab as any);
       }
@@ -40,7 +41,7 @@ export default function Setup() {
   }, [router.query.tab]);
 
   // Handle tab change and update URL
-  const handleTabChange = (tab: 'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations' | 'Task Status' | 'Field Settings' | 'Products') => {
+  const handleTabChange = (tab: 'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Teams' | 'Organizations' | 'Task Status' | 'Field Settings' | 'Products' | 'WhatsApp Settings') => {
     setActiveTab(tab);
     router.push({
       pathname: router.pathname,
@@ -209,6 +210,7 @@ export default function Setup() {
       { name: "Organizations", icon: Building2, visible: canViewOrgs },
       { name: "Field Settings", icon: Settings2, visible: true },
       { name: "Products", icon: Settings, visible: true },
+      { name: "WhatsApp Settings", icon: MessageSquare, visible: true },
     ];
     return items.filter(i => i.visible);
   }, [canViewRole, canViewStaff, canViewLeadSource, canViewLeadStatus, canViewLeadLabel, canViewTeams, canViewOrgs, canViewTaskStatus]);
@@ -286,6 +288,7 @@ export default function Setup() {
               {activeTab === 'Task Status' && <TaskStatusContent />}
               {activeTab === 'Field Settings' && <FieldSettingsContent />}
               {activeTab === 'Products' && <ProductsContent />}
+              {activeTab === 'WhatsApp Settings' && <WhatsappSettingsContent />}
               {activeTab === 'Kanban Status' && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
