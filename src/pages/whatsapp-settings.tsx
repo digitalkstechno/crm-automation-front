@@ -12,6 +12,7 @@ type Rule = {
   template: string;
   lang: string;
   parameters: string[];
+  bodyText?: string;
 };
 
 type WhatsappConfig = {
@@ -37,17 +38,27 @@ export function WhatsappSettingsContent() {
   // Keyword rules list state
   const [rules, setRules] = useState<Rule[]>([]);
 
-  // Add rule form state
+  // Synced Templates state
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [isManual, setIsManual] = useState(false);
+  const [selectedTemplateName, setSelectedTemplateName] = useState<string>('');
+  const [customParamCount, setCustomParamCount] = useState<number>(0);
+  const [paramValues, setParamValues] = useState<string[]>([]);
+
+  // Add/Edit rule form state
   const [newRule, setNewRule] = useState<{
     keyword: string;
     template: string;
     lang: string;
+    bodyText: string;
     parametersRaw: string;
   }>({
     keyword: '',
     template: '',
     lang: 'en',
-    parametersRaw: '{{leadName}}, Campaign Inquiry',
+    bodyText: '',
+    parametersRaw: '',
   });
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -78,6 +89,7 @@ export function WhatsappSettingsContent() {
           template: val.template || '',
           lang: val.lang || 'en',
           parameters: val.parameters || [],
+          bodyText: val.bodyText || '',
         }));
         setRules(parsedRules);
       }
@@ -88,8 +100,25 @@ export function WhatsappSettingsContent() {
     }
   };
 
+  // Fetch templates from Meta/CRMBot API via Backend (using the direct API URL base endpoint)
+  const fetchTemplates = async () => {
+    try {
+      setLoadingTemplates(true);
+      const getBaseUrl = baseUrl.getBaseUrl || '';
+      const res = await axios.get(`${getBaseUrl}whatsapp-webhook/templates`, { headers });
+      if (res.data?.success) {
+        setTemplates(res.data.templates || []);
+      }
+    } catch (err: any) {
+      console.error('Failed to sync templates:', err);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
   useEffect(() => {
     fetchSettings();
+    fetchTemplates();
   }, [token]);
 
   // Save Credentials (whatsapp_config)
@@ -107,6 +136,8 @@ export function WhatsappSettingsContent() {
         { headers }
       );
       toast.success('WhatsApp credentials updated successfully!');
+      // Instantly sync templates
+      fetchTemplates();
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to update credentials');
     } finally {
@@ -114,16 +145,17 @@ export function WhatsappSettingsContent() {
     }
   };
 
-  // Convert Rules array back to object format expected by MongoDB (e.g. { keyword: { template, lang, parameters } })
+  // Convert Rules array back to object format expected by MongoDB
   const saveRulesToDB = async (updatedRules: Rule[]) => {
     setIsSavingRules(true);
     try {
-      const rulesPayload: Record<string, { template: string; lang: string; parameters: string[] }> = {};
+      const rulesPayload: Record<string, { template: string; lang: string; parameters: string[]; bodyText: string }> = {};
       updatedRules.forEach(rule => {
         rulesPayload[rule.keyword.trim().toLowerCase()] = {
           template: rule.template.trim(),
           lang: rule.lang.trim() || 'en',
           parameters: rule.parameters,
+          bodyText: rule.bodyText || '',
         };
       });
 
@@ -144,31 +176,132 @@ export function WhatsappSettingsContent() {
     }
   };
 
-  // Add rule helper
+  // Handle template selection
+  const handleTemplateSelect = (val: string) => {
+    setSelectedTemplateName(val);
+    if (val === 'custom') {
+      setIsManual(true);
+      setNewRule(prev => ({ ...prev, template: '', lang: 'en', bodyText: '' }));
+      setCustomParamCount(0);
+      setParamValues([]);
+    } else if (val === '') {
+      setIsManual(false);
+      setParamValues([]);
+      setNewRule(prev => ({ ...prev, template: '', lang: 'en', bodyText: '' }));
+    } else {
+      setIsManual(false);
+      const tplObj = templates.find(t => t.name === val);
+      if (tplObj) {
+        const count = tplObj.parametersCount || 0;
+        setParamValues(Array(count).fill(''));
+        setNewRule(prev => ({ ...prev, template: tplObj.name, lang: tplObj.language || 'en', bodyText: tplObj.bodyText || '' }));
+      }
+    }
+  };
+
+  // Handle custom body text change, parse variable count, and dynamically resize parameters
+  const handleCustomBodyTextChange = (text: string) => {
+    setNewRule(prev => ({ ...prev, bodyText: text }));
+    // Parse matches of {{number}}
+    const matches = text.match(/\{\{\d+\}\}/g);
+    let count = 0;
+    if (matches) {
+      const indexes = matches.map(m => parseInt(m.replace(/[^0-9]/g, ""), 10));
+      count = Math.max(...indexes, 0);
+    }
+    setCustomParamCount(count);
+    setParamValues(prev => {
+      const updated = [...prev];
+      if (updated.length < count) {
+        while (updated.length < count) {
+          updated.push('');
+        }
+      } else if (updated.length > count) {
+        return updated.slice(0, count);
+      }
+      return updated;
+    });
+  };
+
+  // Insert variable tags into selected parameter input
+  const handleInsertVar = (paramIdx: number, varName: string) => {
+    setParamValues(prev => {
+      const updated = [...prev];
+      updated[paramIdx] = (updated[paramIdx] || "") + varName;
+      return updated;
+    });
+  };
+
+  // Get dynamic preview text
+  const getPreviewText = () => {
+    let tplName = isManual ? (newRule.template || '(Template Name)') : selectedTemplateName;
+    if (!tplName) return "Please choose a template or configure a custom one to preview.";
+
+    let text = "";
+    if (isManual) {
+      text = newRule.bodyText || "";
+    } else {
+      const currentTemplate = templates.find(t => t.name === selectedTemplateName);
+      if (!currentTemplate) return "Please select a template to see details.";
+      text = currentTemplate.bodyText || "";
+    }
+
+    let preview = text;
+    paramValues.forEach((val, idx) => {
+      const placeholder = `{{${idx + 1}}}`;
+      preview = preview.replaceAll(placeholder, val || placeholder);
+    });
+    return preview;
+  };
+
+  // Add or Update rule helper
   const handleAddRule = async () => {
     const kw = newRule.keyword.trim().toLowerCase();
-    const temp = newRule.template.trim();
-    if (!kw || !temp) {
-      toast.warn('Please fill in both Keyword and Template name.');
+    let tplName = isManual ? newRule.template.trim() : selectedTemplateName;
+    let tplLang = isManual ? (newRule.lang.trim() || 'en') : 'en';
+    let tplBodyText = "";
+
+    if (isManual) {
+      tplBodyText = newRule.bodyText.trim();
+    } else if (tplName) {
+      const tplObj = templates.find(t => t.name === tplName);
+      if (tplObj) {
+        if (tplObj.language) tplLang = tplObj.language;
+        if (tplObj.bodyText) tplBodyText = tplObj.bodyText;
+      }
+    }
+
+    if (!kw || !tplName) {
+      toast.warn('Please fill in both Trigger Keyword and Template Name.');
       return;
     }
 
-    // Check duplicate
-    if (rules.some(r => r.keyword === kw)) {
+    // Check duplicate (exclude current editing index)
+    const duplicateIndex = rules.findIndex(r => r.keyword === kw);
+    if (duplicateIndex !== -1 && duplicateIndex !== editingIndex) {
       toast.warn(`Rule for keyword "${kw}" already exists.`);
       return;
     }
 
-    const newRuleObj: Rule = {
+    const ruleObj: Rule = {
       keyword: kw,
-      template: temp,
-      lang: newRule.lang.trim() || 'en',
-      parameters: newRule.parametersRaw
-        ? newRule.parametersRaw.split(',').map(p => p.trim())
-        : [],
+      template: tplName,
+      lang: tplLang,
+      parameters: paramValues,
+      bodyText: tplBodyText,
     };
 
-    const updated = [...rules, newRuleObj];
+    let updated: Rule[] = [];
+    if (editingIndex !== null) {
+      updated = [...rules];
+      updated[editingIndex] = ruleObj;
+      setEditingIndex(null);
+      toast.success('Rule updated successfully!');
+    } else {
+      updated = [...rules, ruleObj];
+      toast.success('Rule added successfully!');
+    }
+
     setRules(updated);
     await saveRulesToDB(updated);
 
@@ -177,8 +310,56 @@ export function WhatsappSettingsContent() {
       keyword: '',
       template: '',
       lang: 'en',
-      parametersRaw: '{{leadName}}, Campaign Inquiry',
+      bodyText: '',
+      parametersRaw: '',
     });
+    setSelectedTemplateName('');
+    setParamValues([]);
+    setIsManual(false);
+    setCustomParamCount(0);
+  };
+
+  // Edit rule helper
+  const handleEditRule = (index: number) => {
+    const rule = rules[index];
+    setEditingIndex(index);
+
+    const tplExists = templates.some(t => t.name === rule.template);
+
+    setNewRule({
+      keyword: rule.keyword,
+      template: rule.template,
+      lang: rule.lang,
+      bodyText: rule.bodyText || '',
+      parametersRaw: '',
+    });
+
+    if (tplExists) {
+      setIsManual(false);
+      setSelectedTemplateName(rule.template);
+      setParamValues(rule.parameters);
+    } else {
+      setIsManual(true);
+      setSelectedTemplateName('custom');
+      setCustomParamCount(rule.parameters.length);
+      setParamValues(rule.parameters);
+    }
+  };
+
+  // Cancel edit helper
+  const handleCancelEdit = () => {
+    setEditingIndex(null);
+    setNewRule({
+      keyword: '',
+      template: '',
+      lang: 'en',
+      bodyText: '',
+      parametersRaw: '',
+    });
+    setSelectedTemplateName('');
+    setParamValues([]);
+    setIsManual(false);
+    setCustomParamCount(0);
   };
 
   // Remove rule helper
@@ -186,6 +367,9 @@ export function WhatsappSettingsContent() {
     const updated = rules.filter((_, i) => i !== index);
     setRules(updated);
     await saveRulesToDB(updated);
+    if (editingIndex === index) {
+      handleCancelEdit();
+    }
   };
 
   if (loading) {
@@ -279,9 +463,11 @@ export function WhatsappSettingsContent() {
         {/* Right column: Reply Rules List */}
         <div className="lg:col-span-7 space-y-6">
           <div className="bg-white border border-gray-200 rounded-lg p-5">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Keyword Reply Templates Map</h2>
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              {editingIndex !== null ? '✏️ Edit Keyword Reply Rule' : '🆕 Add Keyword Reply Rule'}
+            </h2>
 
-            {/* Add Rule Form */}
+            {/* Add/Edit Rule Form */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 border border-slate-200 p-4 rounded-lg mb-6">
               <FormInput
                 label="Trigger Keyword"
@@ -290,36 +476,145 @@ export function WhatsappSettingsContent() {
                 onChange={e => setNewRule({ ...newRule, keyword: e.target.value })}
                 placeholder="e.g. price"
               />
-              <FormInput
-                label="Template Name"
-                name="template"
-                value={newRule.template}
-                onChange={e => setNewRule({ ...newRule, template: e.target.value })}
-                placeholder="e.g. price_details"
-              />
-              <FormInput
-                label="Language Code"
-                name="lang"
-                value={newRule.lang}
-                onChange={e => setNewRule({ ...newRule, lang: e.target.value })}
-                placeholder="en"
-              />
-              <FormInput
-                label="Parameters (Comma-separated)"
-                name="parametersRaw"
-                value={newRule.parametersRaw}
-                onChange={e => setNewRule({ ...newRule, parametersRaw: e.target.value })}
-                placeholder="e.g. {{leadName}}, campaign_val"
-              />
-              <div className="md:col-span-2 flex justify-end">
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Select WhatsApp Template</label>
+                <select
+                  value={isManual ? 'custom' : selectedTemplateName}
+                  onChange={e => handleTemplateSelect(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                >
+                  <option value="">-- Choose Template --</option>
+                  <option value="custom">✨ Custom Template (Manual Setup)</option>
+                  {templates.map((t, index) => (
+                    <option key={`${t.name}-${index}`} value={t.name}>
+                      {t.name} ({t.language})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Render custom configuration details if selected manual template */}
+              {isManual && (
+                <>
+                  <FormInput
+                    label="Custom Template Name"
+                    name="template"
+                    value={newRule.template}
+                    onChange={e => setNewRule({ ...newRule, template: e.target.value })}
+                    placeholder="e.g. order_data"
+                  />
+                  <FormInput
+                    label="Language Code"
+                    name="lang"
+                    value={newRule.lang}
+                    onChange={e => setNewRule({ ...newRule, lang: e.target.value })}
+                    placeholder="en"
+                  />
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Custom Message Body Text</label>
+                    <textarea
+                      value={newRule.bodyText}
+                      onChange={e => handleCustomBodyTextChange(e.target.value)}
+                      rows={3}
+                      className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white font-mono"
+                      placeholder="e.g. Hello {{1}}, thank you for buying {{2}}! Your order status is {{3}}."
+                    />
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      💡 Tip: Write your message text. Use <code>{"{{"}1{"}}"}</code>, <code>{"{{"}2{"}}"}</code>, etc. to mark parameter placeholders. Inputs for each placeholder will appear automatically.
+                    </p>
+                    {(newRule.bodyText.includes('{{leadName}}') || newRule.bodyText.includes('{{contact}}')) && (
+                      <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded p-2.5 text-xs mt-1.5 leading-relaxed">
+                        <strong>⚠️ Format Warning:</strong> Do not write <code>{"{{"}leadName{"}}"}</code> or <code>{"{{"}contact{"}}"}</code> directly in the template text. Meta WhatsApp templates only accept numeric placeholders like <code>{"{{"}1{"}}"}</code>. Please write <code>{"{{"}1{"}}"}</code> in the template text above, and set its value to Customer Name or Phone Number in the parameter section below.
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* Template Text / Structure Preview */}
+              {(selectedTemplateName || (isManual && newRule.template)) && (
+                <div className="md:col-span-2 bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-900">
+                  <span className="font-semibold block mb-1">Template Message Preview:</span>
+                  <pre className="whitespace-pre-wrap font-sans bg-white border border-blue-200 p-2.5 rounded text-slate-800 leading-relaxed max-h-48 overflow-y-auto">
+                    {getPreviewText()}
+                  </pre>
+                </div>
+              )}
+
+              {/* Individual parameter inputs */}
+              {paramValues.length > 0 && (
+                <div className="md:col-span-2 space-y-3.5 pt-2 border-t border-slate-200">
+                  <h3 className="text-xs font-bold text-slate-500 tracking-wider uppercase">Configure Parameter Values</h3>
+                  {paramValues.map((val, idx) => (
+                    <div key={idx} className="bg-white p-3 rounded-lg border border-slate-200 space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="block text-xs font-semibold text-gray-700">
+                          Parameter {idx + 1} ({"{{"}{idx + 1}{"}}"})
+                        </label>
+                        <span className="text-[10px] text-gray-400">Values can be raw text or dynamics tags</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={val}
+                        onChange={e => {
+                          const updated = [...paramValues];
+                          updated[idx] = e.target.value;
+                          setParamValues(updated);
+                        }}
+                        placeholder={`Enter parameter value for {{${idx + 1}}}`}
+                        className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                      />
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        <span className="text-[10px] text-gray-500 font-medium">Auto tags:</span>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertVar(idx, '{{leadName}}')}
+                          className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-semibold transition-colors cursor-pointer"
+                        >
+                          Customer Name
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertVar(idx, '{{contact}}')}
+                          className="px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-semibold transition-colors cursor-pointer"
+                        >
+                          Phone Number
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Form buttons */}
+              <div className="md:col-span-2 flex justify-end gap-2">
+                {editingIndex !== null && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="px-4 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white font-semibold text-sm transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handleAddRule}
                   disabled={isSavingRules}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm cursor-pointer disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm cursor-pointer disabled:opacity-50 transition-colors"
                 >
-                  <Plus className="h-4 w-4" />
-                  Add/Save Rule
+                  {editingIndex !== null ? (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Update Rule
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" />
+                      Add Rule
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -345,7 +640,7 @@ export function WhatsappSettingsContent() {
                     </tr>
                   ) : (
                     rules.map((rule, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                      <tr key={`${rule.keyword}-${idx}`} className="hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-3 font-semibold text-gray-800">{rule.keyword}</td>
                         <td className="px-4 py-3 text-slate-700">{rule.template}</td>
                         <td className="px-4 py-3 font-mono text-xs text-gray-500">{rule.lang}</td>
@@ -363,14 +658,24 @@ export function WhatsappSettingsContent() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteRule(idx)}
-                            className="text-red-500 hover:text-red-700 p-1 cursor-pointer"
-                            title="Delete Rule"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          <div className="flex justify-center items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleEditRule(idx)}
+                              className="text-blue-500 hover:text-blue-700 p-1 cursor-pointer"
+                              title="Edit Rule"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRule(idx)}
+                              className="text-red-500 hover:text-red-700 p-1 cursor-pointer"
+                              title="Delete Rule"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
