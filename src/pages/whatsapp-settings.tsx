@@ -13,6 +13,7 @@ type Rule = {
   lang: string;
   parameters: string[];
   bodyText?: string;
+  sendTemplate?: boolean;
 };
 
 type WhatsappConfig = {
@@ -56,12 +57,14 @@ export function WhatsappSettingsContent() {
     lang: string;
     bodyText: string;
     parametersRaw: string;
+    sendTemplate: boolean;
   }>({
     keyword: '',
     template: '',
     lang: 'en',
     bodyText: '',
     parametersRaw: '',
+    sendTemplate: true,
   });
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -93,6 +96,7 @@ export function WhatsappSettingsContent() {
           lang: val.lang || 'en',
           parameters: val.parameters || [],
           bodyText: val.bodyText || '',
+          sendTemplate: val.sendTemplate !== undefined ? val.sendTemplate : true,
         }));
         setRules(parsedRules);
       }
@@ -157,13 +161,14 @@ export function WhatsappSettingsContent() {
   const saveRulesToDB = async (updatedRules: Rule[]) => {
     setIsSavingRules(true);
     try {
-      const rulesPayload: Record<string, { template: string; lang: string; parameters: string[]; bodyText: string }> = {};
+      const rulesPayload: Record<string, { template: string; lang: string; parameters: string[]; bodyText: string; sendTemplate: boolean }> = {};
       updatedRules.forEach(rule => {
         rulesPayload[rule.keyword.trim()] = {
           template: rule.template.trim(),
           lang: rule.lang.trim() || 'en',
           parameters: rule.parameters,
           bodyText: rule.bodyText || '',
+          sendTemplate: rule.sendTemplate !== undefined ? rule.sendTemplate : true,
         };
       });
 
@@ -297,6 +302,7 @@ export function WhatsappSettingsContent() {
       lang: tplLang,
       parameters: paramValues,
       bodyText: tplBodyText,
+      sendTemplate: newRule.sendTemplate,
     };
 
     let updated: Rule[] = [];
@@ -320,6 +326,7 @@ export function WhatsappSettingsContent() {
       lang: 'en',
       bodyText: '',
       parametersRaw: '',
+      sendTemplate: true,
     });
     setSelectedTemplateName('');
     setParamValues([]);
@@ -340,6 +347,7 @@ export function WhatsappSettingsContent() {
       lang: rule.lang,
       bodyText: rule.bodyText || '',
       parametersRaw: '',
+      sendTemplate: rule.sendTemplate !== undefined ? rule.sendTemplate : true,
     });
 
     if (tplExists) {
@@ -363,6 +371,7 @@ export function WhatsappSettingsContent() {
       lang: 'en',
       bodyText: '',
       parametersRaw: '',
+      sendTemplate: true,
     });
     setSelectedTemplateName('');
     setParamValues([]);
@@ -475,148 +484,191 @@ export function WhatsappSettingsContent() {
             {/* Tabs selection removed to prioritize Synced Meta Templates */}
 
             {/* Add/Edit Rule Form */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 border border-slate-200 p-4 rounded-lg mb-6">
-              <FormInput
-                label="Trigger Keyword"
-                name="keyword"
-                value={newRule.keyword}
-                onChange={e => setNewRule({ ...newRule, keyword: e.target.value })}
-                placeholder="e.g. price"
-              />
+            <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl mb-6 space-y-6">
+              {/* Main Inputs: stacked on mobile, 2 columns on desktop */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* Left Column: Keyword & Toggle Switch */}
+                <div className="space-y-3">
+                  <FormInput
+                    label="Trigger Keyword"
+                    name="keyword"
+                    value={newRule.keyword}
+                    onChange={e => setNewRule({ ...newRule, keyword: e.target.value })}
+                    placeholder="e.g. price"
+                    className="mb-0"
+                  />
 
-              {!isManual ? (
-                /* Synced Template Mode */
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Select WhatsApp Template</label>
-                  <select
-                    value={selectedTemplateName}
-                    onChange={e => handleTemplateSelect(e.target.value)}
-                    className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
-                  >
-                    <option value="">-- Choose Template --</option>
-                    {templates.map((t, index) => (
-                      <option key={`${t.name}-${index}`} value={t.name}>
-                        {t.name} ({t.language})
-                      </option>
-                    ))}
-                  </select>
-                  {templateError ? (
-                    <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-2 text-[10px] mt-1.5 leading-relaxed">
-                      ⚠️ <strong>Sync Warning:</strong> {templateError}
-                    </div>
-                  ) : templates.length === 0 ? (
-                    <p className="text-[10px] text-amber-600 mt-1">
-                      ⚠️ No synced templates found. Please check your credentials configuration.
-                    </p>
-                  ) : null}
-                </div>
-              ) : (
-                /* Custom/Manual Template Mode */
-                <>
-                  <FormInput
-                    label="Custom Template Name"
-                    name="template"
-                    value={newRule.template}
-                    onChange={e => setNewRule({ ...newRule, template: e.target.value })}
-                    placeholder="e.g. order_data"
-                  />
-                  <FormInput
-                    label="Language Code"
-                    name="lang"
-                    value={newRule.lang}
-                    onChange={e => setNewRule({ ...newRule, lang: e.target.value })}
-                    placeholder="en"
-                  />
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Custom Message Body Text</label>
-                    <textarea
-                      value={newRule.bodyText}
-                      onChange={e => handleCustomBodyTextChange(e.target.value)}
-                      rows={3}
-                      className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white font-mono"
-                      placeholder="e.g. Hello {{1}}, thank you for buying {{2}}! Your order status is {{3}}."
-                    />
-                    <p className="text-[10px] text-gray-500 mt-1">
-                      💡 Tip: Write your message text. Use <code>{"{{"}1{"}}"}</code>, <code>{"{{"}2{"}}"}</code>, etc. to mark parameter placeholders. Inputs for each placeholder will appear automatically.
-                    </p>
-                    {(newRule.bodyText.includes('{{leadName}}') || newRule.bodyText.includes('{{contact}}')) && (
-                      <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded p-2.5 text-xs mt-1.5 leading-relaxed">
-                        <strong>⚠️ Format Warning:</strong> Do not write <code>{"{{"}leadName{"}}"}</code> or <code>{"{{"}contact{"}}"}</code> directly in the template text. Meta WhatsApp templates only accept numeric placeholders like <code>{"{{"}1{"}}"}</code>. Please write <code>{"{{"}1{"}}"}</code> in the template text above, and set its value to Customer Name or Phone Number in the parameter section below.
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2 py-1 select-none">
+                    <button
+                      type="button"
+                      onClick={() => setNewRule(prev => ({ ...prev, sendTemplate: !prev.sendTemplate }))}
+                      className={`${
+                        newRule.sendTemplate ? 'bg-emerald-600' : 'bg-slate-300'
+                      } relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none`}
+                    >
+                      <span
+                        className={`${
+                          newRule.sendTemplate ? 'translate-x-4' : 'translate-x-0'
+                        } pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
+                      />
+                    </button>
+                    <span
+                      className="text-xs font-semibold text-gray-700 cursor-pointer"
+                      onClick={() => setNewRule(prev => ({ ...prev, sendTemplate: !prev.sendTemplate }))}
+                    >
+                      Send template reply automatically
+                    </span>
                   </div>
-                </>
+                </div>
+
+                {/* Right Column: Template Choices */}
+                <div>
+                  {!isManual ? (
+                    /* Synced Template Mode */
+                    <div className="flex flex-col h-full justify-between">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Select WhatsApp Template</label>
+                        <select
+                          value={selectedTemplateName}
+                          onChange={e => handleTemplateSelect(e.target.value)}
+                          className="w-full rounded-xl border border-gray-300 p-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                        >
+                          <option value="">-- Choose Template --</option>
+                          {templates.map((t, index) => (
+                            <option key={`${t.name}-${index}`} value={t.name}>
+                              {t.name} ({t.language})
+                            </option>
+                          ))}
+                        </select>
+                        {templateError ? (
+                          <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-2 text-[10px] mt-1.5 leading-relaxed">
+                            ⚠️ <strong>Sync Warning:</strong> {templateError}
+                          </div>
+                        ) : templates.length === 0 ? (
+                          <p className="text-[10px] text-amber-600 mt-1">
+                            ⚠️ No synced templates found. Please check your credentials configuration.
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : (
+                    /* Custom/Manual Template Mode */
+                    <div className="space-y-4">
+                      <FormInput
+                        label="Custom Template Name"
+                        name="template"
+                        value={newRule.template}
+                        onChange={e => setNewRule({ ...newRule, template: e.target.value })}
+                        placeholder="e.g. order_data"
+                        className="mb-0"
+                      />
+                      <FormInput
+                        label="Language Code"
+                        name="lang"
+                        value={newRule.lang}
+                        onChange={e => setNewRule({ ...newRule, lang: e.target.value })}
+                        placeholder="en"
+                        className="mb-0"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Custom message text (full width, if manual) */}
+              {isManual && (
+                <div className="pt-2 border-t border-slate-200">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Custom Message Body Text</label>
+                  <textarea
+                    value={newRule.bodyText}
+                    onChange={e => handleCustomBodyTextChange(e.target.value)}
+                    rows={3}
+                    className="w-full rounded-xl border border-gray-300 p-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white font-mono"
+                    placeholder="e.g. Hello {{1}}, thank you for buying {{2}}! Your order status is {{3}}."
+                  />
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    💡 Tip: Write your message text. Use <code>{"{{"}1{"}}"}</code>, <code>{"{{"}2{"}}"}</code>, etc. to mark parameter placeholders. Inputs for each placeholder will appear automatically.
+                  </p>
+                  {(newRule.bodyText.includes('{{leadName}}') || newRule.bodyText.includes('{{contact}}')) && (
+                    <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded p-3 text-xs mt-2 leading-relaxed">
+                      <strong>⚠️ Format Warning:</strong> Do not write <code>{"{{"}leadName{"}}"}</code> or <code>{"{{"}contact{"}}"}</code> directly in the template text. Meta WhatsApp templates only accept numeric placeholders like <code>{"{{"}1{"}}"}</code>. Please write <code>{"{{"}1{"}}"}</code> in the template text above, and set its value to Customer Name or Phone Number in the parameter section below.
+                    </div>
+                  )}
+                </div>
               )}
 
-              {/* Template Text / Structure Preview */}
+              {/* Template Preview (Full width) */}
               {(selectedTemplateName || (isManual && newRule.template)) ? (
-                <div className="md:col-span-2 bg-blue-50 border border-blue-100 rounded-lg p-4 text-xs text-blue-900 shadow-sm">
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-xs text-blue-900 shadow-xs">
                   <span className="font-bold text-sm block mb-2 text-blue-950">Template Message Preview:</span>
-                  <pre className="whitespace-pre-wrap font-sans bg-white border border-blue-200 p-3 rounded-md text-slate-800 leading-relaxed max-h-48 overflow-y-auto shadow-inner text-sm">
+                  <pre className="whitespace-pre-wrap font-sans bg-white border border-blue-200 p-3 rounded-lg text-slate-800 leading-relaxed max-h-48 overflow-y-auto shadow-inner text-sm">
                     {getPreviewText()}
                   </pre>
                 </div>
               ) : (
-                <div className="md:col-span-2 border border-dashed border-slate-300 rounded-lg p-6 text-center text-slate-400 text-sm">
+                <div className="border border-dashed border-slate-300 rounded-xl p-6 text-center text-slate-400 text-sm bg-white">
                   Please select a WhatsApp template from the dropdown above to view the message preview and configure parameters.
                 </div>
               )}
 
-              {/* Individual parameter inputs */}
+              {/* Individual parameter inputs (Full width layout with internal responsive grid) */}
               {paramValues.length > 0 && (
-                <div className="md:col-span-2 space-y-3.5 pt-2 border-t border-slate-200">
+                <div className="space-y-4 pt-4 border-t border-slate-200">
                   <h3 className="text-xs font-bold text-slate-500 tracking-wider uppercase">Configure Parameter Values</h3>
-                  {paramValues.map((val, idx) => (
-                    <div key={idx} className="bg-white p-3 rounded-lg border border-slate-200 space-y-1.5">
-                      <div className="flex justify-between items-center">
-                        <label className="block text-xs font-semibold text-gray-700">
-                          Parameter {idx + 1} ({"{{"}{idx + 1}{"}}"})
-                        </label>
-                        <span className="text-[10px] text-gray-400">Values can be raw text or dynamics tags</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {paramValues.map((val, idx) => (
+                      <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="block text-xs font-semibold text-gray-700">
+                            Parameter {idx + 1} ({"{{"}{idx + 1}{"}}"})
+                          </label>
+                          <span className="text-[10px] text-gray-400 font-medium">Values can be raw text or dynamics tags</span>
+                        </div>
+                        <input
+                          type="text"
+                          value={val}
+                          onChange={e => {
+                            const updated = [...paramValues];
+                            updated[idx] = e.target.value;
+                            setParamValues(updated);
+                          }}
+                          placeholder={`Enter parameter value for {{${idx + 1}}}`}
+                          className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                        />
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          <span className="text-[10px] text-gray-500 font-medium font-sans">Auto tags:</span>
+                          <button
+                            type="button"
+                            onClick={() => handleInsertVar(idx, '{{leadName}}')}
+                            className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-semibold transition-colors cursor-pointer"
+                          >
+                            Customer Name
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleInsertVar(idx, '{{contact}}')}
+                            className="px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-semibold transition-colors cursor-pointer"
+                          >
+                            Phone Number
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleInsertVar(idx, '{{orderId}}')}
+                            className="px-2 py-0.5 rounded bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-semibold transition-colors cursor-pointer"
+                            title="Generate a random Order ID (e.g. ORD-123456)"
+                          >
+                            Order ID (Random)
+                          </button>
+                        </div>
                       </div>
-                      <input
-                        type="text"
-                        value={val}
-                        onChange={e => {
-                          const updated = [...paramValues];
-                          updated[idx] = e.target.value;
-                          setParamValues(updated);
-                        }}
-                        placeholder={`Enter parameter value for {{${idx + 1}}}`}
-                        className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
-                      />
-                      <div className="flex items-center gap-1.5 pt-0.5">
-                        <span className="text-[10px] text-gray-500 font-medium">Auto tags:</span>
-                        <button
-                          type="button"
-                          onClick={() => handleInsertVar(idx, '{{leadName}}')}
-                          className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-semibold transition-colors cursor-pointer"
-                        >
-                          Customer Name
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleInsertVar(idx, '{{contact}}')}
-                          className="px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-semibold transition-colors cursor-pointer"
-                        >
-                          Phone Number
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleInsertVar(idx, '{{orderId}}')}
-                          className="px-2 py-0.5 rounded bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-semibold transition-colors cursor-pointer"
-                          title="Generate a random Order ID (e.g. ORD-123456)"
-                        >
-                          Order ID (Random)
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
 
               {/* Form buttons */}
-              <div className="md:col-span-2 flex justify-end gap-2">
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
                 {editingIndex !== null && (
                   <button
                     type="button"
@@ -656,13 +708,14 @@ export function WhatsappSettingsContent() {
                     <th className="px-4 py-2.5 text-left">Template</th>
                     <th className="px-4 py-2.5 text-left">Language</th>
                     <th className="px-4 py-2.5 text-left">Parameters</th>
+                    <th className="px-4 py-2.5 text-center">Send Template</th>
                     <th className="px-4 py-2.5 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {rules.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center py-6 text-gray-400">
+                      <td colSpan={6} className="text-center py-6 text-gray-400">
                         No keyword rules defined yet. System will use default rules (hello, price, interested).
                       </td>
                     </tr>
@@ -684,6 +737,34 @@ export function WhatsappSettingsContent() {
                           ) : (
                             <span className="text-gray-400 italic">None</span>
                           )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex justify-center items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const updated = [...rules];
+                                updated[idx] = {
+                                  ...rule,
+                                  sendTemplate: rule.sendTemplate === undefined ? false : !rule.sendTemplate,
+                                };
+                                setRules(updated);
+                                await saveRulesToDB(updated);
+                              }}
+                              className={`${
+                                (rule.sendTemplate !== false) ? 'bg-emerald-600' : 'bg-slate-300'
+                              } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none`}
+                            >
+                              <span
+                                className={`${
+                                  (rule.sendTemplate !== false) ? 'translate-x-5' : 'translate-x-0'
+                                } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
+                              />
+                            </button>
+                            <span className={`text-xs font-bold w-8 text-left ${rule.sendTemplate !== false ? 'text-emerald-600' : 'text-slate-500'}`}>
+                              {rule.sendTemplate !== false ? 'ON' : 'OFF'}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <div className="flex justify-center items-center gap-2">
