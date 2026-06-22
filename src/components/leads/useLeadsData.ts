@@ -251,7 +251,25 @@ export function useLeadsData(
           to: f.to || undefined,
         },
       });
-      setCounts(res.data?.data || null);
+      const rawData = res.data?.data;
+      if (rawData) {
+        const statusCounts: Record<string, number> = {};
+        if (Array.isArray(rawData.statusWiseCounts)) {
+          rawData.statusWiseCounts.forEach((item: any) => {
+            if (item.statusId) {
+              statusCounts[item.statusId] = item.count || 0;
+            }
+          });
+        }
+        setCounts({
+          statusCounts,
+          totalLeads: rawData.totalLeads || 0,
+          totalLost: rawData.totalLost || 0,
+          totalWon: rawData.totalWon || 0,
+        });
+      } else {
+        setCounts(null);
+      }
     } catch (e) {
       console.error('fetchCounts error:', e);
     }

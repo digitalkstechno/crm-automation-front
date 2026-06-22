@@ -562,6 +562,7 @@ export default function LeadsPage() {
           />
         ) : (
           <LeadsKanbanView
+            loading={loading}
             leads={leads}
             lostLeads={lostLeads}
             wonLeads={wonLeads}

@@ -13,6 +13,7 @@ import { baseUrl, getAuthToken } from "@/config";
 import Dialog from "@/components/Dialog";
 import { ListCollapse, Plus } from "lucide-react";
 import Select from "react-select";
+import { KanbanColumnSkeleton } from "@/components/ui/Skeleton";
 
 type ApiUser = {
   _id: string;
@@ -62,6 +63,7 @@ type ApiLead = {
   lostDate?: string;
   wonDate?: string;
   labels?: string[] | LeadLabel[];
+  followUps?: any[];
 };
 
 type StatusGroup = {
@@ -110,6 +112,7 @@ export default function LeadsPage() {
   const [pageMap, setPageMap] = useState<Record<string, number>>({});
   const [hasMoreMap, setHasMoreMap] = useState<Record<string, boolean>>({});
   const [loadingMoreMap, setLoadingMoreMap] = useState<Record<string, boolean>>({});
+  const [totalCounts, setTotalCounts] = useState<Record<string, number>>({});
   const [lostLeadsList, setLostLeadsList] = useState<ApiLead[]>([]);
   const [wonLeadsList, setWonLeadsList] = useState<ApiLead[]>([]);
   const [loadingLost, setLoadingLost] = useState(false);
@@ -135,6 +138,8 @@ export default function LeadsPage() {
   });
 
   // View dialog edit states
+  const [editingStatus, setEditingStatus] = useState("");
+  const [editingNextFollowupDate, setEditingNextFollowupDate] = useState("");
   const [editingNextFollowupTime, setEditingNextFollowupTime] = useState("");
   const [requiredFields, setRequiredFields] = useState<string[]>([]);
 
@@ -186,12 +191,15 @@ export default function LeadsPage() {
 
       const initPages: Record<string, number> = {};
       const initHasMore: Record<string, boolean> = {};
+      const initTotalCounts: Record<string, number> = {};
       kanbanData.forEach((g: any) => {
         initPages[g.statusId] = 1;
-        initHasMore[g.statusId] = g.leads?.length === 10;
+        initHasMore[g.statusId] = (g.leads?.length || 0) < (g.totalCount || 0);
+        initTotalCounts[g.statusId] = g.totalCount ?? g.leads?.length ?? 0;
       });
       setPageMap(initPages);
       setHasMoreMap(initHasMore);
+      setTotalCounts(initTotalCounts);
     } catch (error) {
       console.error("Failed to fetch leads", error);
       toast.error("Failed to load leads");
@@ -206,7 +214,7 @@ export default function LeadsPage() {
     try {
       const token = getAuthToken();
       const nextPage = (pageMap[statusId] || 1) + 1;
-      const res = await axios.get(`${baseUrl.getAllLeads}?status=${statusId}&page=${nextPage}&limit=10`, {
+      const res = await axios.get(`${baseUrl.getAllLeads}?status=${statusId}&page=${nextPage}&limit=20`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = res.data?.data || [];
@@ -217,7 +225,7 @@ export default function LeadsPage() {
           return [...prev, ...newUnique];
         });
         setPageMap(prev => ({ ...prev, [statusId]: nextPage }));
-        setHasMoreMap(prev => ({ ...prev, [statusId]: data.length === 10 }));
+        setHasMoreMap(prev => ({ ...prev, [statusId]: data.length === 20 }));
       } else {
         setHasMoreMap(prev => ({ ...prev, [statusId]: false }));
       }
@@ -615,11 +623,24 @@ export default function LeadsPage() {
 
   if (loading) {
     return (
-      <>
-        <div className="flex h-full items-center justify-center">
-          <div className="text-xl text-gray-600">Loading leads...</div>
+      <div className="space-y-6 p-4">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-3xl shadow-sm">
+          <div className="space-y-2">
+            <div className="h-6 w-32 bg-gray-200 animate-pulse rounded-md" />
+            <div className="h-4 w-48 bg-gray-200 animate-pulse rounded-md" />
+          </div>
+          <div className="h-10 w-28 bg-gray-200 animate-pulse rounded-md" />
         </div>
-      </>
+        {/* Kanban Board Skeleton */}
+        <div className="flex gap-4 overflow-x-auto pb-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="w-80 flex-shrink-0">
+              <KanbanColumnSkeleton />
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 
@@ -724,7 +745,7 @@ export default function LeadsPage() {
                           {status.title}
                         </h3>
                         <span className="rounded-full bg-[#ffffff] px-3 py-1 text-sm font-medium text-[#0a2352]">
-                          {status.leads.length}
+                          {totalCounts[status.id] ?? status.leads.length}
                         </span>
                       </div>
                     </div>

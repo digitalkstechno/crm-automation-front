@@ -11,6 +11,7 @@ import { RefreshCw } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
 import KanbanCard from './KanbanCard';
 import Swal from 'sweetalert2';
+import { KanbanColumnSkeleton } from '@/components/ui/Skeleton';
 
 type PaginationShape = {
     currentPage: number;
@@ -22,6 +23,7 @@ type PaginationShape = {
 };
 
 interface Props {
+    loading?: boolean;
     leads: ApiLead[];
     lostLeads: ApiLead[];
     wonLeads: ApiLead[];
@@ -59,6 +61,7 @@ interface Props {
 type SubView = 'board' | 'lost' | 'won';
 
 export default function LeadsKanbanView({
+    loading = false,
     lostLeads, wonLeads,
     statuses,
     onEdit, onView, onRefresh, counts, permissions, scope = 'all',
@@ -68,6 +71,7 @@ export default function LeadsKanbanView({
     onSubViewChange,
     onRefreshCounts,
 }: Props) {
+    const isInitiallyLoading = loading || statuses.length === 0;
     const [subView, setSubView] = useState<SubView>('board');
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -117,7 +121,7 @@ export default function LeadsKanbanView({
                     params: {
                         statusId,
                         page,
-                        limit: 10,
+                        limit: 20,
                         my: scope === 'my' || undefined,
                         search: filters.search || undefined,
                         source: filters.source || undefined,
@@ -155,6 +159,7 @@ export default function LeadsKanbanView({
     );
 
     const fetchAllKanbanData = useCallback(async () => {
+        if (statuses.length === 0) return;
         setLoadingMoreMap({}); // Reset loading states
         // We set loading for all visible columns
         const visibleStatuses = statuses.filter(s => kanbanVisibleStatusNames.length === 0 || kanbanVisibleStatusNames.includes(s.name));
@@ -185,8 +190,8 @@ export default function LeadsKanbanView({
 
             data.forEach((item: any) => {
                 newBoardLeads[item.statusId] = item.leads || [];
-                newColumnCounts[item.statusId] = item.leads?.length || 0; // Backend returns first 10
-                newHasMoreMap[item.statusId] = (item.leads?.length || 0) === 10; // Assume more if we hit limit
+                newColumnCounts[item.statusId] = item.totalCount ?? item.leads?.length ?? 0;
+                newHasMoreMap[item.statusId] = (item.leads?.length || 0) < (item.totalCount || 0);
                 newPageMap[item.statusId] = 1;
             });
 
@@ -288,7 +293,7 @@ export default function LeadsKanbanView({
             id: s._id,
             title: s.name,
             leads: boardLeads[s._id] || [],
-            count: columnCounts[s._id] ?? (counts ? counts[s._id] || 0 : 0),
+            count: counts?.[s._id] ?? columnCounts[s._id] ?? 0,
             isLoading: columnLoading[s._id]
         }))
         .filter((group) => {
@@ -361,60 +366,70 @@ export default function LeadsKanbanView({
 
             {subView === 'board' && (
                 <div className="overflow-x-auto w-full pb-4">
-                    <div className="flex gap-4 h-[calc(100vh-280px)] min-w-max">
-                        {statusGroups.map((group) => (
-                            <div key={group.id} className="w-80 flex-shrink-0 flex flex-col">
-                                <div className="rounded-t-xl bg-secondary px-5 py-3">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="font-semibold text-white capitalize">{group.title}</h3>
-                                        <span className="rounded-full bg-white px-3 py-0.5 text-sm font-semibold text-secondary">
-                                            {group.count}
-                                        </span>
+                    {isInitiallyLoading ? (
+                        <div className="flex gap-4 h-[calc(100vh-280px)] min-w-max">
+                            {Array.from({ length: 4 }).map((_, i) => (
+                                <div key={i} className="w-80 flex-shrink-0">
+                                    <KanbanColumnSkeleton />
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex gap-4 h-[calc(100vh-280px)] min-w-max">
+                            {statusGroups.map((group) => (
+                                <div key={group.id} className="w-80 flex-shrink-0 flex flex-col">
+                                    <div className="rounded-t-xl bg-secondary px-5 py-3">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="font-semibold text-white capitalize">{group.title}</h3>
+                                            <span className="rounded-full bg-white px-3 py-0.5 text-sm font-semibold text-secondary">
+                                                {group.count}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        className="flex-1 overflow-y-auto rounded-b-lg bg-[#f4f7fb] p-3 space-y-3"
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={() => handleDrop(group.id)}
+                                        onScroll={(e) => {
+                                            const t = e.target as HTMLDivElement;
+                                            if (Math.ceil(t.scrollTop + t.clientHeight) >= t.scrollHeight - 20) {
+                                                loadMore(group.id);
+                                            }
+                                        }}
+                                    >
+                                        {group.isLoading ? (
+                                            <div className="flex h-full items-center justify-center py-10">
+                                                <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-transparent" />
+                                            </div>
+                                        ) : group.leads.length === 0 ? (
+                                            <div className="flex h-full items-center justify-center text-sm text-gray-400">
+                                                No leads
+                                            </div>
+                                        ) : (
+                                            group.leads.map((lead: ApiLead) => (
+                                                <KanbanCard
+                                                    key={lead._id}
+                                                    lead={lead}
+                                                    isUpdating={updatingId === lead._id}
+                                                    onDragStart={() => { if (permissions?.update) setDraggingId(lead._id); }}
+                                                    onView={() => onView?.(lead)}
+                                                    onEdit={permissions?.update ? () => onEdit?.(lead) : undefined}
+                                                    onMarkLost={permissions?.update ? () => markLost(lead._id) : undefined}
+                                                    onMarkWon={permissions?.update ? () => markWon(lead._id) : undefined}
+                                                />
+                                            ))
+                                        )}
+                                        {loadingMoreMap[group.id] && (
+                                            <div className="flex justify-center py-2">
+                                                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-
-                                <div
-                                    className="flex-1 overflow-y-auto rounded-b-lg bg-[#f4f7fb] p-3 space-y-3"
-                                    onDragOver={(e) => e.preventDefault()}
-                                    onDrop={() => handleDrop(group.id)}
-                                    onScroll={(e) => {
-                                        const t = e.target as HTMLDivElement;
-                                        if (Math.ceil(t.scrollTop + t.clientHeight) >= t.scrollHeight - 20) {
-                                            loadMore(group.id);
-                                        }
-                                    }}
-                                >
-                                    {group.isLoading ? (
-                                        <div className="flex h-full items-center justify-center py-10">
-                                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-transparent" />
-                                        </div>
-                                    ) : group.leads.length === 0 ? (
-                                        <div className="flex h-full items-center justify-center text-sm text-gray-400">
-                                            No leads
-                                        </div>
-                                    ) : (
-                                        group.leads.map((lead: ApiLead) => (
-                                            <KanbanCard
-                                                key={lead._id}
-                                                lead={lead}
-                                                isUpdating={updatingId === lead._id}
-                                                onDragStart={() => { if (permissions?.update) setDraggingId(lead._id); }}
-                                                onView={() => onView?.(lead)}
-                                                onEdit={permissions?.update ? () => onEdit?.(lead) : undefined}
-                                                onMarkLost={permissions?.update ? () => markLost(lead._id) : undefined}
-                                                onMarkWon={permissions?.update ? () => markWon(lead._id) : undefined}
-                                            />
-                                        ))
-                                    )}
-                                    {loadingMoreMap[group.id] && (
-                                        <div className="flex justify-center py-2">
-                                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 
