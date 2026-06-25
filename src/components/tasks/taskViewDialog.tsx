@@ -94,6 +94,16 @@ export default function TaskViewDialog({ task, taskStatuses, onClose }: TaskView
             </span>
           </div>
 
+          {/* Organization */}
+          {task.organization && (
+            <div className="rounded-lg border border-gray-200 p-3 col-span-1 md:col-span-2">
+              <div className="text-xs text-gray-500 font-medium text-slate-500">Organization</div>
+              <div className="font-semibold text-slate-900 mt-0.5">
+                {task.organization.name || (task.organization as any)}
+              </div>
+            </div>
+          )}
+
           {/* Dates */}
           <div className="rounded-lg border border-gray-200 p-3">
             <div className="text-xs text-gray-500">Start Date</div>

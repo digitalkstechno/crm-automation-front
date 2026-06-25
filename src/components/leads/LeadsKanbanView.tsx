@@ -1,7 +1,7 @@
 // components/leads/LeadsKanbanView.tsx
 // Kanban board with Board / Lost / Won sub-views + drag-and-drop
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { FiSearch, FiPhone, FiMail } from 'react-icons/fi';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -56,6 +56,137 @@ interface Props {
 
 type SubView = 'board' | 'lost' | 'won';
 
+interface KanbanColumnProps {
+    group: any;
+    updatingId: string | null;
+    draggingId: string | null;
+    setDraggingId: (id: string | null) => void;
+    permissions: any;
+    onView?: (lead: ApiLead) => void;
+    onEdit?: (lead: ApiLead) => void;
+    markLost: (id: string) => void;
+    markWon: (id: string) => void;
+    handleDrop: (statusId: string) => void;
+    loadMore: (statusId: string) => void;
+    loadingMoreMap: Record<string, boolean>;
+    fetchStatusLeads: (statusId: string, page?: number, isLoadMore?: boolean, isSilent?: boolean) => Promise<void>;
+    filters: any;
+    scope: string;
+    hasIntersected: boolean;
+    setHasIntersected: () => void;
+}
+
+function KanbanColumn({
+    group,
+    updatingId,
+    draggingId,
+    setDraggingId,
+    permissions,
+    onView,
+    onEdit,
+    markLost,
+    markWon,
+    handleDrop,
+    loadMore,
+    loadingMoreMap,
+    fetchStatusLeads,
+    filters,
+    scope,
+    hasIntersected,
+    setHasIntersected,
+}: KanbanColumnProps) {
+    const containerRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        if (hasIntersected) return;
+
+        const scrollContainer = containerRef.current?.closest('.overflow-x-auto');
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        setHasIntersected();
+                        observer.disconnect();
+                    }
+                });
+            },
+            {
+                root: scrollContainer || null,
+                rootMargin: '0px 200px 0px 200px', // Preload horizontal columns within 200px
+                threshold: 0.01,
+            }
+        );
+
+        if (containerRef.current) {
+            observer.observe(containerRef.current);
+        }
+
+        return () => {
+            observer.disconnect();
+        };
+    }, [hasIntersected, setHasIntersected]);
+
+    // Fetch leads when column scrolls/intersects into view
+    useEffect(() => {
+        if (hasIntersected) {
+            fetchStatusLeads(group.id, 1);
+        }
+    }, [hasIntersected, group.id, fetchStatusLeads]);
+
+    return (
+        <div ref={containerRef} className="w-80 flex-shrink-0 flex flex-col">
+            <div className="rounded-t-xl bg-secondary px-5 py-3">
+                <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-white capitalize">{group.title}</h3>
+                    <span className="rounded-full bg-white px-3 py-0.5 text-sm font-semibold text-secondary">
+                        {group.count}
+                    </span>
+                </div>
+            </div>
+
+            <div
+                className="flex-1 overflow-y-auto rounded-b-lg bg-[#f4f7fb] p-3 space-y-3"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handleDrop(group.id)}
+                onScroll={(e) => {
+                    const t = e.target as HTMLDivElement;
+                    if (Math.ceil(t.scrollTop + t.clientHeight) >= t.scrollHeight - 20) {
+                        loadMore(group.id);
+                    }
+                }}
+            >
+                {!hasIntersected || group.isLoading ? (
+                    <div className="flex h-full items-center justify-center py-10">
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-transparent" />
+                    </div>
+                ) : group.leads.length === 0 ? (
+                    <div className="flex h-full items-center justify-center text-sm text-gray-400">
+                        No leads
+                    </div>
+                ) : (
+                    group.leads.map((lead: ApiLead) => (
+                        <KanbanCard
+                            key={lead._id}
+                            lead={lead}
+                            isUpdating={updatingId === lead._id}
+                            onDragStart={() => { if (permissions?.update) setDraggingId(lead._id); }}
+                            onView={() => onView?.(lead)}
+                            onEdit={permissions?.update ? () => onEdit?.(lead) : undefined}
+                            onMarkLost={permissions?.update ? () => markLost(lead._id) : undefined}
+                            onMarkWon={permissions?.update ? () => markWon(lead._id) : undefined}
+                        />
+                    ))
+                )}
+                {loadingMoreMap[group.id] && (
+                    <div className="flex justify-center py-2">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export default function LeadsKanbanView({
     lostLeads, wonLeads,
     statuses,
@@ -77,6 +208,12 @@ export default function LeadsKanbanView({
     const [hasMoreMap, setHasMoreMap] = useState<Record<string, boolean>>({});
     const [loadingMoreMap, setLoadingMoreMap] = useState<Record<string, boolean>>({});
     const [columnCounts, setColumnCounts] = useState<Record<string, number>>({});
+    const [intersectedColumns, setIntersectedColumns] = useState<Record<string, boolean>>({});
+    
+    const intersectedRef = useRef(intersectedColumns);
+    useEffect(() => {
+        intersectedRef.current = intersectedColumns;
+    }, [intersectedColumns]);
 
     const [kanbanVisibleStatusNames, setKanbanVisibleStatusNames] = useState<string[]>([]);
 
@@ -115,7 +252,7 @@ export default function LeadsKanbanView({
                     params: {
                         statusId,
                         page,
-                        limit: 10,
+                        limit: 5, // USER REQUEST: limit should be 5 only
                         my: scope === 'my' || undefined,
                         search: filters.search || undefined,
                         source: filters.source || undefined,
@@ -132,7 +269,7 @@ export default function LeadsKanbanView({
                     [statusId]: isLoadMore ? [...(prev[statusId] || []), ...newData] : newData,
                 }));
 
-                const totalRecords = pagination.totalRecords ?? pagination.total ?? pagination.count ?? (isLoadMore ? (columnCounts[statusId] || 0) : newData.length);
+                const totalRecords = pagination.totalRecords ?? pagination.total ?? pagination.count ?? (isLoadMore ? 0 : newData.length);
                 setColumnCounts((prev) => ({ ...prev, [statusId]: totalRecords }));
 
                 setPageMap((prev) => ({ ...prev, [statusId]: page }));
@@ -178,9 +315,9 @@ export default function LeadsKanbanView({
             const newPageMap: Record<string, number> = {};
 
             data.forEach((item: any) => {
-                newBoardLeads[item.statusId] = item.leads || [];
-                newColumnCounts[item.statusId] = item.leads?.length || 0; // Backend returns first 10
-                newHasMoreMap[item.statusId] = (item.leads?.length || 0) === 10; // Assume more if we hit limit
+                newBoardLeads[item.statusId] = []; // Empty initially, lazy-loaded by IntersectionObserver
+                newColumnCounts[item.statusId] = item.totalCount || 0; // Display correct DB count in header
+                newHasMoreMap[item.statusId] = (item.totalCount || 0) > 0;
                 newPageMap[item.statusId] = 1;
             });
 
@@ -200,7 +337,28 @@ export default function LeadsKanbanView({
     useEffect(() => {
         if (subView !== 'board') return;
         fetchAllKanbanData();
+        setIntersectedColumns({}); // Reset columns visibility so they re-trigger IntersectionObserver
     }, [subView, scope, filters, fetchAllKanbanData]);
+
+    // Background counts refresh and visible columns update
+    useEffect(() => {
+        if (!counts || subView !== 'board') return;
+
+        setColumnCounts((prev) => {
+            const next = { ...prev };
+            Object.keys(counts).forEach((statusId) => {
+                next[statusId] = counts[statusId];
+            });
+            return next;
+        });
+
+        // Silently reload any columns that are already visible on the screen
+        Object.keys(intersectedRef.current).forEach((statusId) => {
+            if (intersectedRef.current[statusId]) {
+                fetchStatusLeads(statusId, 1, false, true);
+            }
+        });
+    }, [counts, subView, fetchStatusLeads]);
 
     const loadMore = useCallback(
         async (statusId: string) => {
@@ -249,6 +407,12 @@ export default function LeadsKanbanView({
             }
             return next;
         });
+
+        setColumnCounts(prev => ({
+            ...prev,
+            [sourceStatusId]: Math.max(0, (prev[sourceStatusId] || 0) - 1),
+            [newStatusId]: (prev[newStatusId] || 0) + 1,
+        }));
 
         try {
             await axios.put(
@@ -357,56 +521,26 @@ export default function LeadsKanbanView({
                 <div className="overflow-x-auto w-full pb-4">
                     <div className="flex gap-4 h-[calc(100vh-280px)] min-w-max">
                         {statusGroups.map((group) => (
-                            <div key={group.id} className="w-80 flex-shrink-0 flex flex-col">
-                                <div className="rounded-t-xl bg-secondary px-5 py-3">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="font-semibold text-white capitalize">{group.title}</h3>
-                                        <span className="rounded-full bg-white px-3 py-0.5 text-sm font-semibold text-secondary">
-                                            {group.count}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div
-                                    className="flex-1 overflow-y-auto rounded-b-lg bg-[#f4f7fb] p-3 space-y-3"
-                                    onDragOver={(e) => e.preventDefault()}
-                                    onDrop={() => handleDrop(group.id)}
-                                    onScroll={(e) => {
-                                        const t = e.target as HTMLDivElement;
-                                        if (Math.ceil(t.scrollTop + t.clientHeight) >= t.scrollHeight - 20) {
-                                            loadMore(group.id);
-                                        }
-                                    }}
-                                >
-                                    {group.isLoading ? (
-                                        <div className="flex h-full items-center justify-center py-10">
-                                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-transparent" />
-                                        </div>
-                                    ) : group.leads.length === 0 ? (
-                                        <div className="flex h-full items-center justify-center text-sm text-gray-400">
-                                            No leads
-                                        </div>
-                                    ) : (
-                                        group.leads.map((lead: ApiLead) => (
-                                            <KanbanCard
-                                                key={lead._id}
-                                                lead={lead}
-                                                isUpdating={updatingId === lead._id}
-                                                onDragStart={() => { if (permissions?.update) setDraggingId(lead._id); }}
-                                                onView={() => onView?.(lead)}
-                                                onEdit={permissions?.update ? () => onEdit?.(lead) : undefined}
-                                                onMarkLost={permissions?.update ? () => markLost(lead._id) : undefined}
-                                                onMarkWon={permissions?.update ? () => markWon(lead._id) : undefined}
-                                            />
-                                        ))
-                                    )}
-                                    {loadingMoreMap[group.id] && (
-                                        <div className="flex justify-center py-2">
-                                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                            <KanbanColumn
+                                key={group.id}
+                                group={group}
+                                updatingId={updatingId}
+                                draggingId={draggingId}
+                                setDraggingId={setDraggingId}
+                                permissions={permissions}
+                                onView={onView}
+                                onEdit={onEdit}
+                                markLost={markLost}
+                                markWon={markWon}
+                                handleDrop={handleDrop}
+                                loadMore={loadMore}
+                                loadingMoreMap={loadingMoreMap}
+                                fetchStatusLeads={fetchStatusLeads}
+                                filters={filters}
+                                scope={scope}
+                                hasIntersected={!!intersectedColumns[group.id]}
+                                setHasIntersected={() => setIntersectedColumns(prev => ({ ...prev, [group.id]: true }))}
+                            />
                         ))}
                     </div>
                 </div>

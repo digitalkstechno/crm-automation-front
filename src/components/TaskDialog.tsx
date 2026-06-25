@@ -7,7 +7,7 @@ import * as Yup from 'yup';
 import { baseUrl, getAuthToken } from '@/config';
 import Dialog, { CenterDialog } from './Dialog';
 import { DefaultEditor } from 'react-simple-wysiwyg';
-import { Eye, Download, Trash2, Paperclip } from 'lucide-react';
+import { Eye, Download, Trash2, Paperclip, ChevronDown, ChevronUp, CheckSquare, Square, MinusSquare, Search, Building2 } from 'lucide-react';
 import { getFileIcon } from '@/utills/utill';
 import FormInput from './ui/Input';
 import FormSelect from './ui/FormSelect';
@@ -27,11 +27,13 @@ interface StaffOption {
   fullName: string;
   email?: string;
   teams: any[];
+  organizations?: any[];
 }
 
 interface TeamOption {
   _id: string;
   name: string;
+  organization?: any;
 }
 
 export interface Task {
@@ -47,6 +49,7 @@ export interface Task {
   assignedTeams: { _id: string; name: string }[];
   description: string;
   attachments: Attachment[];
+  organization?: { _id: string; name: string } | null;
 }
 
 interface TaskDialogProps {
@@ -67,6 +70,7 @@ interface TaskFormData {
   assignedUsers: string[];
   assignedTeams: string[];
   description: string;
+  organization: string;
 }
 
 const defaultForm: TaskFormData = {
@@ -78,6 +82,7 @@ const defaultForm: TaskFormData = {
   assignedUsers: [],
   assignedTeams: [],
   description: '',
+  organization: '',
 };
 
 // Static TaskValidationSchema removed - moved inside component for dynamic required fields
@@ -113,6 +118,9 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
   const [loading, setLoading] = useState(false);
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [requiredFields, setRequiredFields] = useState<string[]>([]);
+  const [organizationList, setOrganizationList] = useState<any[]>([]);
+  const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>({});
+  const [assigneeSearch, setAssigneeSearch] = useState('');
 
   useEffect(() => {
     const loadRequiredFields = async () => {
@@ -164,6 +172,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
       priority: Yup.string().oneOf(['low', 'medium', 'high'], 'Invalid priority'),
       assignedUsers: Yup.array().of(Yup.string()),
       assignedTeams: Yup.array().of(Yup.string()),
+      organization: Yup.string().required('Organization is required'),
       description: Yup.string()
         .max(5000, 'Description must not exceed 5000 characters'),
     };
@@ -234,41 +243,74 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
     }
   };
 
-  const toggleUser = (id: string) => {
+  const handleToggleUser = (userId: string) => {
     const currentUsers = formik.values.assignedUsers;
-    const newUsers = currentUsers.includes(id)
-      ? currentUsers.filter((x) => x !== id)
-      : [...currentUsers, id];
+    const isSelected = currentUsers.includes(userId);
+    const newUsers = isSelected
+      ? currentUsers.filter((x) => x !== userId)
+      : [...currentUsers, userId];
+
+    let newTeams = [...formik.values.assignedTeams];
+    teamList.forEach((t) => {
+      const teamMembers = staffList
+        .filter((s) => Array.isArray(s.teams) && s.teams.some((tm: any) => (tm._id || tm) === t._id))
+        .map((s) => s._id);
+      if (teamMembers.length > 0) {
+        const allSelected = teamMembers.every((id) => newUsers.includes(id));
+        if (allSelected) {
+          if (!newTeams.includes(t._id)) newTeams.push(t._id);
+        } else {
+          newTeams = newTeams.filter((id) => id !== t._id);
+        }
+      }
+    });
+
+    updateField('assignedUsers', newUsers);
+    updateField('assignedTeams', newTeams);
+  };
+
+  const handleToggleTeam = (teamId: string, teamMembers: StaffOption[]) => {
+    const memberIds = teamMembers.map((m) => m._id);
+    const isTeamSelected = formik.values.assignedTeams.includes(teamId);
+    
+    let newUsers = [...formik.values.assignedUsers];
+    let newTeams = [...formik.values.assignedTeams];
+
+    if (isTeamSelected || (memberIds.length > 0 && memberIds.every((id) => newUsers.includes(id)))) {
+      newTeams = newTeams.filter((id) => id !== teamId);
+      if (memberIds.length > 0) {
+        newUsers = newUsers.filter((id) => !memberIds.includes(id));
+      }
+    } else {
+      if (!newTeams.includes(teamId)) {
+        newTeams.push(teamId);
+      }
+      memberIds.forEach((id) => {
+        if (!newUsers.includes(id)) {
+          newUsers.push(id);
+        }
+      });
+    }
+
+    updateField('assignedTeams', newTeams);
     updateField('assignedUsers', newUsers);
   };
 
-  const toggleTeam = (teamId: string) => {
-    const teamMembers = staffList
-      .filter((s) => Array.isArray(s.teams) && s.teams.some((t: any) => (t._id || t) === teamId))
-      .map((s) => s._id);
+  const toggleExpandTeam = (teamId: string) => {
+    setExpandedTeams((prev) => ({
+      ...prev,
+      [teamId]: !prev[teamId],
+    }));
+  };
 
-    const isSelected = formik.values.assignedTeams.includes(teamId);
-    const updatedTeams = isSelected
-      ? formik.values.assignedTeams.filter((x) => x !== teamId)
-      : [...formik.values.assignedTeams, teamId];
-
-    let updatedUsers = [...formik.values.assignedUsers];
-    if (isSelected) {
-      const otherTeamMemberIds = new Set(
-        staffList
-          .filter((s) => Array.isArray(s.teams) && s.teams.some((t: any) => updatedTeams.includes(t._id || t)))
-          .map((s) => s._id)
-      );
-      updatedUsers = updatedUsers.filter((uid) => {
-        const isMember = teamMembers.includes(uid);
-        return !isMember || otherTeamMemberIds.has(uid);
-      });
-    } else {
-      teamMembers.forEach((uid) => { if (!updatedUsers.includes(uid)) updatedUsers.push(uid); });
+  const getTeamSelectionState = (teamId: string, members: StaffOption[]) => {
+    if (members.length === 0) {
+      return formik.values.assignedTeams.includes(teamId) ? 'checked' : 'unchecked';
     }
-
-    updateField('assignedTeams', updatedTeams);
-    updateField('assignedUsers', updatedUsers);
+    const selectedCount = members.filter((m) => formik.values.assignedUsers.includes(m._id)).length;
+    if (selectedCount === 0) return 'unchecked';
+    if (selectedCount === members.length) return 'checked';
+    return 'indeterminate';
   };
 
   /**
@@ -348,15 +390,98 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
       axios.get(`${baseUrl.getAllStaff}?limit=1000`, { headers }),
       axios.get(baseUrl.teams, { headers }),
       axios.get(baseUrl.taskStatuses, { headers }),
+      axios.get(baseUrl.organizations, { headers }),
     ])
-      .then(([staffRes, teamRes, statusRes]) => {
+      .then(([staffRes, teamRes, statusRes, orgRes]) => {
         setStaffList(staffRes.data?.data || []);
         setTeamList(teamRes.data?.data || []);
         setLocalTaskStatuses(statusRes.data?.data || []);
+        setOrganizationList(orgRes.data?.data || []);
       })
       .catch(() => { })
       .finally(() => setLoadingOptions(false));
   }, [isOpen]);
+
+  const filteredTeams = useMemo(() => {
+    if (!formik.values.organization) return [];
+    return teamList.filter((t) => {
+      const orgId = t.organization?._id || t.organization;
+      return orgId === formik.values.organization;
+    });
+  }, [teamList, formik.values.organization]);
+
+  const filteredStaff = useMemo(() => {
+    if (!formik.values.organization) return [];
+    return staffList.filter((s) => {
+      return Array.isArray(s.organizations) && s.organizations.some(
+        (o: any) => (o._id || o) === formik.values.organization
+      );
+    });
+  }, [staffList, formik.values.organization]);
+
+  // Clean invalid selections on organization change
+  useEffect(() => {
+    if (!isOpen) return;
+    if (formik.values.organization) {
+      const validTeamIds = new Set(filteredTeams.map((t) => t._id));
+      const validStaffIds = new Set(filteredStaff.map((s) => s._id));
+
+      const newAssignedTeams = formik.values.assignedTeams.filter((id) => validTeamIds.has(id));
+      const newAssignedUsers = formik.values.assignedUsers.filter((id) => validStaffIds.has(id));
+
+      if (newAssignedTeams.length !== formik.values.assignedTeams.length) {
+        formik.setFieldValue('assignedTeams', newAssignedTeams);
+      }
+      if (newAssignedUsers.length !== formik.values.assignedUsers.length) {
+        formik.setFieldValue('assignedUsers', newAssignedUsers);
+      }
+    }
+  }, [formik.values.organization, filteredTeams, filteredStaff, isOpen]);
+
+  const teamsWithMembers = useMemo(() => {
+    const groups = filteredTeams.map((t) => {
+      const members = filteredStaff.filter((s) => 
+        Array.isArray(s.teams) && s.teams.some((tm: any) => (tm._id || tm) === t._id)
+      );
+      return {
+        ...t,
+        members
+      };
+    });
+
+    if (!assigneeSearch.trim()) return groups;
+    const search = assigneeSearch.toLowerCase();
+    
+    return groups.map((g) => {
+      const matchingMembers = g.members.filter((m) => 
+        m.fullName.toLowerCase().includes(search) || 
+        (m.email && m.email.toLowerCase().includes(search))
+      );
+      const matchesTeamName = g.name.toLowerCase().includes(search);
+      return {
+        ...g,
+        members: matchesTeamName ? g.members : matchingMembers,
+        visible: matchesTeamName || matchingMembers.length > 0
+      };
+    }).filter((g) => (g as any).visible);
+  }, [filteredTeams, filteredStaff, assigneeSearch]);
+
+  const directStaff = useMemo(() => {
+    const teamStaffIds = new Set(
+      filteredTeams.flatMap((t) => 
+        filteredStaff.filter((s) => Array.isArray(s.teams) && s.teams.some((tm: any) => (tm._id || tm) === t._id)).map((s) => s._id)
+      )
+    );
+    
+    const otherStaff = filteredStaff.filter((s) => !teamStaffIds.has(s._id));
+
+    if (!assigneeSearch.trim()) return otherStaff;
+    const search = assigneeSearch.toLowerCase();
+    return otherStaff.filter((s) => 
+      s.fullName.toLowerCase().includes(search) || 
+      (s.email && s.email.toLowerCase().includes(search))
+    );
+  }, [filteredTeams, filteredStaff, assigneeSearch]);
 
   // Populate form on edit
   useEffect(() => {
@@ -370,6 +495,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
         assignedUsers: (initialData.assignedUsers || []).map((u: any) => u._id || u),
         assignedTeams: (initialData.assignedTeams || []).map((t: any) => t._id || t),
         description: initialData.description || '',
+        organization: initialData.organization?._id || (initialData.organization as any) || '',
       };
       formik.setValues(formData as any);
       setExistingAttachments(initialData.attachments || []);
@@ -379,6 +505,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
       setExistingAttachments([]);
     }
     setPreviewUrl(null);
+    setAssigneeSearch('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, initialData, isOpen]);
 
@@ -403,7 +530,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
             value={formik.values.subject}
             onChange={formik.handleChange}
             onBlur={formik.handleBlur}
-            error={formik.touched.subject && formik.errors.subject}
+            error={(formik.touched.subject && formik.errors.subject) || undefined}
             placeholder=""
             as="input"
             required={requiredFields.includes('subject')}
@@ -444,7 +571,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
               value={formik.values.startDate}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
-              error={formik.touched.startDate && formik.errors.startDate}
+              error={(formik.touched.startDate && formik.errors.startDate) || undefined}
               placeholder=""
               as="input"
               required={requiredFields.includes('startDate')}
@@ -456,7 +583,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
               value={formik.values.endDate}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
-              error={formik.touched.endDate && formik.errors.endDate}
+              error={(formik.touched.endDate && formik.errors.endDate) || undefined}
               placeholder=""
               as="input"
               required={requiredFields.includes('endDate')}
@@ -472,7 +599,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
               onChange={(val) => formik.setFieldValue('status', val)}
               // onBlur={() => formik.setFieldTouched('status')}
               options={dropdownStatuses.map((s: any) => ({ value: s._id, label: s.name! }))}
-              error={formik.touched.status && formik.errors.status}
+              error={(formik.touched.status && formik.errors.status) || undefined}
               placeholder="— Select Status —"
               required={requiredFields.includes('status')}
             />
@@ -483,94 +610,199 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
               onChange={(val) => updateField('priority', val)}
               onBlur={() => formik.setFieldTouched('priority')}
               options={PRIORITY_OPTIONS.map((p) => ({ value: p.value, label: p.label }))}
-              error={formik.touched.priority && formik.errors.priority}
+              error={(formik.touched.priority && formik.errors.priority) || undefined}
               placeholder="— Select Priority —"
               required={requiredFields.includes('priority')}
             />
           </div>
 
-          {/* Assign Teams */}
-          <div>
-            <Label>Assign Teams {requiredFields.includes('assignedTeams') && <span className="text-red-700 ml-1 font-semibold">*</span>}</Label>
-            {loadingOptions ? (
-              <div className="text-sm text-gray-400">Loading...</div>
-            ) : (
-              <div className="max-h-32 overflow-y-auto align-center rounded-xl border border-gray-300 p-2">
-                <div className="space-y-1">
-
-                  {teamList.length === 0 ? (
-                    <p className="text-xs text-gray-400 px-2">No teams available</p>
-                  ) : (
-                    teamList.map((t) => {
-                      const memberCount = staffList.filter(
-                        (s) => Array.isArray(s.teams) && s.teams.some((tm: any) => (tm._id || tm) === t._id)
-                      ).length;
-                      return (
-                        <FormInput
-                          key={t._id}
-                          as="checkbox"
-                          name={`team_${t._id}`}
-                          checked={formik.values.assignedTeams.includes(t._id)}
-                          onChange={() => toggleTeam(t._id)}
-                          label={
-                            <div className="flex items-center justify-between w-full">
-                              <span className="text-sm text-gray-700">{t.name}</span>
-                              {memberCount > 0 && (
-                                <span className="text-xs ml-2 text-gray-400">
-                                  {memberCount} member{memberCount > 1 ? 's' : ''}
-                                </span>
-                              )}
-                            </div>
-                          }
-                          className="hover:bg-gray-50 rounded px-2 py-2 mt-2"
-                          labelClassName="w-full"
-                          compact
-                        />
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            )}
+          {/* Organization Selector */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormSelect
+              label="Organization"
+              name="organization"
+              value={formik.values.organization}
+              onChange={(val) => formik.setFieldValue('organization', val)}
+              options={[{ value: '', label: '— Select Organization —' }, ...organizationList.map((o) => ({ value: o._id, label: o.name }))]}
+              error={(formik.touched.organization && formik.errors.organization) || undefined}
+              placeholder="— Select Organization —"
+              required
+            />
           </div>
 
-          {/* Assign Users */}
-          <div>
-            <Label>Assign Users {requiredFields.includes('assignedUsers') && <span className="text-red-700 ml-1 font-semibold">*</span>}</Label>
-            {loadingOptions ? (
-              <div className="text-sm text-gray-400">Loading...</div>
-            ) : (
-              <div className="max-h-32 overflow-y-auto rounded-xl border border-gray-300 p-2 space-y-1">
-                {staffList.length === 0 ? (
-                  <p className="text-xs text-gray-400 px-2">No staff available</p>
-                ) : (
-                  staffList.map((s) => {
-                    const isViaTeam =
-                      Array.isArray(s.teams) &&
-                      s.teams.some((t: any) => formik.values.assignedTeams.includes(t._id || t));
-                    return (
+          {/* Collapsible Accordion for Teams & Users Assignment */}
+          <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/50 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-200">
+              <div>
+                <Label className="font-semibold text-gray-800">Assign Teams & Users</Label>
+                <p className="text-xs text-gray-500">
+                  Select a team to assign all members, or select individual members.
+                </p>
+              </div>
+              
+              {/* Assignee Search Input */}
+              <div className="relative max-w-xs w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search team or user..."
+                  value={assigneeSearch}
+                  onChange={(e) => setAssigneeSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-1.5 text-sm rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+            </div>
 
-                      <FormInput
-                        key={s._id}
-                        as="checkbox"
-                        name={`user_${s._id}`}
-                        label={
-                          <div className="flex items-center justify-between w-full">
-                            <span className="text-sm text-gray-700">{s.fullName}</span>
-                            {isViaTeam && (
-                              <span className="text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full">
-                                via team
-                              </span>
+            {loadingOptions ? (
+              <div className="flex items-center justify-center py-6 text-sm text-gray-400">
+                <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2" />
+                Loading assignees...
+              </div>
+            ) : !formik.values.organization ? (
+              <div className="text-center py-10 text-sm text-gray-500 bg-white border border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2">
+                <Building2 className="w-8 h-8 text-gray-400" />
+                <span className="font-semibold text-gray-700">Please select an organization first</span>
+                <span className="text-xs text-gray-400 px-4">Teams and staff members will be filtered based on the selected organization.</span>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                {teamsWithMembers.length === 0 && directStaff.length === 0 && (
+                  <div className="text-center py-6 text-sm text-gray-500">No teams or staff match search / organization.</div>
+                )}
+
+                {/* Teams Accordion */}
+                {teamsWithMembers.map((group) => {
+                  const state = getTeamSelectionState(group._id, group.members);
+                  const isExpanded = !!expandedTeams[group._id];
+                  
+                  return (
+                    <div key={group._id} className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm transition-all duration-200 hover:shadow">
+                      {/* Team Header */}
+                      <div 
+                        className="flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-slate-100/80 cursor-pointer select-none transition-colors"
+                        onClick={() => toggleExpandTeam(group._id)}
+                      >
+                        <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleTeam(group._id, group.members)}
+                            className="text-gray-500 hover:text-blue-600 transition-colors"
+                          >
+                            {state === 'checked' ? (
+                              <CheckSquare className="w-5 h-5 text-blue-600" />
+                            ) : state === 'indeterminate' ? (
+                              <MinusSquare className="w-5 h-5 text-blue-500" />
+                            ) : (
+                              <Square className="w-5 h-5" />
+                            )}
+                          </button>
+                          <span className="font-semibold text-gray-800 text-sm">{group.name}</span>
+                          <span className="text-xs bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded-full font-medium">
+                            {group.members.length} member{group.members.length !== 1 ? 's' : ''}
+                          </span>
+                          {group.organization && (
+                            <span className="text-[10px] bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded-md font-medium">
+                              {group.organization.name || 'Org'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-gray-400 hover:text-gray-600">
+                          {isExpanded ? (
+                            <ChevronUp className="w-4 h-4 transition-transform duration-200" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 transition-transform duration-200" />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Team Members List */}
+                      {isExpanded && (
+                        <div className="divide-y divide-gray-100 px-4 py-1 bg-white animate-fadeIn">
+                          {group.members.length === 0 ? (
+                            <div className="py-3 text-xs text-gray-400 italic text-center">No members in this team</div>
+                          ) : (
+                            group.members.map((member) => {
+                              const isChecked = formik.values.assignedUsers.includes(member._id);
+                              return (
+                                <div 
+                                  key={member._id}
+                                  className="flex items-center gap-3 py-2.5 hover:bg-slate-50/50 transition-colors cursor-pointer"
+                                  onClick={() => handleToggleUser(member._id)}
+                                >
+                                  <button
+                                    type="button"
+                                    className="text-gray-400 hover:text-blue-600 transition-colors flex-shrink-0"
+                                  >
+                                    {isChecked ? (
+                                      <CheckSquare className="w-4 h-4 text-blue-600" />
+                                    ) : (
+                                      <Square className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-700 truncate">{member.fullName}</p>
+                                    {member.email && (
+                                      <p className="text-xs text-gray-400 truncate">{member.email}</p>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Direct/Other Staff Section */}
+                {directStaff.length > 0 && (
+                  <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                    {/* Section Header */}
+                    <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-150 flex items-center justify-between">
+                      <span className="font-semibold text-gray-800 text-sm">Direct / Individual Staff</span>
+                      <span className="text-xs text-gray-400 font-medium">{directStaff.length} staff</span>
+                    </div>
+                    {/* Members list */}
+                    <div className="divide-y divide-gray-100 px-4 py-1">
+                      {directStaff.map((member) => {
+                        const isChecked = formik.values.assignedUsers.includes(member._id);
+                        return (
+                          <div 
+                            key={member._id}
+                            className="flex items-center gap-3 py-2.5 hover:bg-slate-50/50 transition-colors cursor-pointer"
+                            onClick={() => handleToggleUser(member._id)}
+                          >
+                            <button
+                              type="button"
+                              className="text-gray-400 hover:text-blue-600 transition-colors flex-shrink-0"
+                            >
+                              {isChecked ? (
+                                <CheckSquare className="w-4 h-4 text-blue-600" />
+                              ) : (
+                                <Square className="w-4 h-4" />
+                              )}
+                            </button>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-700 truncate">{member.fullName}</p>
+                              {member.email && (
+                                <p className="text-xs text-gray-400 truncate">{member.email}</p>
+                              )}
+                            </div>
+                            {Array.isArray(member.organizations) && member.organizations.length > 0 && (
+                              <div className="flex gap-1 flex-shrink-0">
+                                {member.organizations.map((o: any, idx) => (
+                                  <span key={idx} className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">
+                                    {o.name || o}
+                                  </span>
+                                ))}
+                              </div>
                             )}
                           </div>
-                        }
-                        checked={formik.values.assignedUsers.includes(s._id)}
-                        onChange={() => toggleUser(s._id)}
-                        className="hover:bg-gray-50 rounded px-2 py-1"
-                        labelClassName="w-full"
-                      />
-                    );
-                  })
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
               </div>
             )}

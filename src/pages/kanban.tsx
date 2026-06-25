@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   FiSearch,
   FiPhone,
@@ -135,6 +135,8 @@ export default function LeadsPage() {
   });
 
   // View dialog edit states
+  const [editingStatus, setEditingStatus] = useState("");
+  const [editingNextFollowupDate, setEditingNextFollowupDate] = useState("");
   const [editingNextFollowupTime, setEditingNextFollowupTime] = useState("");
   const [requiredFields, setRequiredFields] = useState<string[]>([]);
 

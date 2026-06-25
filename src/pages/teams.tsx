@@ -16,6 +16,7 @@ type Team = {
   _id: string; 
   name: string; 
   teamLeader?: { _id: string; fullName: string; email: string };
+  organization?: { _id: string; name: string } | null;
   createdAt?: string; 
 };
 
@@ -36,6 +37,7 @@ const validationSchema = Yup.object({
     .max(100, 'Team name must be at most 100 characters')
     .matches(/^[a-zA-Z0-9\s&-]+$/, 'Team name can only contain letters, numbers, spaces, &, and -'),
   teamLeader: Yup.string().nullable(),
+  organization: Yup.string().nullable(),
 });
 
 export function TeamsContent() {
@@ -52,6 +54,7 @@ export function TeamsContent() {
   const [toDelete, setToDelete] = useState<Team | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [staffOptions, setStaffOptions] = useState<{ label: string; value: string }[]>([]);
+  const [organizationOptions, setOrganizationOptions] = useState<{ label: string; value: string }[]>([]);
 
   const token = typeof window !== 'undefined' ? getAuthToken() : null;
   const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
@@ -69,6 +72,7 @@ export function TeamsContent() {
       _id: '',
       name: '',
       teamLeader: '',
+      organization: '',
     },
     validationSchema,
     validateOnChange: true,
@@ -113,6 +117,22 @@ export function TeamsContent() {
       .catch((err) => console.error("Failed to fetch staff list", err));
   }, [token]);
 
+  useEffect(() => {
+    if (!token) return;
+    axios
+      .get(baseUrl.organizations, { headers })
+      .then((res) => {
+        const orgList = res.data?.data || [];
+        setOrganizationOptions(
+          orgList.map((o: any) => ({
+            label: o.name,
+            value: o._id,
+          }))
+        );
+      })
+      .catch((err) => console.error("Failed to fetch organizations list", err));
+  }, [token]);
+
   const fetchData = async () => {
     try {
       const res = await axios.get(baseUrl.teams, {
@@ -130,10 +150,14 @@ export function TeamsContent() {
 
   useEffect(() => { fetchData(); }, [debouncedSearch, currentPage, pageSize]);
 
-  const handleSave = async (values: { _id?: string; name: string; teamLeader?: string }) => {
+  const handleSave = async (values: { _id?: string; name: string; teamLeader?: string; organization?: string }) => {
     setIsSubmitting(true);
     try {
-      const payload = { name: values.name, teamLeader: values.teamLeader || undefined };
+      const payload = { 
+        name: values.name, 
+        teamLeader: values.teamLeader || undefined,
+        organization: values.organization || undefined
+      };
       if (values._id) {
         await axios.put(`${baseUrl.teams}/${values._id}`, payload, { headers });
         toast.success('Team updated successfully');
@@ -181,6 +205,7 @@ export function TeamsContent() {
       _id: row._id,
       name: row.name,
       teamLeader: row.teamLeader?._id || '',
+      organization: row.organization?._id || (row.organization as any) || '',
     });
     setIsDialogOpen(true);
   };
@@ -206,6 +231,11 @@ export function TeamsContent() {
       key: 'teamLeader',
       label: 'Team Leader',
       render: (v: any) => v?.fullName ? <span className="text-gray-700">{v.fullName}</span> : <span className="text-gray-400 italic">Not Assigned</span>
+    },
+    {
+      key: 'organization',
+      label: 'Organization',
+      render: (v: any) => v?.name ? <span className="text-gray-700 font-medium">{v.name}</span> : <span className="text-gray-400 italic">Not Assigned</span>
     }
   ];
 
@@ -341,6 +371,16 @@ export function TeamsContent() {
             onChange={(val) => formik.setFieldValue("teamLeader", val)}
             options={[{ label: 'None', value: '' }, ...staffOptions]}
             placeholder="Select a team leader"
+            disabled={isSubmitting}
+          />
+
+          <FormSelect
+            label="Organization (Optional)"
+            name="organization"
+            value={formik.values.organization || ''}
+            onChange={(val) => formik.setFieldValue("organization", val)}
+            options={[{ label: 'None', value: '' }, ...organizationOptions]}
+            placeholder="Select an organization"
             disabled={isSubmitting}
           />
 
