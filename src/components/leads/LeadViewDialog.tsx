@@ -513,8 +513,8 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
   useEffect(() => {
     if (lead) {
       setEditStatus(lead.leadStatus?._id || '');
-      setEditNextDate(lead.nextFollowupDate || '');
-      setEditNextTime(lead.nextFollowupTime || '');
+      setEditNextDate('');
+      setEditNextTime('');
       setLocalFollowUps(lead.followUps || []);
       setFollowupNote('');
     } else {
