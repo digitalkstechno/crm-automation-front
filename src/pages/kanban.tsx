@@ -38,6 +38,8 @@ type ApiLead = {
   companyName?: string;
   address?: string;
   contact: string;
+  phone?: string;
+  countryCode?: string;
   email: string;
   leadSource?: ApiSource;
   leadLabel?: LeadLabel[];
@@ -70,6 +72,7 @@ type AddLeadForm = {
   companyName?: string;
   address?: string;
   phone: string;
+  countryCode?: string;
   email: string;
   source: string;
   label: string[]; // Added label field
@@ -191,7 +194,7 @@ export default function LeadsPage() {
       setPageMap(initPages);
       setHasMoreMap(initHasMore);
     } catch (error) {
-      console.error("Failed to fetch leads", error);
+      console.error();
       toast.error("Failed to load leads");
     } finally {
       setLoading(false);
@@ -220,7 +223,7 @@ export default function LeadsPage() {
         setHasMoreMap(prev => ({ ...prev, [statusId]: false }));
       }
     } catch (error) {
-      console.error("Failed to load more leads", error);
+      console.error();
     } finally {
       setLoadingMoreMap(prev => ({ ...prev, [statusId]: false }));
     }
@@ -235,7 +238,7 @@ export default function LeadsPage() {
       });
       setLostLeadsList(res.data?.data || []);
     } catch (error) {
-      console.error("Failed to fetch lost leads", error);
+      console.error();
       setLostLeadsList([]);
     } finally {
       setLoadingLost(false);
@@ -251,7 +254,7 @@ export default function LeadsPage() {
       });
       setWonLeadsList(res.data?.data || []);
     } catch (error) {
-      console.error("Failed to fetch won leads", error);
+      console.error();
       setWonLeadsList([]);
     } finally {
       setLoadingWon(false);
@@ -267,7 +270,7 @@ export default function LeadsPage() {
       const data = res.data?.data ?? res.data;
       setSources(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Failed to fetch sources", error);
+      console.error();
     }
   };
 
@@ -280,7 +283,7 @@ export default function LeadsPage() {
       const data = res.data?.data;
       setLeadLabels(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Failed to fetch lead labels", error);
+      console.error();
     }
   };
 
@@ -293,7 +296,7 @@ export default function LeadsPage() {
       const data = res.data?.data ?? res.data;
       setStatuses(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Failed to fetch statuses", error);
+      console.error();
     }
   };
 
@@ -306,7 +309,7 @@ export default function LeadsPage() {
       const data = res.data?.data ?? res.data;
       setStaffMembers(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Failed to fetch staff", error);
+      console.error();
     }
   };
 
@@ -362,9 +365,7 @@ export default function LeadsPage() {
       };
 
       if (editingLead) {
-        // Edit mode - don't include status and next follow-up date
-        const { leadStatus, nextFollowupDate, ...editPayload } = payload;
-        await axios.put(`${baseUrl.updateLead}/${editingLead._id}`, editPayload, {
+        await axios.put(`${baseUrl.updateLead}/${editingLead._id}`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         toast.success("Lead updated successfully");
@@ -385,7 +386,7 @@ export default function LeadsPage() {
       fetchLostLeads();
       fetchWonLeads();
     } catch (error: any) {
-      console.error(error);
+      console.warn(err);
       toast.error(error.response?.data?.message || "Failed to save lead");
     } finally {
       setAddingLead(false);
@@ -468,6 +469,12 @@ export default function LeadsPage() {
     setEditingNextFollowupTime(lead.nextFollowupTime || "");
   };
 
+  const closeViewDialog = () => {
+    setViewLead(null);
+    setEditingNextFollowupDate("");
+    setEditingNextFollowupTime("");
+  };
+
   const handleSaveViewChanges = async () => {
     if (!viewLead) return;
 
@@ -489,9 +496,9 @@ export default function LeadsPage() {
       fetchLeads();
       fetchLostLeads();
       fetchWonLeads();
-      setViewLead(null);
+      closeViewDialog();
     } catch (error: any) {
-      console.error(error);
+      console.warn(err);
       toast.error(error.response?.data?.message || "Failed to update lead");
     }
   };
@@ -1435,12 +1442,12 @@ export default function LeadsPage() {
         {/* View Lead Dialog with Edit Capabilities */}
         <Dialog
           isOpen={!!viewLead}
-          onClose={() => setViewLead(null)}
+          onClose={closeViewDialog}
           title="Lead Details"
           footer={
             <>
               <button
-                onClick={() => setViewLead(null)}
+                onClick={closeViewDialog}
                 className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 Close
@@ -1455,28 +1462,27 @@ export default function LeadsPage() {
           }
         >
           {viewLead && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="font-semibold text-xl">{viewLead.fullName}</div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="bg-gray-50 p-3 rounded-lg">
                   <div className="text-sm text-gray-600">Company</div>
                   <div>{viewLead.companyName || "-"}</div>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="bg-gray-50 p-3 rounded-lg">
                   <div className="text-sm text-gray-600">Phone</div>
                   <div>{viewLead.contact || "-"}</div>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="bg-gray-50 p-3 rounded-lg">
                   <div className="text-sm text-gray-600">Email</div>
                   <div>{viewLead.email || "-"}</div>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="bg-gray-50 p-3 rounded-lg">
                   <div className="text-sm text-gray-600">Source</div>
                   <div>{viewLead.leadSource?.name || "-"}</div>
                 </div>
-                {/* Status Selection Boxes */}
-                <div className="bg-gray-50 p-4 rounded-lg md:col-span-2">
-                  <div className="text-sm text-gray-600 mb-3">Status</div>
+                <div className="bg-gray-50 p-3 rounded-lg md:col-span-2">
+                  <div className="text-sm text-gray-600 mb-2">Status</div>
                   <div className="flex flex-wrap gap-2">
                     {statuses.map((s) => (
                       <button
@@ -1492,22 +1498,22 @@ export default function LeadsPage() {
                     ))}
                   </div>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="bg-gray-50 p-3 rounded-lg">
                   <div className="text-sm text-gray-600">Assigned Staff</div>
                   <div>{viewLead.assignedTo?.fullName || "-"}</div>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="bg-gray-50 p-3 rounded-lg">
                   <div className="text-sm text-gray-600">Priority</div>
                   <div>{viewLead.priority || "-"}</div>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="bg-gray-50 p-3 rounded-lg">
                   <div className="text-sm text-gray-600">Last Follow-Up</div>
                   <div>{viewLead.lastFollowUp || "-"}</div>
                 </div>
               </div>
               {/* Editable Next Follow-up */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="bg-gray-50 p-3 rounded-lg">
                   <div className="text-sm text-gray-600 mb-2">Next Follow-Up Date</div>
                   <input
                     type="date"
@@ -1516,7 +1522,7 @@ export default function LeadsPage() {
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="bg-gray-50 p-3 rounded-lg">
                   <div className="text-sm text-gray-600 mb-2">Next Follow-Up Time</div>
                   <input
                     type="time"
@@ -1527,13 +1533,13 @@ export default function LeadsPage() {
                 </div>
               </div>
               {viewLead.note && (
-                <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="bg-gray-50 p-3 rounded-lg">
                   <div className="text-sm text-gray-600">Note</div>
                   <div>{viewLead.note}</div>
                 </div>
               )}
               {viewLead.attachments && viewLead.attachments.length > 0 && (
-                <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="bg-gray-50 p-3 rounded-lg">
                   <div className="text-sm text-gray-600">Attachments</div>
                   <div className="space-y-2 mt-2">
                     {viewLead.attachments.map((attachment, index) => (
@@ -1551,7 +1557,7 @@ export default function LeadsPage() {
                 </div>
               )}
               {viewLead.isLost && (
-                <div className="bg-red-50 p-4 rounded-lg">
+                <div className="bg-red-50 p-3 rounded-lg">
                   <div className="text-sm text-red-600 font-medium">Lost Information</div>
                   <div className="mt-2 text-sm">
                     <div>Lost Date: {viewLead.lostDate ? new Date(viewLead.lostDate).toLocaleDateString() : 'N/A'}</div>
@@ -1560,7 +1566,7 @@ export default function LeadsPage() {
                 </div>
               )}
               {viewLead.isWon && (
-                <div className="bg-green-50 p-4 rounded-lg">
+                <div className="bg-green-50 p-3 rounded-lg">
                   <div className="text-sm text-green-600 font-medium">Won Information</div>
                   <div className="mt-2 text-sm">
                     <div>Won Date: {viewLead.wonDate ? new Date(viewLead.wonDate).toLocaleDateString() : 'N/A'}</div>

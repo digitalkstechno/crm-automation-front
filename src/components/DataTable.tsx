@@ -61,6 +61,8 @@ interface DataTableProps<T> {
   selectable?: boolean;
   selectedRows?: T[];
   onSelectionChange?: (selectedRows: T[]) => void;
+  sortableRows?: boolean;
+  onReorder?: (newOrder: T[]) => void;
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -92,10 +94,29 @@ export default function DataTable<T extends Record<string, any>>({
   selectable,
   selectedRows = [],
   onSelectionChange,
+  sortableRows,
+  onReorder,
 }: DataTableProps<T>) {
   const [searchValue, setSearchValue] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+
+  const { DndContext, closestCenter } = require('@dnd-kit/core');
+  const { SortableContext, verticalListSortingStrategy, arrayMove } = require('@dnd-kit/sortable');
+  const { SortableTableRow } = require('./SortableTableRow');
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    if (active.id !== over.id) {
+      const oldIndex = data.findIndex((item) => (item.id || item._id) === active.id);
+      const newIndex = data.findIndex((item) => (item.id || item._id) === over.id);
+      
+      const newData = arrayMove(data, oldIndex, newIndex);
+      if (onReorder) {
+        onReorder(newData);
+      }
+    }
+  };
 
   const renderCell = (column: Column<T>, row: T) => {
     const value = row[column.key as string];
@@ -156,6 +177,154 @@ export default function DataTable<T extends Record<string, any>>({
       onPageChange(1);
     }
   }, [pagination, currentPage, data.length, totalRecords, onPageChange]);
+
+  const renderRows = () => {
+    if (loading) {
+      return (
+        <tr>
+          <td colSpan={columns.length + (actions ? 1 : 0)} className="px-6 py-16 text-center">
+            <div className="flex flex-col items-center justify-center gap-4">
+              <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-200 border-r-blue-600"></div>
+              <p className="text-sm font-medium text-gray-600">Loading your data...</p>
+            </div>
+          </td>
+        </tr>
+      );
+    }
+    if (data.length === 0) {
+      return (
+        <tr>
+          <td colSpan={columns.length + (actions ? 1 : 0)} className="px-3 py-16 text-center">
+            <div className="flex flex-col items-center justify-center gap-3">
+              <div className="rounded-full bg-gray-50 p-4">
+                <FiSearch className="h-8 w-8 text-gray-400" />
+              </div>
+              <p className="text-sm font-medium text-gray-600">No records found</p>
+              <p className="text-xs text-gray-400">Try adjusting your search or filters</p>
+              {addButton && (
+                <button
+                  onClick={addButton.onClick}
+                  className="mt-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  + Add your first record
+                </button>
+              )}
+            </div>
+          </td>
+        </tr>
+      );
+    }
+    return data.map((row, index) => {
+      const trProps = {
+        key: String(row.id || row._id || index),
+        onMouseEnter: () => setHoveredRow(index),
+        onMouseLeave: () => setHoveredRow(null),
+        className: `
+          transition-all duration-200
+          ${striped && index % 2 === 1 ? 'bg-gray-50/50' : 'bg-white'}
+          ${hoveredRow === index ? 'bg-blue-50/30' : ''}
+          border-b border-gray-50 last:border-0
+        `
+      };
+      
+      const RowComponent = sortableRows ? SortableTableRow : 'tr';
+      const rowId = row.id || row._id || index;
+
+      return (
+      <RowComponent
+        {...trProps}
+        id={String(rowId)}
+      >
+        {selectable && (
+          <td className="px-6 py-4">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              checked={selectedRows.some(r => (r.id || r._id) === (row.id || row._id))}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  onSelectionChange?.([...selectedRows, row]);
+                } else {
+                  onSelectionChange?.(selectedRows.filter(r => (r.id || r._id) !== (row.id || row._id)));
+                }
+              }}
+            />
+          </td>
+        )}
+        {columns.map((column) => (
+          <td
+            key={String(column.key)}
+            className={`px-6 py-4 text-sm text-gray-700 whitespace-nowrap ${column.className || ''}`}
+          >
+            {renderCell(column, row)}
+          </td>
+        ))}
+
+        {actions && (onView || onEdit || onDelete || extraActions) && (
+          <td className="px-6 py-4">
+            <div className="flex items-center gap-2">
+
+              {/* VIEW */}
+              {onView && (
+                <button
+                  onClick={() => onView(row)}
+                  className="group h-9 w-9 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition-all duration-200 hover:bg-[#0a2352] hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:scale-95"
+                >
+                  <FiEye className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                </button>
+              )}
+
+              {/* EDIT */}
+              {onEdit && (!canEdit || canEdit(row)) && (
+                <button
+                  onClick={() => onEdit(row)}
+                  className="group h-9 w-9 flex items-center justify-center rounded-lg bg-gray-100 text-green-600 transition-all duration-200 hover:bg-green-600 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 active:scale-95"
+                >
+                  <FiEdit className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                </button>
+              )}
+
+              {/* DELETE */}
+              {onDelete && (!canDelete || canDelete(row)) && (
+                <button
+                  onClick={() => onDelete(row)}
+                  className="group h-9 w-9 flex items-center justify-center rounded-lg bg-gray-100 text-red-600 transition-all duration-200 hover:bg-red-500 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 active:scale-95"
+                >
+                  <FiTrash2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                </button>
+              )}
+
+              {/* EXTRA ACTIONS */}
+              {extraActions?.map((act, idx) => {
+                const colors: Record<string, string> = {
+                  blue: 'text-blue-600 hover:bg-blue-600 focus:ring-blue-500',
+                  green: 'text-green-600 hover:bg-green-600 focus:ring-green-500',
+                  red: 'text-red-600 hover:bg-red-500 focus:ring-red-500',
+                  orange: 'text-orange-600 hover:bg-orange-500 focus:ring-orange-500',
+                  purple: 'text-purple-600 hover:bg-purple-600 focus:ring-purple-500',
+                  emerald: 'text-emerald-600 hover:bg-emerald-600 focus:ring-emerald-500',
+                };
+                const colorClass = colors[act.color || 'blue'];
+                if (act.show && !act.show(row)) return null;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => act.onClick(row)}
+                    className={`group h-9 min-w-[36px] flex items-center justify-center rounded-lg bg-gray-100 ${colorClass} hover:text-white px-3 transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-95`}
+                    title={act.label}
+                  >
+                    {act.icon && <span className={act.label ? 'mr-1.5' : ''}>{act.icon}</span>}
+                    {act.label && <span className="text-xs font-semibold">{act.label}</span>}
+                  </button>
+                );
+              })}
+
+            </div>
+          </td>
+        )}
+      </RowComponent>
+    )})
+  };
 
   return (
     <div className="rounded-md bg-white border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-2xl">
@@ -263,6 +432,7 @@ export default function DataTable<T extends Record<string, any>>({
                     />
                   </th>
                 )}
+                {sortableRows && <th className="px-3 py-4 w-10"></th>}
                 {columns.map((column) => (
                   <th
                     key={String(column.key)}
@@ -279,140 +449,19 @@ export default function DataTable<T extends Record<string, any>>({
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-gray-50 bg-white">
-              {loading ? (
-                <tr>
-                  <td colSpan={columns.length + (actions ? 1 : 0)} className="px-6 py-16 text-center">
-                    <div className="flex flex-col items-center justify-center gap-4">
-                      <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-200 border-r-blue-600"></div>
-                      <p className="text-sm font-medium text-gray-600">Loading your data...</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : data.length === 0 ? (
-                <tr>
-                  <td colSpan={columns.length + (actions ? 1 : 0)} className="px-3 py-16 text-center">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="rounded-full bg-gray-50 p-4">
-                        <FiSearch className="h-8 w-8 text-gray-400" />
-                      </div>
-                      <p className="text-sm font-medium text-gray-600">No records found</p>
-                      <p className="text-xs text-gray-400">Try adjusting your search or filters</p>
-                      {addButton && (
-                        <button
-                          onClick={addButton.onClick}
-                          className="mt-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
-                        >
-                          + Add your first record
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                data.map((row, index) => (
-                  <tr
-                    key={index}
-                    onMouseEnter={() => setHoveredRow(index)}
-                    onMouseLeave={() => setHoveredRow(null)}
-                    className={`
-                    transition-all duration-200
-                    ${striped && index % 2 === 1 ? 'bg-gray-50/50' : 'bg-white'}
-                    ${hoveredRow === index ? 'bg-blue-50/30' : ''}
-                    border-b border-gray-50 last:border-0
-                  `}
-                  >
-                    {selectable && (
-                      <td className="px-6 py-4">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                          checked={selectedRows.some(r => (r.id || r._id) === (row.id || row._id))}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              onSelectionChange?.([...selectedRows, row]);
-                            } else {
-                              onSelectionChange?.(selectedRows.filter(r => (r.id || r._id) !== (row.id || row._id)));
-                            }
-                          }}
-                        />
-                      </td>
-                    )}
-                    {columns.map((column) => (
-                      <td
-                        key={String(column.key)}
-                        className={`px-6 py-4 text-sm text-gray-700 whitespace-nowrap ${column.className || ''}`}
-                      >
-                        {renderCell(column, row)}
-                      </td>
-                    ))}
-
-                    {actions && (onView || onEdit || onDelete || extraActions) && (
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-
-                          {/* VIEW */}
-                          {onView && (
-                            <button
-                              onClick={() => onView(row)}
-                              className="group h-9 w-9 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition-all duration-200 hover:bg-[#0a2352] hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:scale-95"
-                            >
-                              <FiEye className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                            </button>
-                          )}
-
-                          {/* EDIT */}
-                          {onEdit && (!canEdit || canEdit(row)) && (
-                            <button
-                              onClick={() => onEdit(row)}
-                              className="group h-9 w-9 flex items-center justify-center rounded-lg bg-gray-100 text-green-600 transition-all duration-200 hover:bg-green-600 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 active:scale-95"
-                            >
-                              <FiEdit className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                            </button>
-                          )}
-
-                          {/* DELETE */}
-                          {onDelete && (!canDelete || canDelete(row)) && (
-                            <button
-                              onClick={() => onDelete(row)}
-                              className="group h-9 w-9 flex items-center justify-center rounded-lg bg-gray-100 text-red-600 transition-all duration-200 hover:bg-red-500 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 active:scale-95"
-                            >
-                              <FiTrash2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                            </button>
-                          )}
-
-                          {/* EXTRA ACTIONS */}
-                          {extraActions?.map((act, idx) => {
-                            const colors: Record<string, string> = {
-                              blue: 'text-blue-600 hover:bg-blue-600 focus:ring-blue-500',
-                              green: 'text-green-600 hover:bg-green-600 focus:ring-green-500',
-                              red: 'text-red-600 hover:bg-red-500 focus:ring-red-500',
-                              orange: 'text-orange-600 hover:bg-orange-500 focus:ring-orange-500',
-                              purple: 'text-purple-600 hover:bg-purple-600 focus:ring-purple-500',
-                              emerald: 'text-emerald-600 hover:bg-emerald-600 focus:ring-emerald-500',
-                            };
-                            const colorClass = colors[act.color || 'blue'];
-                            if (act.show && !act.show(row)) return null;
-                            return (
-                              <button
-                                key={idx}
-                                onClick={() => act.onClick(row)}
-                                className={`group h-9 min-w-[36px] flex items-center justify-center rounded-lg bg-gray-100 ${colorClass} hover:text-white px-3 transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-95`}
-                                title={act.label}
-                              >
-                                {act.icon && <span className={act.label ? 'mr-1.5' : ''}>{act.icon}</span>}
-                                {act.label && <span className="text-xs font-semibold">{act.label}</span>}
-                              </button>
-                            );
-                          })}
-
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))
-              )}
-            </tbody>
+            {sortableRows ? (
+              <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={data.map(d => d.id || d._id)} strategy={verticalListSortingStrategy}>
+                  <tbody className="divide-y divide-gray-50 bg-white">
+                    {renderRows()}
+                  </tbody>
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <tbody className="divide-y divide-gray-50 bg-white">
+                {renderRows()}
+              </tbody>
+            )}
           </table>
         </div>
 

@@ -47,12 +47,6 @@ const validationSchema = Yup.object({
       }
       return !reservedNames.includes(value?.toLowerCase());
     }),
-  
-  order: Yup.number()
-    .required('Order is required')
-    .integer('Order must be a whole number')
-    .min(1, 'Order must be at least 1')
-    .max(9999, 'Order must be at most 9999'),
 });
 
 export function LeadStatusContent() {
@@ -83,7 +77,6 @@ export function LeadStatusContent() {
     initialValues: {
       _id: '',
       name: '',
-      order: 1,
       originalName: '', // Store original name for reserved check
     },
     validationSchema,
@@ -119,7 +112,7 @@ export function LeadStatusContent() {
       setAllData(items);
       setTotalRecords(res.data.pagination?.totalRecords || items.length);
     } catch (err: any) {
-      console.error('Failed to load lead statuses', err);
+      console.error();
       setAllData([]);
       setTotalRecords(0);
       toast.error(err?.response?.data?.message || 'Failed to load lead statuses');
@@ -134,11 +127,11 @@ export function LeadStatusContent() {
 
   /* ================= SAVE (add or edit) ================= */
 
-  const saveStatus = async (values: { _id?: string; name: string; order: number; originalName?: string }) => {
+  const saveStatus = async (values: { _id?: string; name: string; originalName?: string }) => {
     setIsSubmitting(true);
 
     try {
-      const payload = { name: values.name.trim(), order: values.order };
+      const payload = { name: values.name.trim() };
 
       if (values._id) {
         // EDIT: fetch by ID first
@@ -157,7 +150,7 @@ export function LeadStatusContent() {
       setIsDialogOpen(false);
       formik.resetForm();
     } catch (err: any) {
-      console.error('Failed to save', err);
+      console.error();
       toast.error(err?.response?.data?.message || 'Operation failed');
     } finally {
       setIsSubmitting(false);
@@ -185,7 +178,7 @@ export function LeadStatusContent() {
       setShowDeleteDialog(false);
       setStatusToDelete(null);
     } catch (err: any) {
-      console.error('Delete failed', err);
+      console.error();
       toast.error(err?.response?.data?.message || 'Failed to delete lead status');
     } finally {
       setIsDeleting(false);
@@ -198,6 +191,22 @@ export function LeadStatusContent() {
     { key: 'name', label: 'Name' },
     { key: 'order', label: 'Order' },
   ];
+
+  /* ================= REORDER ================= */
+  const handleReorder = async (newData: LeadItem[]) => {
+    // Optimistic update
+    setAllData(newData);
+    try {
+      const items = newData.map((item, index) => ({ _id: item._id, order: index + 1 }));
+      await axios.put(`${baseUrl.leadStatuses}/reorder`, { items }, { headers });
+      toast.success('Order updated');
+      fetchData();
+    } catch (err: any) {
+      console.error();
+      toast.error(err?.response?.data?.message || 'Failed to update order');
+      fetchData(); // revert
+    }
+  };
 
   // Check if a status is reserved (cannot be edited or deleted)
   const isReserved = (name: string) => {
@@ -220,6 +229,8 @@ export function LeadStatusContent() {
         totalRecords={totalRecords}
         pageSize={pageSize}
         loading={isLoading}
+        sortableRows={true}
+        onReorder={handleReorder}
         onSearch={(v) => {
           setSearch(v);
           setCurrentPage(1);
@@ -236,12 +247,11 @@ export function LeadStatusContent() {
             formik.setValues({
               _id: data._id,
               name: data.name,
-              order: data.order,
               originalName: data.name, // Store original name for validation
             });
             setIsDialogOpen(true);
           } catch (err: any) {
-            console.error('Failed to fetch by ID', err);
+            console.error();
             toast.error(err?.response?.data?.message || 'Failed to fetch data');
           }
         }}
@@ -362,20 +372,7 @@ export function LeadStatusContent() {
             error={formik.touched.name && formik.errors.name ? formik.errors.name : undefined}
             required
             placeholder="Enter status name"
-            disabled={isSubmitting || (formik.values._id && isReserved(formik.values.originalName))}
-          />
-          
-          <FormInput
-            label="Order"
-            name="order"
-            type="number"
-            value={formik.values.order}
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-            error={formik.touched.order && formik.errors.order ? formik.errors.order : undefined}
-            required
-            placeholder="Enter display order"
-            disabled={isSubmitting}
+            disabled={isSubmitting || (!!formik.values._id && isReserved(formik.values.originalName))}
           />
 
           {formik.values._id && isReserved(formik.values.originalName) && (

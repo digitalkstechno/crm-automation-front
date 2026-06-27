@@ -27,6 +27,7 @@ interface Lead {
   companyName?: string;
   address?: string;
   phone: string;
+  countryCode?: string;
   email: string;
   source: string;     // _id when editing
   status: string;     // _id when editing
@@ -110,7 +111,7 @@ export default function LeadAddDialog({
         setStaffList(staffRes.data?.data || []);
         setLeadLabels(labelsRes.data?.data || []);
       } catch (err) {
-        console.error(err);
+        console.warn(err);
         setFormError('Failed to load dropdown options');
       } finally {
         setLoading(false);
@@ -269,7 +270,7 @@ export default function LeadAddDialog({
 
       onClose();
     } catch (error: any) {
-      console.error(`${mode} lead failed:`, error);
+      console.error();
       const msg = error.response?.data?.message || `Failed to ${mode} lead`;
       setFormError(msg);
       toast.error(msg);

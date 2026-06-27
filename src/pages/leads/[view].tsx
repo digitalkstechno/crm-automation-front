@@ -101,7 +101,7 @@ export default function LeadsPage() {
         setLeadPermissions(lp);
         if (!lp.readAll && lp.readOwn) setActiveTab('my');
       } catch (error) {
-        console.error('Failed to fetch permissions:', error);
+        console.error();
         setLeadPermissions(null);
       }
     };
@@ -234,7 +234,7 @@ export default function LeadsPage() {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('Export failed:', err);
+      console.error();
       alert('Export failed. Please try again.');
     } finally {
       setExporting(false);

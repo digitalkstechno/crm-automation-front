@@ -40,12 +40,6 @@ const validationSchema = Yup.object({
         .max(50, 'Status name must be at most 50 characters')
         .matches(/^[a-zA-Z0-9\s&-]+$/, 'Status name can only contain letters, numbers, spaces, &, and -'),
     
-    order: Yup.number()
-        .required('Order is required')
-        .integer('Order must be a whole number')
-        .min(1, 'Order must be at least 1')
-        .max(9999, 'Order must be at most 9999'),
-    
     color: Yup.string()
         .required('Color is required')
         .matches(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color code. Use format: #RRGGBB or #RGB'),
@@ -72,7 +66,6 @@ export function TaskStatusContent() {
         initialValues: {
             _id: '',
             name: '',
-            order: 1,
             color: '#6B7280',
         },
         validationSchema,
@@ -108,7 +101,7 @@ export function TaskStatusContent() {
             setAllData(items);
             setTotalRecords(res.data.pagination?.totalRecords || items.length);
         } catch (err: any) {
-            console.error('Failed to load task statuses', err);
+            console.error();
             setAllData([]);
             setTotalRecords(0);
             toast.error(err?.response?.data?.message || 'Failed to load task statuses');
@@ -122,12 +115,11 @@ export function TaskStatusContent() {
 
     /* ================= SAVE (ADD / EDIT) ================= */
 
-    const saveTaskStatus = async (values: { _id?: string; name: string; order: number; color: string }) => {
+    const saveTaskStatus = async (values: { _id?: string; name: string; color: string }) => {
         setIsSubmitting(true);
 
         const payload = {
             name: values.name.trim(),
-            order: values.order,
             color: values.color
         };
 
@@ -150,7 +142,7 @@ export function TaskStatusContent() {
             setIsDialogOpen(false);
             formik.resetForm();
         } catch (err: any) {
-            console.error('Failed to save task status', err);
+            console.error();
             toast.error(err?.response?.data?.message || 'Operation failed');
         } finally {
             setIsSubmitting(false);
@@ -178,7 +170,7 @@ export function TaskStatusContent() {
             setShowDeleteDialog(false);
             setStatusToDelete(null);
         } catch (err: any) {
-            console.error('Failed to delete', err);
+            console.error();
             toast.error(err?.response?.data?.message || 'Delete failed');
         } finally {
             setIsDeleting(false);
@@ -202,45 +194,60 @@ export function TaskStatusContent() {
             formik.setValues({
                 _id: data._id,
                 name: data.name,
-                order: data.order,
                 color: data.color || '#6B7280',
             });
             setIsDialogOpen(true);
         } catch (err: any) {
-            console.error('Failed to fetch by id', err);
+            console.error();
             toast.error(err?.response?.data?.message || 'Failed to fetch data');
         }
     };
 
     /* ================= COLUMNS ================= */
 
-    const renderNameCell = (value: string, row: TaskStatusItem) => (
-        <div className="flex items-center gap-3">
-            <div
-                className="w-3 h-3 rounded-full shadow-sm"
-                style={{ backgroundColor: row.color }}
-                title={row.color}
-            />
-            <span className="text-gray-700">{value}</span>
-        </div>
-    );
-
-    const renderOrderCell = (value: number) => (
-        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-medium">
-            #{value}
-        </span>
-    );
+    const handleReorder = async (newData: TaskStatusItem[]) => {
+        setAllData(newData);
+        try {
+            const items = newData.map((item, index) => ({ _id: item._id, order: index + 1 }));
+            await axios.put(`${baseUrl.taskStatuses}/reorder`, { items }, { headers });
+            toast.success('Order updated');
+            fetchData();
+        } catch (err: any) {
+            console.error();
+            toast.error(err?.response?.data?.message || 'Failed to update order');
+            fetchData(); // revert
+        }
+    };
 
     const columns: Column<TaskStatusItem>[] = [
         {
+            key: 'color',
+            label: 'Color',
+            render: (_, row) => (
+                <div className="flex items-center gap-3">
+                    <div
+                        className="h-4 w-4 rounded-full shadow-sm border border-gray-200"
+                        style={{ backgroundColor: row.color || '#6B7280' }}
+                    />
+                    <span className="font-mono text-xs text-gray-500 uppercase">{row.color || '#6B7280'}</span>
+                </div>
+            ),
+        },
+        {
             key: 'name',
             label: 'Name',
-            render: renderNameCell
+            render: (_, row) => (
+                <span className="font-medium text-gray-900">{row.name}</span>
+            )
         },
         {
             key: 'order',
             label: 'Order',
-            render: renderOrderCell
+            render: (_, row) => (
+                <span className="inline-flex items-center justify-center h-6 w-6 rounded-md bg-gray-100 text-xs font-medium text-gray-700 border border-gray-200">
+                    {row.order}
+                </span>
+            )
         },
     ];
 
@@ -264,6 +271,9 @@ export function TaskStatusContent() {
                 totalPages={Math.ceil(totalRecords / pageSize)}
                 totalRecords={totalRecords}
                 pageSize={pageSize}
+                loading={false}
+                sortableRows={true}
+                onReorder={handleReorder}
                 onSearch={(v) => {
                     setSearch(v);
                     setCurrentPage(1);
@@ -395,21 +405,6 @@ export function TaskStatusContent() {
                         required
                         placeholder="e.g., To Do, In Progress, Done"
                         helperText="Unique name for the task status"
-                        disabled={isSubmitting}
-                    />
-
-                    {/* Order Field */}
-                    <FormInput
-                        label="Display Order"
-                        name="order"
-                        type="number"
-                        value={formik.values.order}
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        error={formik.touched.order && formik.errors.order ? formik.errors.order : undefined}
-                        required
-                        placeholder="Enter display order"
-                        helperText="Lower numbers appear first"
                         disabled={isSubmitting}
                     />
 

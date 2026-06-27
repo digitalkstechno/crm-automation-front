@@ -73,7 +73,7 @@ export default function TaskKanbanView({
           [statusId]: page < (pagination.totalPages || 1),
         }));
       } catch (error) {
-        console.error(`Failed to fetch tasks for status ${statusId}:`, error);
+        console.error();
       } finally {
         setColumnLoading((p) => ({ ...p, [statusId]: false }));
         setLoadingMoreMap((p) => ({ ...p, [statusId]: false }));

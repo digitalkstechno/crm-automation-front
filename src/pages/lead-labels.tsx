@@ -48,12 +48,6 @@ const validationSchema = Yup.object({
     color: Yup.string()
         .required('Color is required')
         .matches(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color code. Use format: #RRGGBB or #RGB'),
-    
-    order: Yup.number()
-        .required('Order is required')
-        .integer('Order must be a whole number')
-        .min(1, 'Order must be at least 1')
-        .max(9999, 'Order must be at most 9999'),
 });
 
 /* ================= CONTENT ================= */
@@ -80,7 +74,6 @@ export function LeadLabelsContent() {
             _id: '',
             name: '',
             color: '#3B82F6',
-            order: 1,
         },
         validationSchema,
         validateOnChange: true,
@@ -108,7 +101,7 @@ export function LeadLabelsContent() {
             setAllData(data);
             setTotalRecords(res.data.pagination?.totalRecords || data.length);
         } catch (err: any) {
-            console.error('Failed to load lead labels', err);
+            console.error();
             setAllData([]);
             setTotalRecords(0);
             toast.error(err?.response?.data?.message || 'Failed to load lead labels');
@@ -122,13 +115,12 @@ export function LeadLabelsContent() {
 
     /* ================= SAVE (ADD / EDIT) ================= */
 
-    const saveLeadLabel = async (values: { _id?: string; name: string; color: string; order: number }) => {
+    const saveLeadLabel = async (values: { _id?: string; name: string; color: string }) => {
         setIsSubmitting(true);
 
         const payload = {
             name: values.name.trim(),
-            color: values.color,
-            order: values.order
+            color: values.color
         };
 
         try {
@@ -147,7 +139,7 @@ export function LeadLabelsContent() {
             setIsDialogOpen(false);
             formik.resetForm();
         } catch (err: any) {
-            console.error('Failed to save lead label', err);
+            console.error();
             toast.error(err.response?.data?.message || 'Operation failed');
         } finally {
             setIsSubmitting(false);
@@ -173,7 +165,7 @@ export function LeadLabelsContent() {
             setShowDeleteDialog(false);
             setLabelToDelete(null);
         } catch (err: any) {
-            console.error('Failed to delete', err);
+            console.error();
             toast.error(err.response?.data?.message || 'Delete failed');
         } finally {
             setIsDeleting(false);
@@ -194,35 +186,58 @@ export function LeadLabelsContent() {
         formik.setValues({
             _id: row._id,
             name: row.name,
-            color: row.color,
-            order: row.order
+            color: row.color || '#3B82F6',
         });
         setIsDialogOpen(true);
     };
 
-    /* ================= CUSTOM COLOR CELL RENDERER ================= */
-
-    const renderColorCell = (value: string) => (
-        <div className="flex items-center gap-2">
-            <div
-                className="w-6 h-6 rounded border border-gray-300 shadow-sm"
-                style={{ backgroundColor: value }}
-                title={value}
-            />
-            <span className="text-sm font-mono text-gray-600">{value}</span>
-        </div>
-    );
+    /* ================= REORDER ================= */
+    const handleReorder = async (newData: LeadLabel[]) => {
+        setAllData(newData);
+        try {
+            const items = newData.map((item, index) => ({ _id: item._id, order: index + 1 }));
+            await axios.put(`${baseUrl.leadLabels}/reorder`, { items }, { headers });
+            toast.success('Order updated');
+            fetchData();
+        } catch (err: any) {
+            console.error();
+            toast.error(err?.response?.data?.message || 'Failed to update order');
+            fetchData(); // revert
+        }
+    };
 
     /* ================= COLUMNS ================= */
 
     const columns: Column<LeadLabel>[] = [
-        { key: 'name', label: 'Name' },
         {
             key: 'color',
             label: 'Color',
-            render: renderColorCell
+            render: (_, row) => (
+                <div className="flex items-center gap-3">
+                    <div
+                        className="h-4 w-4 rounded-full shadow-sm border border-gray-200"
+                        style={{ backgroundColor: row.color || '#3B82F6' }}
+                    />
+                    <span className="font-mono text-xs text-gray-500 uppercase">{row.color || '#3B82F6'}</span>
+                </div>
+            ),
         },
-        { key: 'order', label: 'Order' },
+        {
+            key: 'name',
+            label: 'Name',
+            render: (_, row) => (
+                <span className="font-medium text-gray-900">{row.name}</span>
+            )
+        },
+        {
+            key: 'order',
+            label: 'Order',
+            render: (_, row) => (
+                <span className="inline-flex items-center justify-center h-6 w-6 rounded-md bg-gray-100 text-xs font-medium text-gray-700 border border-gray-200">
+                    {row.order}
+                </span>
+            )
+        },
         {
             key: 'count',
             label: 'Used Count',
@@ -254,6 +269,9 @@ export function LeadLabelsContent() {
                 totalPages={Math.ceil(totalRecords / pageSize)}
                 totalRecords={totalRecords}
                 pageSize={pageSize}
+                loading={false}
+                sortableRows={true}
+                onReorder={handleReorder}
                 onSearch={(v) => {
                     setSearch(v);
                     setCurrentPage(1);
@@ -423,21 +441,6 @@ export function LeadLabelsContent() {
                             Enter hex color code (e.g., #FF0000 for red, #00FF00 for green)
                         </p>
                     </div>
-
-                    {/* Order Field */}
-                    <FormInput
-                        label="Display Order"
-                        name="order"
-                        type="number"
-                        value={formik.values.order}
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        error={formik.touched.order && formik.errors.order ? formik.errors.order : undefined}
-                        required
-                        placeholder="Enter display order"
-                        helperText="Lower numbers appear first"
-                        disabled={isSubmitting}
-                    />
 
                     {/* Preview */}
                     {formik.values.name && formik.values.color && (

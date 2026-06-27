@@ -389,7 +389,7 @@ export default function SalesExecutiveForm({
             name="status"
             value={formik.values.status}
             onChange={(e) => { formik.setFieldValue('status', e); formik.setFieldTouched('status', true, false); }}
-            onBlur={formik.handleBlur}
+            onBlur={() => formik.setFieldTouched('status')}
             options={statusOptions.map((status) => ({ value: status, label: status }))}
             placeholder="— Select —"
             error={formik.touched.status && formik.errors.status ? formik.errors.status : undefined}
@@ -399,7 +399,7 @@ export default function SalesExecutiveForm({
             name="role"
             value={formik.values.role}
             onChange={(e) => { formik.setFieldValue('role', e); formik.setFieldTouched('role', true, false); }}
-            onBlur={formik.handleBlur}
+            onBlur={() => formik.setFieldTouched('role')}
             options={roles.map((role) => ({ value: role._id, label: role.roleName }))}
             placeholder="— Select —"
             error={formik.touched.role && formik.errors.role ? formik.errors.role : undefined}
@@ -416,7 +416,7 @@ export default function SalesExecutiveForm({
               onChange={(vals) => { formik.setFieldValue('teams', vals); formik.setFieldTouched('teams', true, false); }}
               onBlur={() => formik.setFieldTouched('teams')}
               options={teams.map((t) => ({ value: t._id, label: t.name }))}
-              error={formik.touched.teams && formik.errors.teams ? formik.errors.teams : undefined}
+              error={formik.touched.teams && typeof formik.errors.teams === 'string' ? formik.errors.teams : undefined}
               placeholder="Select teams..."
             />
           </div>
@@ -428,7 +428,7 @@ export default function SalesExecutiveForm({
               onChange={(vals) => { formik.setFieldValue('organizations', vals); formik.setFieldTouched('organizations', true, false); }}
               onBlur={() => formik.setFieldTouched('organizations')}
               options={organizations.map((o) => ({ value: o._id, label: o.name }))}
-              error={formik.touched.organizations && formik.errors.organizations ? formik.errors.organizations : undefined}
+              error={formik.touched.organizations && typeof formik.errors.organizations === 'string' ? formik.errors.organizations : undefined}
               placeholder="Select organizations..."
             />
           </div>

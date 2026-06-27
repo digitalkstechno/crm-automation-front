@@ -173,7 +173,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
           function (value) {
             const { startDate } = this.parent;
             if (!startDate || !value) return true;
-            return new Date(value) >= new Date(startDate);
+            return new Date(value) > new Date(startDate);
           }
         ),
       status: Yup.string(),

@@ -84,7 +84,7 @@ export default function LeadBulkImportDialog({ isOpen, onClose, onImported }: Pr
           });
           setStaff(res.data?.data || []);
         } catch (error) {
-          console.error('Failed to fetch staff', error);
+          console.error();
         } finally {
           setLoadingStaff(false);
         }

@@ -155,19 +155,29 @@ export default function LeadsListView({
     {
       key: 'contact',
       label: 'CONTACT',
-      render: (_, row) => (
+      render: (_, row) => {
+        let num = row.contact || row.phone || '';
+        let code = row.countryCode || '';
+        if (num.startsWith('+')) {
+            code = ''; // Ignore if already has +
+        } else if (code && !code.startsWith('+')) {
+            code = '+' + code;
+        }
+        const fullPhone = code ? `${code} ${num}` : num;
+        
+        return (
         <div className="space-y-1 text-sm">
           {/* Phone number */}
           <div className="flex items-center gap-1.5 text-gray-600">
             <Phone className="h-3 w-3 text-gray-400" />
-            <span>{row.phone || '-'}</span>
+            <span>{fullPhone || '-'}</span>
           </div>
           {/* Action icons */}
-          {row.phone && (
+          {fullPhone && (
             <div className="flex items-center gap-2 mt-1">
               {/* Call Now */}
               <a
-                href={`tel:${row.phone.replace(/[^0-9+]/g, '')}`}
+                href={`tel:${fullPhone.replace(/[^0-9+]/g, '')}`}
                 title="Call Now"
                 onClick={(e) => e.stopPropagation()}
                 className="flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600 hover:bg-blue-100 transition-colors"
@@ -177,7 +187,7 @@ export default function LeadsListView({
               </a>
               {/* WhatsApp */}
               <a
-                href={`https://wa.me/${row.phone.replace(/[^0-9]/g, '')}`}
+                href={`https://wa.me/${fullPhone.replace(/[^0-9]/g, '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="WhatsApp"
@@ -213,7 +223,7 @@ export default function LeadsListView({
             )}
           </div>
         </div>
-      ),
+      )},
     },
     { key: 'source', label: 'SOURCE', className: 'hidden xl:table-cell' },
     { key: 'status', label: 'STATUS' },

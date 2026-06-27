@@ -201,7 +201,7 @@ export function RolesContent() {
         setCurrentPage(pagination.totalPages || 1);
       }
     } catch (err) {
-      console.error('Failed to fetch roles:', err);
+      console.error();
       setRolesData([]);
       setTotalRecords(0);
       setTotalPages(1);
@@ -242,7 +242,7 @@ export function RolesContent() {
       setEditingRole(normalized);
       setIsFormOpen(true);
     } catch (err) {
-      console.error('Error fetching role by ID:', err);
+      console.error();
       toast.error('Failed to load role details');
     }
   };
@@ -269,12 +269,12 @@ export function RolesContent() {
       }
 
       refreshAfterMutation();
-    } catch (err) {
-      console.error('Failed to save role:', err);
-      toast.error('Failed to save role');
-    } finally {
       setIsFormOpen(false);
       setEditingRole(null);
+      return true;
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to save role');
+      return false;
     }
   };
 
@@ -299,7 +299,7 @@ export function RolesContent() {
       setShowDeleteDialog(false);
       setRoleToDelete(null);
     } catch (err) {
-      console.error('Failed to delete role:', err);
+      console.error();
       toast.error('Failed to delete role');
     }
   };

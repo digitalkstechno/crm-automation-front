@@ -121,7 +121,7 @@ export function WhatsappSettingsContent() {
         }
       }
     } catch (err: any) {
-      console.error('Failed to sync templates:', err);
+      console.error();
       setTemplateError('Failed to communicate with the WhatsApp settings backend.');
     } finally {
       setLoadingTemplates(false);

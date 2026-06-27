@@ -96,7 +96,7 @@ export function OrganizationsContent() {
       setData(res.data?.data ?? []);
       setTotalRecords(res.data?.pagination?.totalRecords ?? 0);
     } catch (err: any) {
-      console.error('Failed to fetch organizations', err);
+      console.error();
       setData([]);
       toast.error(err?.response?.data?.message || 'Failed to load organizations');
     }

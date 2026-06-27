@@ -39,6 +39,8 @@ export type ApiLead = {
   companyName?: string;
   address?: string;
   contact: string;
+  phone?: string;
+  countryCode?: string;
   email: string;
   leadSource?: ApiSource;
   leadLabel?: LeadLabel[];
@@ -66,6 +68,7 @@ export type ApiLead = {
   lostDate?: string;
   wonDate?: string;
   amountDate?: string;
+  products?: string[] | any[];
 };
 
 export type AddLeadForm = {
@@ -73,6 +76,7 @@ export type AddLeadForm = {
   companyName?: string;
   address?: string;
   phone: string;
+  countryCode?: string;
   email: string;
   source: string;
   labels: string[];

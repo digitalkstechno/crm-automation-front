@@ -9,6 +9,7 @@ import axios from 'axios';
 import { baseUrl, getAuthToken } from '@/config';
 import DeleteDialog from '@/components/DeleteDialog';
 import FormInput from '@/components/ui/Input';
+import { toast } from 'react-toastify';
 
 function useDebounce<T>(value: T, delay: number = 500): T {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -39,12 +40,6 @@ const validationSchema = Yup.object({
     .min(2, 'Name must be at least 2 characters')
     .max(100, 'Name must be at most 100 characters')
     .matches(/^[a-zA-Z0-9\s&-]+$/, 'Name can only contain letters, numbers, spaces, &, and -'),
-  
-  order: Yup.number()
-    .required('Order is required')
-    .integer('Order must be a whole number')
-    .min(1, 'Order must be at least 1')
-    .max(9999, 'Order must be at most 9999'),
 });
 
 /* ================= CONTENT ================= */
@@ -69,7 +64,6 @@ export function LeadSourcesContent() {
     initialValues: {
       _id: '',
       name: '',
-      order: 1,
     },
     validationSchema,
     validateOnChange: true,
@@ -103,7 +97,7 @@ export function LeadSourcesContent() {
       setAllData(items);
       setTotalRecords(res.data.pagination?.totalRecords || items.length);
     } catch (err) {
-      console.error('Failed to load lead sources', err);
+      console.error();
       setAllData([]);
       setTotalRecords(0);
     }
@@ -116,10 +110,10 @@ export function LeadSourcesContent() {
 
   /* ================= SAVE (ADD / EDIT) ================= */
 
-  const saveLeadSource = async (values: { _id?: string; name: string; order: number }) => {
+  const saveLeadSource = async (values: { _id?: string; name: string }) => {
     setIsSubmitting(true);
     
-    const payload = { name: values.name.trim(), order: values.order };
+    const payload = { name: values.name.trim() };
 
     try {
       if (values._id) {
@@ -140,7 +134,7 @@ export function LeadSourcesContent() {
       setIsDialogOpen(false);
       formik.resetForm();
     } catch (err) {
-      console.error('Failed to save lead source', err);
+      console.error();
       alert('Operation failed');
     } finally {
       setIsSubmitting(false);
@@ -165,7 +159,7 @@ export function LeadSourcesContent() {
       setShowDeleteDialog(false);
       setSourceToDelete(null);
     } catch (err) {
-      console.error('Failed to delete', err);
+      console.error();
       alert('Delete failed');
     }
   };
@@ -176,6 +170,21 @@ export function LeadSourcesContent() {
     { key: 'name', label: 'Name' },
     { key: 'order', label: 'Order' },
   ];
+
+  /* ================= REORDER ================= */
+  const handleReorder = async (newData: LeadItem[]) => {
+    setAllData(newData);
+    try {
+      const items = newData.map((item, index) => ({ _id: item._id, order: index + 1 }));
+      await axios.put(`${baseUrl.leadSources}/reorder`, { items }, { headers });
+      toast.success('Order updated');
+      fetchData();
+    } catch (err: any) {
+      console.error();
+      toast.error(err?.response?.data?.message || 'Failed to update order');
+      fetchData(); // revert
+    }
+  };
 
   /* ================= UI ================= */
 
@@ -194,6 +203,9 @@ export function LeadSourcesContent() {
         totalPages={Math.ceil(totalRecords / pageSize)}
         totalRecords={totalRecords}
         pageSize={pageSize}
+        loading={false}
+        sortableRows={true}
+        onReorder={handleReorder}
         onSearch={(v) => {
           setSearch(v);
           setCurrentPage(1);
@@ -210,11 +222,10 @@ export function LeadSourcesContent() {
             formik.setValues({
               _id: data._id,
               name: data.name,
-              order: data.order,
             });
             setIsDialogOpen(true);
           } catch (err) {
-            console.error('Failed to fetch by id', err);
+            console.error();
             alert('Failed to fetch data');
           }
         }}
@@ -315,17 +326,6 @@ export function LeadSourcesContent() {
             error={formik.touched.name && formik.errors.name ? formik.errors.name : undefined}
             required
             placeholder="Lead Source"
-          />
-          <FormInput
-            label="Order"
-            name="order"
-            type="number"
-            value={formik.values.order}
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-            error={formik.touched.order && formik.errors.order ? formik.errors.order : undefined}
-            required
-            placeholder="Enter display order"
           />
         </form>
       </Dialog>

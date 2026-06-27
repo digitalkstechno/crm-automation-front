@@ -179,7 +179,7 @@
         });
         setSummary(res.data.data);
       } catch (err) {
-        console.error("Lead summary error:", err);
+        console.error();
       }
     };
 
@@ -211,7 +211,7 @@
 
         setLeadsBySource(chartData);
       } catch (err) {
-        console.error("Leads by source error:", err);
+        console.error();
       }
     };
 
@@ -229,7 +229,7 @@
         }));
         setStaffPerformance(chartData);
       } catch (err) {
-        console.error("Staff performance error:", err);
+        console.error();
       }
     };
 
@@ -250,7 +250,7 @@
         setUpcomingTotalPages(pagination?.totalPages || 1);
         setUpcomingPage(pagination?.currentPage || 1);
       } catch (err) {
-        console.error("Upcoming followups error:", err);
+        console.error();
         setUpcomingFollowups([]);
       } finally {
         setUpcomingLoading(false);
@@ -274,7 +274,7 @@
         setDueTotalPages(pagination?.totalPages || 1);
         setDuePage(pagination?.currentPage || 1);
       } catch (err) {
-        console.error("Due followups error:", err);
+        console.error();
         setDueFollowups([]);
       } finally {
         setDueLoading(false);
@@ -290,7 +290,7 @@
         });
         setTodayTasks(res.data?.data || []);
       } catch (err) {
-        console.error("Today tasks error:", err);
+        console.error();
         setTodayTasks([]);
       } finally {
         setTasksLoading(false);

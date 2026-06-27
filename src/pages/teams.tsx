@@ -114,7 +114,7 @@ export function TeamsContent() {
           }))
         );
       })
-      .catch((err) => console.error("Failed to fetch staff list", err));
+      .catch((err) => console.error());
   }, [token]);
 
   useEffect(() => {
@@ -130,7 +130,7 @@ export function TeamsContent() {
           }))
         );
       })
-      .catch((err) => console.error("Failed to fetch organizations list", err));
+      .catch((err) => console.error());
   }, [token]);
 
   const fetchData = async () => {
@@ -142,7 +142,7 @@ export function TeamsContent() {
       setData(res.data?.data ?? []);
       setTotalRecords(res.data?.pagination?.totalRecords ?? 0);
     } catch (err: any) {
-      console.error('Failed to fetch teams', err);
+      console.error();
       setData([]);
       toast.error(err?.response?.data?.message || 'Failed to load teams');
     }

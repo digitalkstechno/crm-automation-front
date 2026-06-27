@@ -280,7 +280,7 @@ export default function LeadsKanbanView({
                     [statusId]: page < (pagination.totalPages || 1),
                 }));
             } catch (error) {
-                console.error(`Failed to fetch leads for status ${statusId}:`, error);
+                console.error();
             } finally {
                 setColumnLoading((p) => ({ ...p, [statusId]: false }));
                 setLoadingMoreMap((p) => ({ ...p, [statusId]: false }));
@@ -328,7 +328,7 @@ export default function LeadsKanbanView({
             setHasMoreMap(newHasMoreMap);
             setPageMap(newPageMap);
         } catch (error) {
-            console.error("Failed to fetch all kanban data:", error);
+            console.error();
             toast.error("Failed to load kanban board");
         } finally {
             setColumnLoading({});

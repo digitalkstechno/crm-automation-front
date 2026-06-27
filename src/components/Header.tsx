@@ -77,7 +77,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
           // You can show a toast or tooltip here to inform the user
         }
       } catch (error) {
-        console.error('Error requesting notification permission:', error);
+        console.error();
       }
     }
   };
@@ -123,7 +123,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
       });
       setNotifications(res.data?.data || []);
     } catch (error) {
-      console.error('Failed to fetch notifications', error);
+      console.error();
     }
   };
 
@@ -263,7 +263,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
         });
       })
       .catch((err) => {
-        console.error('[Socket] ❌ Failed to get user:', err);
+        console.error();
       });
 
     // =========================
@@ -304,7 +304,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
           : notification
       ));
     } catch (error) {
-      console.error('Failed to mark read', error);
+      console.error();
     }
   };
 
@@ -325,7 +325,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
         isRead: true
       })));
     } catch (error) {
-      console.error('Failed to mark all as read', error);
+      console.error();
     } finally {
       setMarkingAllRead(false);
     }
@@ -355,7 +355,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
         router.push(`/leads/list`);
       }
     } catch (error) {
-      console.error('Failed to mark read', error);
+      console.error();
     }
   };
 

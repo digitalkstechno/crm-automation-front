@@ -130,7 +130,7 @@
 //       window.URL.revokeObjectURL(blobUrl);
 //       toast.success('Download started');
 //     } catch (error) {
-//       console.error('Download error:', error);
+//       console.error();
 //       toast.error('Failed to download file');
 //     }
 //   };
@@ -546,7 +546,7 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
         });
         setStaffInfo(res.data?.data);
       } catch (error) {
-        console.error('Failed to fetch staff info', error);
+        console.error();
       }
     };
     fetchCurrentStaff();
@@ -669,7 +669,7 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
       window.URL.revokeObjectURL(blobUrl);
       toast.success('Download started');
     } catch (error) {
-      console.error('Download error:', error);
+      console.error();
       toast.error('Failed to download file');
     }
   };
@@ -700,7 +700,7 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
         }
       >
         {lead && (
-          <div className="space-y-4 text-sm pr-1">
+          <div className="space-y-3 text-sm pr-1">
             <h2 className="text-xl font-bold text-gray-900">{lead.fullName}</h2>
 
             {/* Info grid */}
@@ -732,7 +732,7 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
             {/* Address */}
             {lead.address && <InfoCard label="Address" value={lead.address} />}
 
-            <div className="rounded-lg bg-gray-50 p-4">
+            <div className="rounded-lg bg-gray-50 p-3">
               <div className="mb-3 text-sm font-medium text-gray-600">Status</div>
               <div className="flex flex-wrap gap-2">
                 {statuses.map((s) => (
@@ -751,7 +751,7 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
             </div>
 
             {/* Follow-up History */}
-            <div className="rounded-lg bg-gray-50 p-4">
+            <div className="rounded-lg bg-gray-50 p-3">
               <div className="mb-3 text-sm font-bold text-gray-800 flex items-center justify-between">
                 <span>Follow-Up History</span>
                 <span className="bg-gray-200 text-gray-700 px-2.5 py-0.5 rounded-full text-xs font-normal">
@@ -760,9 +760,9 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
               </div>
 
               {/* Add New Follow-up Section */}
-              <div className="mb-6 p-4 bg-white border border-gray-200 rounded-xl">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Add New Follow-up</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="mb-4 p-3 bg-white border border-gray-200 rounded-xl">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Add New Follow-up</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-500">Date</label>
                     <input
@@ -910,7 +910,7 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
 
             {/* Note */}
             {lead.note && (
-              <div className="rounded-lg bg-gray-50 p-4">
+              <div className="rounded-lg bg-gray-50 p-3">
                 <div className="mb-1 text-sm font-medium text-gray-600">Primary Note</div>
                 <p className="text-gray-800 whitespace-pre-wrap">{lead.note}</p>
               </div>
@@ -918,8 +918,8 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
 
             {/* Attachments */}
             {lead.attachments && lead.attachments.length > 0 && (
-              <div className="rounded-lg bg-gray-50 p-4">
-                <div className="mb-3 text-sm font-medium text-gray-600 flex items-center gap-2">
+              <div className="rounded-lg bg-gray-50 p-3">
+                <div className="mb-2 text-sm font-medium text-gray-600 flex items-center gap-2">
                   <span>Attachments</span>
                   <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">
                     {lead.attachments.length}
@@ -983,7 +983,7 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
 
             {/* Lost info */}
             {lead.isLost && (
-              <div className="rounded-lg bg-red-50 p-4">
+              <div className="rounded-lg bg-red-50 p-3">
                 <div className="mb-2 text-sm font-semibold text-red-600">Lost Information</div>
                 <div className="space-y-1 text-sm text-red-800">
                   <div>Lost Date: {lead.lostDate ? new Date(lead.lostDate).toLocaleDateString() : 'N/A'}</div>
@@ -994,7 +994,7 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
 
             {/* Won info */}
             {lead.isWon && (
-              <div className="rounded-lg bg-green-50 p-4">
+              <div className="rounded-lg bg-green-50 p-3">
                 <div className="mb-2 text-sm font-semibold text-green-700">Won Information</div>
                 <div className="space-y-1 text-sm text-green-800">
                   <div>Won Date: {lead.wonDate ? new Date(lead.wonDate).toLocaleDateString() : 'N/A'}</div>

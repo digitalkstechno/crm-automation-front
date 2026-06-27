@@ -110,8 +110,10 @@ export default function RoleForm({
     },
     validationSchema,
     onSubmit: async (values) => {
-      await onSubmit(values);
-      onClose();
+      const success = await onSubmit(values);
+      if (success !== false) {
+        onClose();
+      }
     },
     enableReinitialize: true,
   });

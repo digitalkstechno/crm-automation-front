@@ -126,7 +126,7 @@ export function StaffManagementContent() {
         setPage(pagination.totalPages || 1);
       }
     } catch (error) {
-      console.error('Failed to fetch staff:', error);
+      console.error();
       setStaffManagementData([]);
       setTotalPages(1);
       setTotalRecords(0);
@@ -270,7 +270,7 @@ export function StaffManagementContent() {
       setEditingExecutive(formatted);
       setIsFormOpen(true);
     } catch (err: any) {
-      console.error('Failed to fetch staff by id:', err);
+      console.error();
       toast.error(err?.response?.data?.message || 'Could not load staff details');
     }
   };
@@ -296,7 +296,7 @@ export function StaffManagementContent() {
       setShowDeleteDialog(false);
       setStaffToDelete(null);
     } catch (err: any) {
-      console.error('Delete failed:', err);
+      console.error();
       toast.error(err?.response?.data?.message || 'Failed to delete staff member');
     }
   };
