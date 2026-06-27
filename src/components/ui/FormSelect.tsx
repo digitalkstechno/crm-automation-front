@@ -118,7 +118,6 @@ export const FormSelect: React.FC<FormSelectProps> = ({
     onChange(option.value);
     setIsOpen(false);
     setIsFocused(false);
-    onBlur?.();
   };
 
   const triggerClasses = `

@@ -209,6 +209,24 @@ export default function LeadAddDialog({
     },
   });
 
+  const updateField = (field: string, value: any) => {
+    formik.setFieldValue(field, value);
+    if (formik.errors[field as keyof typeof formik.errors]) {
+      formik.setFieldError(field, undefined);
+    }
+    if (!formik.touched[field as keyof typeof formik.touched]) {
+      formik.setFieldTouched(field, true, false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<any>) => {
+    formik.handleChange(e);
+    const fieldName = e.target.name;
+    if (formik.errors[fieldName as keyof typeof formik.errors]) {
+      formik.setFieldError(fieldName, undefined);
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) return;
     const fetchDropdowns = async () => {
@@ -395,7 +413,7 @@ export default function LeadAddDialog({
                 name="fullName"
                 type="text"
                 value={formik.values.fullName}
-                onChange={formik.handleChange}
+                onChange={handleInputChange}
                 onBlur={formik.handleBlur}
                 error={getFieldError('fullName')}
                 placeholder="Full Name"
@@ -406,7 +424,7 @@ export default function LeadAddDialog({
                 name="companyName"
                 type="text"
                 value={formik.values.companyName}
-                onChange={formik.handleChange}
+                onChange={handleInputChange}
                 onBlur={formik.handleBlur}
                 error={getFieldError('companyName')}
                 placeholder="Company"
@@ -419,7 +437,7 @@ export default function LeadAddDialog({
               label="Address"
               name="address"
               value={formik.values.address}
-              onChange={formik.handleChange}
+              onChange={handleInputChange}
               onBlur={formik.handleBlur}
               error={getFieldError('address')}
               placeholder="Address"
@@ -435,7 +453,7 @@ export default function LeadAddDialog({
                     label="Code"
                     name="countryCode"
                     value={formik.values.countryCode}
-                    onChange={(val) => { formik.setFieldValue('countryCode', val); }}
+                    onChange={(val) => updateField('countryCode', val)}
                     onBlur={() => formik.setFieldTouched('countryCode')}
                     options={COUNTRY_CODES.map((c) => ({ value: c.code, label: `${c.name} (${c.code})` }))}
                   />
@@ -446,7 +464,7 @@ export default function LeadAddDialog({
                     name="contact"
                     type="text"
                     value={formik.values.contact}
-                    onChange={formik.handleChange}
+                    onChange={handleInputChange}
                     onBlur={formik.handleBlur}
                     error={getFieldError('contact')}
                     placeholder="Phone"
@@ -459,7 +477,7 @@ export default function LeadAddDialog({
                 name="email"
                 type="email"
                 value={formik.values.email}
-                onChange={formik.handleChange}
+                onChange={handleInputChange}
                 onBlur={formik.handleBlur}
                 error={getFieldError('email')}
                 placeholder="Email"
@@ -473,7 +491,7 @@ export default function LeadAddDialog({
                 label="Source"
                 name="leadSource"
                 value={formik.values.leadSource}
-                onChange={(val) => { formik.setFieldValue('leadSource', val); formik.setFieldTouched('leadSource', true, false); }}
+                onChange={(val) => updateField('leadSource', val)}
                 onBlur={() => formik.setFieldTouched('leadSource')}
                 options={sources.map((s) => ({ value: s._id, label: s.name! }))}
                 error={getFieldError('leadSource')}
@@ -484,7 +502,7 @@ export default function LeadAddDialog({
                 label="Status"
                 name="leadStatus"
                 value={formik.values.leadStatus}
-                onChange={(val) => { formik.setFieldValue('leadStatus', val); formik.setFieldTouched('leadStatus', true, false); }}
+                onChange={(val) => updateField('leadStatus', val)}
                 onBlur={() => formik.setFieldTouched('leadStatus')}
                 options={statuses.map((s) => ({ value: s._id, label: s.name! }))}
                 error={getFieldError('leadStatus')}
@@ -495,7 +513,7 @@ export default function LeadAddDialog({
                 label="Assigned Staff"
                 name="assignedTo"
                 value={formik.values.assignedTo}
-                onChange={(val) => { formik.setFieldValue('assignedTo', val); formik.setFieldTouched('assignedTo', true, false); }}
+                onChange={(val) => updateField('assignedTo', val)}
                 onBlur={() => formik.setFieldTouched('assignedTo')}
                 options={staff.map((s) => ({ value: s._id, label: s.fullName || s.name! }))}
                 error={getFieldError('assignedTo')}
@@ -506,7 +524,7 @@ export default function LeadAddDialog({
                 label="Priority"
                 name="priority"
                 value={formik.values.priority}
-                onChange={(val) => { formik.setFieldValue('priority', val); formik.setFieldTouched('priority', true, false); }}
+                onChange={(val) => updateField('priority', val)}
                 onBlur={() => formik.setFieldTouched('priority')}
                 options={[
                   { value: 'high', label: 'High' },
@@ -523,7 +541,7 @@ export default function LeadAddDialog({
               label="Lead Labels"
               name="labels"
               value={formik.values.labels}
-              onChange={(vals) => { formik.setFieldValue('labels', vals); formik.setFieldTouched('labels', true, false); }}
+              onChange={(vals) => updateField('labels', vals)}
               onBlur={() => formik.setFieldTouched('labels')}
               options={labelOptions}
               error={getFieldError('labels')}
@@ -536,7 +554,7 @@ export default function LeadAddDialog({
               label="Products"
               name="products"
               value={formik.values.products[0] || ''}
-              onChange={(val) => { formik.setFieldValue('products', val ? [val] : []); formik.setFieldTouched('products', true, false); }}
+              onChange={(val) => updateField('products', val ? [val] : [])}
               onBlur={() => formik.setFieldTouched('products')}
               options={products.map((p) => ({ value: p._id, label: p.name! }))}
               placeholder="— Select Product —"
@@ -645,7 +663,7 @@ export default function LeadAddDialog({
                 type="checkbox"
                 name="isActive"
                 checked={formik.values.isActive}
-                onChange={formik.handleChange}
+                onChange={handleInputChange}
                 className="h-4 w-4 rounded border-gray-300 text-blue-600"
               />
               <span className="text-sm font-medium text-gray-700">Active Lead</span>
