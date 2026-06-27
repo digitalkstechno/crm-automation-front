@@ -698,32 +698,31 @@
                 Here's what's happening with your projects today.
               </p>
             </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
+            <div className="flex items-center gap-4 w-full md:w-auto">
+              <div className="flex flex-col sm:flex-row items-center gap-3 bg-gray-50/50 p-3 sm:p-2 rounded-2xl border border-gray-100 w-full md:w-auto">
+                <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                  <div className="relative w-full sm:w-auto">
                     <label className="absolute -top-2 left-3 px-1 bg-white text-[9px] font-bold text-blue-500 uppercase tracking-widest">From</label>
                     <input 
                       type="date" 
                       value={fromDate}
                       onChange={(e) => setFromDate(e.target.value)}
-                      className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer"
+                      className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer w-full sm:w-auto"
                     />
                   </div>
-                  <div className="relative">
+                  <div className="relative w-full sm:w-auto">
                     <label className="absolute -top-2 left-3 px-1 bg-white text-[9px] font-bold text-blue-500 uppercase tracking-widest">To</label>
                     <input 
                       type="date" 
                       value={toDate}
                       onChange={(e) => setToDate(e.target.value)}
-                      className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer"
+                      className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer w-full sm:w-auto"
                     />
                   </div>
                 </div>
                 <button 
                   onClick={() => handleQuickFilter('reset')}
-                  className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all rounded-xl"
+                  className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all rounded-xl w-full sm:w-auto flex justify-center mt-2 sm:mt-0"
                   title="Reset Filter"
                 >
                   <RefreshCw className="h-4 w-4" />

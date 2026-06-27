@@ -604,7 +604,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
               label="Status"
               name="status"
               value={formik.values.status}
-              onChange={(val) => formik.setFieldValue('status', val)}
+              onChange={(val) => updateField('status', val)}
               // onBlur={() => formik.setFieldTouched('status')}
               options={dropdownStatuses.map((s: any) => ({ value: s._id, label: s.name! }))}
               error={(formik.touched.status && formik.errors.status) || undefined}
@@ -630,7 +630,7 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
               label="Organization"
               name="organization"
               value={formik.values.organization}
-              onChange={(val) => formik.setFieldValue('organization', val)}
+              onChange={(val) => updateField('organization', val)}
               options={[{ value: '', label: '— Select Organization —' }, ...organizationList.map((o) => ({ value: o._id, label: o.name }))]}
               error={(formik.touched.organization && formik.errors.organization) || undefined}
               placeholder="— Select Organization —"

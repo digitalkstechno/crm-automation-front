@@ -210,7 +210,7 @@ export default function Setup() {
       { name: "Organizations", icon: Building2, visible: canViewOrgs },
       { name: "Field Settings", icon: Settings2, visible: true },
       { name: "Products", icon: Settings, visible: true },
-      { name: "WhatsApp Settings", icon: MessageSquare, visible: true },
+      // { name: "WhatsApp Settings", icon: MessageSquare, visible: true },
     ];
     return items.filter(i => i.visible);
   }, [canViewRole, canViewStaff, canViewLeadSource, canViewLeadStatus, canViewLeadLabel, canViewTeams, canViewOrgs, canViewTaskStatus]);
@@ -288,7 +288,7 @@ export default function Setup() {
               {activeTab === 'Task Status' && <TaskStatusContent />}
               {activeTab === 'Field Settings' && <FieldSettingsContent />}
               {activeTab === 'Products' && <ProductsContent />}
-              {activeTab === 'WhatsApp Settings' && <WhatsappSettingsContent />}
+              {/* {activeTab === 'WhatsApp Settings' && <WhatsappSettingsContent />} */}
               {activeTab === 'Kanban Status' && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">

@@ -88,7 +88,7 @@ export default function SalesExecutiveForm({
         .matches(/^[0-9]{10}$/, 'Mobile number must be exactly 10 digits'),
       email: Yup.string()
         .required('Email is required')
-        .email('Invalid email format'),
+        .matches(/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, 'Invalid email format'),
       password: isUpdate
         ? Yup.string()
         : Yup.string().required('Password is required').min(6, 'Password must be at least 6 characters'),

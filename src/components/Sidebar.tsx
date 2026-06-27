@@ -207,9 +207,9 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
           <div className={`flex items-center h-20 px-4 border-b border-white/10 ${isOpen ? 'justify-between' : 'justify-center'}`}>
             <div className={`flex items-center gap-3 ${!isOpen && 'hidden md:flex'}`}>
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#30cdb2] to-[#23abed] flex items-center justify-center font-bold text-white shadow-lg">
-                LF
+                LC
               </div>
-              {isOpen && <span className="text-lg font-semibold text-white tracking-wide">LeadFlow</span>}
+              {isOpen && <span className="text-lg font-semibold text-white tracking-wide">Lead CRM</span>}
             </div>
             
             <button

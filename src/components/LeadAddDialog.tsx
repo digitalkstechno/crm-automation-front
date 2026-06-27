@@ -199,7 +199,11 @@ export default function LeadAddDialog({
     if (!formData.companyName.trim()) return setFormError('Company Name is required');
     if (!formData.address.trim()) return setFormError('Address is required');
     if (!formData.contact.trim()) return setFormError('Phone is required');
-    if (!formData.email.trim()) return setFormError('Email is required');
+    if (!formData.email.trim()) {
+      return setFormError('Email is required');
+    } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(formData.email.trim())) {
+      return setFormError('Invalid email format');
+    }
     if (!formData.leadSource) return setFormError('Please select Source');
     if (!formData.leadStatus) return setFormError('Please select Status');
     if (!formData.assignedTo) return setFormError('Please assign Staff');
