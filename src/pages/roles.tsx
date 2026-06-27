@@ -271,10 +271,8 @@ export function RolesContent() {
       refreshAfterMutation();
       setIsFormOpen(false);
       setEditingRole(null);
-      return true;
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Failed to save role');
-      return false;
     }
   };
 

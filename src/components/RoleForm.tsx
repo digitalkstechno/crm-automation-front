@@ -17,7 +17,7 @@ interface Role {
 interface RoleFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (role: any) => void | Promise<void>;
+  onSubmit: (role: any) => Promise<boolean | void> | boolean | void;
   initialData?: any;
 }
 
