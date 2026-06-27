@@ -139,6 +139,8 @@ export default function LeadsPage() {
     listPagination,
     lostPagination,
     wonPagination,
+    pagination,
+    refreshTrigger
   } = useLeadsData(activeTab, filters, viewMode, kanbanSubView);
 
   // ── Sync URL → state ─────────────────────────────────────────────────────
@@ -532,6 +534,7 @@ export default function LeadsPage() {
             // Notify parent when sub-view changes so hook fetches correct data
             onSubViewChange={setKanbanSubView}
             onRefreshCounts={refreshCounts}
+            refreshTrigger={refreshTrigger}
             permissions={{
               create: canCreate,
               readAll: canReadAll,

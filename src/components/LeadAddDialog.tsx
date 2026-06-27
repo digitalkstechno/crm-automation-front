@@ -7,6 +7,7 @@ import { baseUrl, getAuthToken } from '@/config';
 import { toast } from 'react-toastify';
 import Label from './ui/Label';
 import Select from 'react-select';
+import { COUNTRY_CODES } from '@/utills/countryCodes';
 
 interface DropdownItem {
   _id: string;
@@ -73,6 +74,7 @@ export default function LeadAddDialog({
     companyName: '',
     address: '',
     contact: '',
+    countryCode: '+91',
     email: '',
     leadSource: '',
     leadStatus: '',
@@ -132,6 +134,7 @@ export default function LeadAddDialog({
         companyName: initialData.companyName || '',
         address: initialData.address || '',
         contact: initialData.phone || '',
+        countryCode: initialData.countryCode || '+91',
         email: initialData.email || '',
         leadSource: initialData.source || '',
         leadStatus: initialData.status || '',
@@ -153,6 +156,7 @@ export default function LeadAddDialog({
         companyName: '',
         address: '',
         contact: '',
+        countryCode: '+91',
         email: '',
         leadSource: '',
         leadStatus: '',
@@ -210,6 +214,7 @@ export default function LeadAddDialog({
         companyName: formData.companyName.trim(),
         address: formData.address.trim(),
         contact: formData.contact.trim(),
+        countryCode: formData.countryCode,
         email: formData.email.trim().toLowerCase(),
         leadSource: formData.leadSource,
         leadStatus: formData.leadStatus,
@@ -362,14 +367,28 @@ export default function LeadAddDialog({
 
           <div>
             <Label required>Phone</Label>
-            <input
-              name="contact"
-              value={formData.contact}
-              onChange={handleChange}
-              required
-              className="w-full border border-slate-400 rounded px-3 py-2 text-black"
-              placeholder="Enter Phone Number"
-            />
+            <div className="flex gap-2">
+              <select
+                name="countryCode"
+                value={formData.countryCode}
+                onChange={handleChange}
+                className="w-1/3 border border-slate-400 rounded px-2 py-2 text-black"
+              >
+                {COUNTRY_CODES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name} ({c.code})
+                  </option>
+                ))}
+              </select>
+              <input
+                name="contact"
+                value={formData.contact}
+                onChange={handleChange}
+                required
+                className="flex-1 border border-slate-400 rounded px-3 py-2 text-black"
+                placeholder="Enter Phone Number"
+              />
+            </div>
           </div>
 
           <div>

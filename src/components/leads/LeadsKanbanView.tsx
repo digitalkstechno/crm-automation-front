@@ -40,6 +40,7 @@ interface Props {
         transfer?: boolean;
         convert?: boolean;
     };
+    refreshTrigger?: number;
     scope?: 'all' | 'my';
     filters: {
         search?: string;
@@ -196,6 +197,7 @@ export default function LeadsKanbanView({
     wonPagination,
     onSubViewChange,
     onRefreshCounts,
+    refreshTrigger = 0,
 }: Props) {
     const [subView, setSubView] = useState<SubView>('board');
     const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -252,7 +254,7 @@ export default function LeadsKanbanView({
                     params: {
                         statusId,
                         page,
-                        limit: 5, // USER REQUEST: limit should be 5 only
+                        limit: 5,
                         my: scope === 'my' || undefined,
                         search: filters.search || undefined,
                         source: filters.source || undefined,
@@ -333,12 +335,12 @@ export default function LeadsKanbanView({
         }
     }, [scope, filters, statuses, kanbanVisibleStatusNames]);
 
-    // Initial fetch and re-fetch on filter change
+    // Initial fetch and re-fetch on filter/trigger change
     useEffect(() => {
         if (subView !== 'board') return;
         fetchAllKanbanData();
         setIntersectedColumns({}); // Reset columns visibility so they re-trigger IntersectionObserver
-    }, [subView, scope, filters, fetchAllKanbanData]);
+    }, [subView, scope, filters, fetchAllKanbanData, refreshTrigger]);
 
     // Background counts refresh and visible columns update
     useEffect(() => {

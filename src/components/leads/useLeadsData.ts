@@ -34,6 +34,7 @@ export function useLeadsData(
   const [permissions, setPermissions] = useState({
     create: false, update: false, delete: false, readAll: false, readOwn: false,
   });
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // List pagination
   const [listPage, setListPage] = useState(1);
@@ -283,6 +284,8 @@ export function useLeadsData(
       listPage: lp, lostPage: lsp, wonPage: wp,
       listLimit, lostLimit, wonLimit } = stateRef.current;
 
+    setRefreshTrigger(prev => prev + 1);
+
     const calls: Promise<void>[] = [fetchCounts(tab, f)];
 
     if (vm === 'list') {
@@ -415,6 +418,7 @@ export function useLeadsData(
     sources, statuses, staffMembers, leadLabels,
     counts, loading, permissions,
     refetchAll, refreshCounts,
+    refreshTrigger,
     fetchLeadsList,
     fetchKanbanLeads,
     findLeadById,

@@ -1,11 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import {
-  FiSearch,
-  FiPhone,
-  FiMail,
-  FiEye,
-  FiEdit,
-} from "react-icons/fi";
+import { FiSearch, FiPhone, FiMail, FiEdit, FiTrash2, FiEye, FiPaperclip } from "react-icons/fi";
+import { COUNTRY_CODES } from '@/utills/countryCodes';
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useRouter } from "next/router";
@@ -120,6 +115,7 @@ export default function LeadsPage() {
     companyName: "",
     address: "",
     phone: "",
+    countryCode: "+91",
     email: "",
     source: "",
     label: [],
@@ -351,6 +347,7 @@ export default function LeadsPage() {
         companyName: addForm.companyName?.trim() || "",
         address: addForm.address?.trim() || "",
         contact: addForm.phone.trim(),
+        countryCode: addForm.countryCode,
         email: addForm.email.trim().toLowerCase(),
         leadSource: addForm.source,
         leadStatus: addForm.status,
@@ -401,6 +398,7 @@ export default function LeadsPage() {
       companyName: "",
       address: "",
       phone: "",
+      countryCode: "+91",
       email: "",
       source: "",
       label: [],
@@ -438,6 +436,7 @@ export default function LeadsPage() {
       companyName: lead.companyName || "",
       address: lead.address || "",
       phone: lead.contact || "",
+      countryCode: lead.countryCode || "+91",
       email: lead.email || "",
       source: lead.leadSource?._id || "",
       label: labelIds,
@@ -1184,14 +1183,28 @@ export default function LeadsPage() {
               <label className="block text-sm font-medium text-slate-700">
                 Phone {requiredFields.includes('contact') && <span className="text-red-500">*</span>}
               </label>
-              <input
-                type="text"
-                value={addForm.phone}
-                onChange={(e) =>
-                  setAddForm((p) => ({ ...p, phone: e.target.value }))
-                }
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
-              />
+              <div className="flex gap-2">
+                <select
+                  value={addForm.countryCode}
+                  onChange={(e) => setAddForm((p) => ({ ...p, countryCode: e.target.value }))}
+                  className="w-1/3 rounded-lg border border-gray-300 p-2 focus:border-blue-500 focus:outline-none"
+                >
+                  {COUNTRY_CODES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  placeholder="Enter Phone Number"
+                  value={addForm.phone}
+                  onChange={(e) =>
+                    setAddForm((p) => ({ ...p, phone: e.target.value }))
+                  }
+                  className="flex-1 rounded-lg border border-gray-300 p-2 focus:border-blue-500 focus:outline-none"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">

@@ -10,6 +10,7 @@ import { getFileIcon } from '@/utills/utill';
 import { Download, Eye, Trash } from 'lucide-react';
 import FormInput from '../ui/Input';
 import { FormSelect, FormMultiSelect } from '../ui/FormSelect';
+import { COUNTRY_CODES } from '@/utills/countryCodes';
 
 interface DropdownItem { _id: string; name?: string; fullName?: string; }
 
@@ -133,6 +134,7 @@ export default function LeadAddDialog({
       companyName: '',
       address: '',
       contact: '',
+      countryCode: '+91',
       email: '',
       leadSource: '',
       leadStatus: '',
@@ -154,6 +156,7 @@ export default function LeadAddDialog({
           companyName: values.companyName.trim(),
           address: values.address.trim(),
           contact: values.contact.trim(),
+          countryCode: values.countryCode,
           email: values.email.trim().toLowerCase(),
           leadSource: values.leadSource,
           leadStatus: values.leadStatus,
@@ -241,6 +244,7 @@ export default function LeadAddDialog({
         companyName: initialData.companyName || '',
         address: initialData.address || '',
         contact: initialData.contact || '',
+        countryCode: initialData.countryCode || '+91',
         email: initialData.email || '',
         leadSource: initialData.leadSource?._id || '',
         leadStatus: initialData.leadStatus?._id || '',
@@ -425,17 +429,31 @@ export default function LeadAddDialog({
 
             {/* Contact & Email */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormInput
-                label="Phone"
-                name="contact"
-                type="text"
-                value={formik.values.contact}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                error={getFieldError('contact')}
-                placeholder="Phone"
-                required={requiredFields.includes('contact')}
-              />
+              <div className="flex gap-2">
+                <div className="w-1/3">
+                  <FormSelect
+                    label="Code"
+                    name="countryCode"
+                    value={formik.values.countryCode}
+                    onChange={(val) => { formik.setFieldValue('countryCode', val); }}
+                    onBlur={() => formik.setFieldTouched('countryCode')}
+                    options={COUNTRY_CODES.map((c) => ({ value: c.code, label: `${c.name} (${c.code})` }))}
+                  />
+                </div>
+                <div className="flex-1">
+                  <FormInput
+                    label="Phone"
+                    name="contact"
+                    type="text"
+                    value={formik.values.contact}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    error={getFieldError('contact')}
+                    placeholder="Phone"
+                    required={requiredFields.includes('contact')}
+                  />
+                </div>
+              </div>
               <FormInput
                 label="Email"
                 name="email"

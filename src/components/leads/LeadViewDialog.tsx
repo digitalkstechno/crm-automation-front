@@ -558,6 +558,7 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
       );
       toast.success('Lead status updated');
       onRefresh();
+      onClose();
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Failed to update lead');
     } finally {

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import Dialog from './Dialog';
+import { COUNTRY_CODES } from '@/utills/countryCodes';
 import axios from 'axios';
 import { baseUrl, getAuthToken } from '@/config';
 import { toast } from 'react-toastify';
@@ -31,35 +32,7 @@ interface SalesExecutiveFormProps {
   initialData?: SalesExecutive | null;
 }
 
-// Validation schema
-const validationSchema = Yup.object({
-  fullName: Yup.string()
-    .required('Full name is required')
-    .min(2, 'Full name must be at least 2 characters')
-    .max(100, 'Full name must be at most 100 characters')
-    .matches(/^[a-zA-Z\s]+$/, 'Full name can only contain letters and spaces'),
 
-  number: Yup.string()
-    .required('Mobile number is required')
-    .matches(/^[0-9]{10}$/, 'Mobile number must be exactly 10 digits'),
-
-  email: Yup.string()
-    .required('Email is required')
-    .email('Invalid email format'),
-
-  password: Yup.string()
-    .when('$isUpdate', {
-      is: false,
-      then: (schema) => schema.required('Password is required').min(6, 'Password must be at least 6 characters'),
-      otherwise: (schema) => schema.notRequired(),
-    }),
-
-  status: Yup.string()
-    .required('Status is required'),
-
-  role: Yup.string()
-    .required('Role is required'),
-});
 
 export default function SalesExecutiveForm({
   isOpen,
@@ -93,6 +66,7 @@ export default function SalesExecutiveForm({
   const formik = useFormik({
     initialValues: {
       fullName: '',
+      countryCode: '+91',
       number: '',
       email: '',
       password: '',
@@ -103,10 +77,26 @@ export default function SalesExecutiveForm({
       id: undefined as string | number | undefined,
       image: undefined as string | undefined,
     },
-    validationSchema,
+    validationSchema: Yup.object({
+      fullName: Yup.string()
+        .required('Full name is required')
+        .min(2, 'Full name must be at least 2 characters')
+        .max(100, 'Full name must be at most 100 characters')
+        .matches(/^[a-zA-Z\s]+$/, 'Full name can only contain letters and spaces'),
+      number: Yup.string()
+        .required('Mobile number is required')
+        .matches(/^[0-9]{10}$/, 'Mobile number must be exactly 10 digits'),
+      email: Yup.string()
+        .required('Email is required')
+        .email('Invalid email format'),
+      password: isUpdate
+        ? Yup.string()
+        : Yup.string().required('Password is required').min(6, 'Password must be at least 6 characters'),
+      status: Yup.string().required('Status is required'),
+      role: Yup.string().required('Role is required'),
+    }),
     validateOnChange: true,
     validateOnBlur: true,
-    context: { isUpdate },
     onSubmit: async (values) => {
       await handleSubmit(values);
     },
@@ -128,6 +118,7 @@ export default function SalesExecutiveForm({
         id: initialData.id,
         image: initialData.image,
         fullName: initialData.fullName || '',
+        countryCode: (initialData as any).countryCode || '+91',
         number: initialData.number || '',
         email: initialData.email || '',
         password: '',
@@ -196,8 +187,8 @@ export default function SalesExecutiveForm({
     try {
       const payload = new FormData();
 
-      // Append text fields
       payload.append('fullName', values.fullName);
+      payload.append('countryCode', values.countryCode);
       payload.append('phone', values.number);
       payload.append('email', values.email);
       payload.append('status', values.status || 'Active');
@@ -331,17 +322,38 @@ export default function SalesExecutiveForm({
             required
             placeholder="Enter full name"
           />
-          <FormInput
-            label="Mobile Number"
-            name="number"
-            type="tel"
-            value={formik.values.number}
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-            error={formik.touched.number && formik.errors.number ? formik.errors.number : undefined}
-            required
-            placeholder="Enter mobile number"
-          />
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Mobile Number <span className="text-red-500">*</span>
+            </label>
+            <div className="flex gap-2">
+              <select
+                name="countryCode"
+                value={formik.values.countryCode}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                className="w-1/3 rounded-lg border border-slate-300 px-2 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+              >
+                {COUNTRY_CODES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name} ({c.code})
+                  </option>
+                ))}
+              </select>
+              <input
+                name="number"
+                type="tel"
+                value={formik.values.number}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                className={`flex-1 rounded-lg border ${formik.touched.number && formik.errors.number ? 'border-red-500' : 'border-slate-300'} px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm`}
+                placeholder="Enter mobile number"
+              />
+            </div>
+            {formik.touched.number && formik.errors.number && (
+              <p className="mt-1 text-sm text-red-500">{formik.errors.number as string}</p>
+            )}
+          </div>
         </div>
 
         {/* Email + Password */}
