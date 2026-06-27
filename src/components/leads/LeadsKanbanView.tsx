@@ -265,6 +265,7 @@ export default function LeadsKanbanView({
 
                 const newData: ApiLead[] = res.data?.data || [];
                 const pagination = res.data?.pagination || {};
+                console.log(`fetchStatusLeads response for ${statusId}:`, newData);
 
                 setBoardLeads((prev) => ({
                     ...prev,
@@ -311,18 +312,21 @@ export default function LeadsKanbanView({
             });
 
             const data = res.data?.data || [];
+            console.log("fetchAllKanbanData Response:", data);
+            
             const newBoardLeads: Record<string, ApiLead[]> = {};
             const newColumnCounts: Record<string, number> = {};
             const newHasMoreMap: Record<string, boolean> = {};
             const newPageMap: Record<string, number> = {};
 
             data.forEach((item: any) => {
-                newBoardLeads[item.statusId] = []; // Empty initially, lazy-loaded by IntersectionObserver
-                newColumnCounts[item.statusId] = item.totalCount || 0; // Display correct DB count in header
+                newBoardLeads[item.statusId] = item.leads || []; 
+                newColumnCounts[item.statusId] = item.totalCount || 0; 
                 newHasMoreMap[item.statusId] = (item.totalCount || 0) > 0;
                 newPageMap[item.statusId] = 1;
             });
 
+            console.log("Setting initial boardLeads:", newBoardLeads);
             setBoardLeads(newBoardLeads);
             setColumnCounts(newColumnCounts);
             setHasMoreMap(newHasMoreMap);
