@@ -209,7 +209,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#30cdb2] to-[#23abed] flex items-center justify-center font-bold text-white shadow-lg">
                 LC
               </div>
-              {isOpen && <span className="text-lg font-semibold text-white tracking-wide">Lead CRM</span>}
+              {isOpen && <span className="text-lg font-semibold text-white tracking-wide">CRM Software</span>}
             </div>
             
             <button

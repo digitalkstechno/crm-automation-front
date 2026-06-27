@@ -65,7 +65,7 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent tracking-tight">
-            CRM
+            CRM Software
           </h1>
           <p className="mt-2 text-sm text-gray-400">Sign in to continue to your account</p>
         </div>
