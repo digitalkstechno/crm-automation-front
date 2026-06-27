@@ -484,7 +484,7 @@ export default function LeadsKanbanView({
         { key: 'fullName', label: 'LEAD NAME', render: (v) => (<div><div className="font-semibold text-gray-900">{v}</div><span className="text-xs text-red-500">• Lost</span></div>) },
         { key: 'companyName', label: 'COMPANY', render: (v) => <span className="text-sm">{v || '-'}</span> },
         { key: 'address', label: 'LOCATION', render: (v) => <span className="text-sm">{v || '-'}</span> },
-        { key: 'contact', label: 'CONTACT', render: (v, row) => <ContactCell phone={v} email={row.email} /> },
+        { key: 'contact', label: 'CONTACT', render: (v, row) => <ContactCell phone={v} email={row.email} countryCode={row.countryCode} /> },
         { key: 'lostDate', label: 'LOST DATE', render: (v) => (v ? new Date(v).toLocaleDateString() : 'N/A') },
         { key: 'assignedTo', label: 'ASSIGNED TO', render: (v) => v?.fullName || '-' },
         { key: 'lostReason', label: 'REASON', render: (v) => v || 'Not specified' },
@@ -494,7 +494,7 @@ export default function LeadsKanbanView({
         { key: 'fullName', label: 'LEAD NAME', render: (v) => <span className="font-semibold text-gray-900">{v}</span> },
         { key: 'companyName', label: 'COMPANY', render: (v) => <span className="text-sm">{v || '-'}</span> },
         { key: 'address', label: 'LOCATION', render: (v) => <span className="text-sm">{v || '-'}</span> },
-        { key: 'contact', label: 'CONTACT', render: (v, row) => <ContactCell phone={v} email={row.email} /> },
+        { key: 'contact', label: 'CONTACT', render: (v, row) => <ContactCell phone={v} email={row.email} countryCode={row.countryCode} /> },
         { key: 'wonDate', label: 'WON DATE', render: (v) => (v ? new Date(v).toLocaleDateString() : 'N/A') },
         { key: 'assignedTo', label: 'ASSIGNED TO', render: (v) => v?.fullName || '-' },
         { key: 'paymentAmount', label: 'AMOUNT', render: (v) => (v ? `₹${v.toLocaleString()}` : '-') },
@@ -651,10 +651,19 @@ export default function LeadsKanbanView({
     );
 }
 
-function ContactCell({ phone, email }: { phone: string; email: string }) {
+function ContactCell({ phone, email, countryCode }: { phone: string; email: string; countryCode?: string }) {
+    let num = phone || '';
+    let code = countryCode || '';
+    if (num.startsWith('+')) {
+        code = '';
+    } else if (code && !code.startsWith('+')) {
+        code = '+' + code;
+    }
+    const fullPhone = code ? `${code} ${num}` : num;
+
     return (
         <div className="space-y-0.5 text-sm text-gray-600">
-            <div className="flex items-center gap-1.5"><FiPhone className="h-3.5 w-3.5 text-gray-400" />{phone ? (phone.startsWith('+') ? phone : `+${phone}`) : '-'}</div>
+            <div className="flex items-center gap-1.5"><FiPhone className="h-3.5 w-3.5 text-gray-400" />{fullPhone || '-'}</div>
             <div className="flex items-center gap-1.5"><FiMail className="h-3.5 w-3.5 text-gray-400" />{email}</div>
         </div>
     );

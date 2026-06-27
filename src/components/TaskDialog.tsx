@@ -167,7 +167,15 @@ export default function TaskDialog({ isOpen, onClose, mode, initialData, onSucce
       endDate: Yup.date()
         .nullable()
         .typeError('Invalid date format')
-        .min(Yup.ref('startDate'), 'End date must be after start date'),
+        .test(
+          'is-after-start',
+          'End date must be after start date',
+          function (value) {
+            const { startDate } = this.parent;
+            if (!startDate || !value) return true;
+            return new Date(value) >= new Date(startDate);
+          }
+        ),
       status: Yup.string(),
       priority: Yup.string().oneOf(['low', 'medium', 'high'], 'Invalid priority'),
       assignedUsers: Yup.array().of(Yup.string()),

@@ -516,6 +516,13 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
       setEditNextDate(lead.nextFollowupDate || '');
       setEditNextTime(lead.nextFollowupTime || '');
       setLocalFollowUps(lead.followUps || []);
+      setFollowupNote('');
+    } else {
+      setEditStatus('');
+      setEditNextDate('');
+      setEditNextTime('');
+      setLocalFollowUps([]);
+      setFollowupNote('');
     }
   }, [lead]);
 
@@ -693,13 +700,13 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
         }
       >
         {lead && (
-          <div className="space-y-4 text-sm max-h-[70vh] overflow-y-auto pr-1">
+          <div className="space-y-4 text-sm pr-1">
             <h2 className="text-xl font-bold text-gray-900">{lead.fullName}</h2>
 
             {/* Info grid */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <InfoCard label="Company" value={lead.companyName} />
-              <InfoCard label="Phone" value={lead.contact ? (lead.contact.startsWith('+') ? lead.contact : `+${lead.contact}`) : '-'} />
+              <InfoCard label="Phone" value={lead.contact ? (lead.contact.startsWith('+') ? lead.contact : `${lead.countryCode?.startsWith('+') ? '' : '+'}${lead.countryCode || '91'} ${lead.contact}`) : '-'} />
               <InfoCard label="Email" value={lead.email} />
               <InfoCard label="Source" value={lead.leadSource?.name} />
               <InfoCard label="Assigned Staff" value={lead.assignedTo?.fullName} />

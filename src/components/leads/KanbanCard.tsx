@@ -35,6 +35,15 @@ export default function KanbanCard({
     onMarkWon?: () => void;
     isUpdating?: boolean;
 }) {
+    let num = lead.contact || lead.phone || '';
+    let code = lead.countryCode || '';
+    if (num.startsWith('+')) {
+        code = ''; // Ignore if already has +
+    } else if (code && !code.startsWith('+')) {
+        code = '+' + code;
+    }
+    const fullPhone = code ? `${code} ${num}` : num;
+
     return (
         <div
             draggable={!isUpdating}
@@ -75,7 +84,7 @@ export default function KanbanCard({
             <div className="mt-2 space-y-1.5 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
                     <FiPhone className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span className="truncate">{lead.contact ? (lead.contact.startsWith('+') ? lead.contact : `+${lead.contact}`) : '-'}</span>
+                    <span className="truncate">{fullPhone || '-'}</span>
                 </div>
                 <div className="flex items-center gap-2 min-w-0">
                     <FiMail className="h-3.5 w-3.5 flex-shrink-0" />

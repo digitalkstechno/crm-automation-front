@@ -81,12 +81,21 @@ interface Props {
 }
 
 function mapLead(item: any): TableLead {
+  let num = item.contact || item.phone || '';
+  let code = item.countryCode || '';
+  if (num.startsWith('+')) {
+    code = ''; // Ignore if already has +
+  } else if (code && !code.startsWith('+')) {
+    code = '+' + code;
+  }
+  const fullPhone = code ? `${code} ${num}` : num;
+
   return {
     id: item._id,
     name: item.fullName,
     companyName: item.companyName,
     address: item.address,
-    phone: item.contact || item.phone,
+    phone: fullPhone,
     email: item.email,
     source: item.leadSource?.name || item.source?.name || '-',
     status: item.leadStatus?.name || item.status?.name || '-',
@@ -151,14 +160,14 @@ export default function LeadsListView({
           {/* Phone number */}
           <div className="flex items-center gap-1.5 text-gray-600">
             <Phone className="h-3 w-3 text-gray-400" />
-            <span>{row.phone ? (row.phone.startsWith('+') ? row.phone : `+${row.phone}`) : '-'}</span>
+            <span>{row.phone || '-'}</span>
           </div>
           {/* Action icons */}
           {row.phone && (
             <div className="flex items-center gap-2 mt-1">
               {/* Call Now */}
               <a
-                href={`tel:${row.phone && !row.phone.startsWith('+') ? `+${row.phone}` : row.phone}`}
+                href={`tel:${row.phone.replace(/[^0-9+]/g, '')}`}
                 title="Call Now"
                 onClick={(e) => e.stopPropagation()}
                 className="flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600 hover:bg-blue-100 transition-colors"
