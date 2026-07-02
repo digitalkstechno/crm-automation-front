@@ -57,6 +57,7 @@ export const baseUrl = {
   getBaseUrl: API,
   products: `${API}product`,
   settings: `${API}settings`,
+  publicLead: `${API}public-lead`,
 };
 
 const TOKEN_COOKIE_NAME = "crm_token";

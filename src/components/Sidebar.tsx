@@ -6,15 +6,12 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Settings,
-  Users,
-  LogOut,
-  RefreshCw,
   ChevronDown,
   UserPlus,
-  ChevronRight,
   ChevronLeft,
   Menu,
   CheckSquare,
+  Globe,
 } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import axios from "axios";
@@ -37,6 +34,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   const [canViewLead, setCanViewLead] = useState(false);
   const [canViewTask, setCanViewTask] = useState(false);
   const [canViewStaff, setCanViewStaff] = useState(false);
@@ -47,7 +45,10 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
 
   useEffect(() => {
     const token = getAuthToken();
-    if (!token) return;
+    if (!token) {
+      setPermissionsLoaded(true);
+      return;
+    }
     axios
       .get(baseUrl.currentStaff, {
         headers: { Authorization: `Bearer ${token}` },
@@ -81,30 +82,19 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
         setCanViewLeadStatus(false);
         setCanViewLeadSource(false);
         setCanViewLeadLabel(false);
+      })
+      .finally(() => {
+        setPermissionsLoaded(true);
       });
   }, []);
 
   const menuItems: MenuItem[] = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+    { icon: UserPlus, label: "Leads", path: "/leads" },
+    { icon: Globe, label: "Public Leads", path: "/public-leads" },
+    { icon: CheckSquare, label: "Tasks", path: "/tasks" },
+    { icon: Settings, label: "Setup", path: "/setup" },
   ];
-
-  if (canViewLead) {
-    menuItems.push({ icon: UserPlus, label: "Leads", path: "/leads" });
-  }
-
-  if (canViewTask) {
-    menuItems.push({ icon: CheckSquare, label: "Tasks", path: "/tasks" });
-  }
-
-  const hasAnySetupPerm = canViewStaff || canViewRole || canViewLeadStatus || canViewLeadSource || canViewLeadLabel;
-
-  // if (hasAnySetupPerm) {
-    menuItems.push({
-      icon: Settings,
-      label: "Setup",
-      path: "/setup",
-    });
-  // }
 
   const isActive = (path?: string) => {
     if (!path) return false;
@@ -140,7 +130,6 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
       allowEscapeKey: true,
     }).then((result) => {
       if (result.isConfirmed) {
-        // Show loading state
         Swal.fire({
           title: 'Logging out...',
           text: 'Please wait',
@@ -152,15 +141,13 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
             Swal.showLoading();
           }
         });
-        
-        // Perform logout
+
         clearAuthToken();
         if (typeof window !== "undefined") {
           localStorage.removeItem("token");
           localStorage.removeItem("auth");
         }
-        
-        // Show success message
+
         Swal.fire({
           title: 'Logged Out!',
           text: 'You have been successfully logged out',
@@ -177,7 +164,6 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   const handleNavigation = (path?: string) => {
     if (path) {
       router.push(path);
-      // Close sidebar on mobile after navigation
       if (window.innerWidth < 768) {
         toggleSidebar();
       }
@@ -186,7 +172,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
 
   return (
     <>
-      {/* Overlay for mobile when sidebar is open */}
+      {/* Overlay for mobile */}
       {isOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm md:hidden transition-opacity duration-300"
@@ -197,21 +183,26 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 z-40 h-screen bg-[#05111e] text-white shadow-2xl transition-all duration-300 ease-in-out ${
-          isOpen 
-            ? 'w-64 translate-x-0' 
+          isOpen
+            ? 'w-64 translate-x-0'
             : 'w-64 -translate-x-full md:w-20 md:translate-x-0'
         }`}
       >
         <div className="flex h-full flex-col">
-          {/* Header with Logo */}
+
+          {/* Header */}
           <div className={`flex items-center h-20 px-4 border-b border-white/10 ${isOpen ? 'justify-between' : 'justify-center'}`}>
             <div className={`flex items-center gap-3 ${!isOpen && 'hidden md:flex'}`}>
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#30cdb2] to-[#23abed] flex items-center justify-center font-bold text-white shadow-lg">
                 LC
               </div>
-              {isOpen && <span className="text-lg font-semibold text-white tracking-wide">CRM Software</span>}
+              {isOpen && (
+                <span className="text-lg font-semibold text-white tracking-wide">
+                  CRM Software
+                </span>
+              )}
             </div>
-            
+
             <button
               onClick={toggleSidebar}
               className={`p-2 rounded-lg hover:bg-white/10 transition-all duration-200 group ${!isOpen && 'md:block'}`}
@@ -225,89 +216,137 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
             </button>
           </div>
 
-          {/* Navigation Menu */}
+          {/* Navigation */}
           <nav className="flex-1 overflow-y-auto overflow-x-hidden py-6 px-3 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-            <ul className="space-y-1.5">
-              {menuItems.map((item) => {
-                const Icon = item.icon;
-                const hasChildren = !!item.children;
-                const expanded = expandedItems.has(item.label);
-                const isItemActive = isActive(item.path);
 
-                return (
-                  <li key={item.label}>
-                    {hasChildren ? (
-                      <div>
+            {/* Skeleton while loading */}
+            {!permissionsLoaded ? (
+              <div className="space-y-2 px-1">
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="h-11 rounded-xl bg-white/5 animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : (
+              <ul className="space-y-1.5">
+                {menuItems.map((item) => {
+                  const Icon = item.icon;
+                  const hasChildren = !!item.children;
+                  const expanded = expandedItems.has(item.label);
+                  const isItemActive = isActive(item.path);
+
+                  return (
+                    <li key={item.label}>
+                      {hasChildren ? (
+                        <div>
+                          <button
+                            onClick={() => toggleExpand(item.label)}
+                            className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 group ${
+                              expanded
+                                ? 'bg-white/10 text-white'
+                                : 'text-white/70 hover:bg-white/5 hover:text-white'
+                            }`}
+                          >
+                            <Icon
+                              className={`h-5 w-5 flex-shrink-0 transition-transform group-hover:scale-110 ${
+                                expanded ? 'text-white' : 'text-white/70'
+                              }`}
+                            />
+                            {isOpen && (
+                              <>
+                                <span className="flex-1 text-sm font-medium text-left">
+                                  {item.label}
+                                </span>
+                                <ChevronDown
+                                  className={`h-4 w-4 transition-transform duration-300 ${
+                                    expanded ? 'rotate-180' : ''
+                                  }`}
+                                />
+                              </>
+                            )}
+                          </button>
+
+                          {/* Submenu */}
+                          {isOpen && expanded && (
+                            <ul className="mt-1 ml-4 space-y-1 border-l border-white/10 pl-3">
+                              {item.children?.map((child) => {
+                                const ChildIcon = child.icon;
+                                const isChildActive = isActive(child.path);
+
+                                return (
+                                  <li key={child.label}>
+                                    <button
+                                      onClick={() => handleNavigation(child.path)}
+                                      className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm transition-all duration-200 group ${
+                                        isChildActive
+                                          ? 'bg-gradient-to-r from-[#0f3c70]/20 to-[#0f2f5a]/20 text-white border border-white/10'
+                                          : 'text-white/60 hover:bg-white/5 hover:text-white'
+                                      }`}
+                                    >
+                                      <ChildIcon
+                                        className={`h-4 w-4 flex-shrink-0 transition-transform group-hover:scale-110 ${
+                                          isChildActive ? 'text-[#9f7cff]' : 'text-white/60'
+                                        }`}
+                                      />
+                                      <span className="text-sm">{child.label}</span>
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      ) : (
                         <button
-                          onClick={() => toggleExpand(item.label)}
-                          className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 group ${
-                            expanded
-                              ? 'bg-white/10 text-white'
+                          onClick={() => handleNavigation(item.path)}
+                          className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 group ${
+                            isItemActive
+                              ? 'bg-gradient-to-r from-[#0f3c70] to-[#0f2f5a] text-white'
                               : 'text-white/70 hover:bg-white/5 hover:text-white'
                           }`}
                         >
-                          <Icon className={`h-5 w-5 flex-shrink-0 transition-transform group-hover:scale-110 ${
-                            expanded ? 'text-white' : 'text-white/70'
-                          }`} />
+                          <Icon
+                            className={`h-5 w-5 flex-shrink-0 transition-transform group-hover:scale-110 ${
+                              isItemActive ? 'text-white' : 'text-white/70'
+                            }`}
+                          />
                           {isOpen && (
-                            <>
-                              <span className="flex-1 text-sm font-medium text-left">{item.label}</span>
-                              <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`} />
-                            </>
+                            <span className="text-sm font-medium">{item.label}</span>
                           )}
                         </button>
-
-                        {/* Submenu */}
-                        {isOpen && expanded && (
-                          <ul className="mt-1 ml-4 space-y-1 border-l border-white/10 pl-3">
-                            {item.children?.map((child) => {
-                              const ChildIcon = child.icon;
-                              const isChildActive = isActive(child.path);
-                              
-                              return (
-                                <li key={child.label}>
-                                  <button
-                                    onClick={() => handleNavigation(child.path)}
-                                    className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm transition-all duration-200 group ${
-                                      isChildActive
-                                        ? 'bg-gradient-to-r from-[#0f3c70]/20 to-[#0f2f5a]/20 text-white border border-white/10'
-                                        : 'text-white/60 hover:bg-white/5 hover:text-white'
-                                    }`}
-                                  >
-                                    <ChildIcon className={`h-4 w-4 flex-shrink-0 transition-transform group-hover:scale-110 ${
-                                      isChildActive ? 'text-[#9f7cff]' : 'text-white/60'
-                                    }`} />
-                                    <span className="text-sm">{child.label}</span>
-                                  </button>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        )}
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => handleNavigation(item.path)}
-                        className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 group ${
-                          isItemActive
-                            ? 'bg-gradient-to-r from-[#0f3c70] to-[#0f2f5a] text-white'
-                            : 'text-white/70 hover:bg-white/5 hover:text-white'
-                        }`}
-                      >
-                        <Icon className={`h-5 w-5 flex-shrink-0 transition-transform group-hover:scale-110 ${
-                          isItemActive ? 'text-white' : 'text-white/70'
-                        }`} />
-                        {isOpen && (
-                          <span className="text-sm font-medium">{item.label}</span>
-                        )}
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </nav>
 
+          {/* Logout Button */}
+          <div className="px-3 py-4 border-t border-white/10">
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-white/70 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 group"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 flex-shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1"
+                />
+              </svg>
+              {isOpen && <span className="text-sm font-medium">Logout</span>}
+            </button>
+          </div>
 
         </div>
       </aside>
