@@ -91,7 +91,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   const menuItems: MenuItem[] = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/" },
     { icon: UserPlus, label: "Leads", path: "/leads" },
-    { icon: Globe, label: "Public Leads", path: "/public-leads" },
+    // { icon: Globe, label: "Public Leads", path: "/public-leads" },
     { icon: CheckSquare, label: "Tasks", path: "/tasks" },
     { icon: Settings, label: "Setup", path: "/setup" },
   ];
