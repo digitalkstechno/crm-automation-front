@@ -27,8 +27,8 @@ export default function LoginPage() {
   // Formik form handling
   const formik = useFormik({
     initialValues: {
-      email: '',
-      password: '',
+      email: 'admin@gmail.com',
+      password: '123456',
     },
     validationSchema,
     onSubmit: async (values) => {
@@ -68,6 +68,13 @@ export default function LoginPage() {
             CRM Software
           </h1>
           <p className="mt-2 text-sm text-gray-400">Sign in to continue to your account</p>
+        </div>
+
+        {/* Demo Credentials */}
+        <div className="mb-6 p-4 rounded-lg bg-blue-900/30 border border-blue-500/30 text-sm text-blue-200 text-center">
+          <p className="font-semibold mb-1">Demo Admin Credentials</p>
+          <p>Email: <span className="text-white font-mono">admin@gmail.com</span></p>
+          <p>Password: <span className="text-white font-mono">123456</span></p>
         </div>
 
         <form onSubmit={formik.handleSubmit} className="space-y-6">
