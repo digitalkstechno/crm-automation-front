@@ -20,6 +20,7 @@ interface ImportResult {
   imported: number;
   failed: number;
   failedBlob?: Blob;
+  errorSummary?: string;
 }
 
 export default function LeadBulkImportDialog({ isOpen, onClose, onImported }: Props) {
@@ -151,10 +152,21 @@ export default function LeadBulkImportDialog({ isOpen, onClose, onImported }: Pr
       if (contentType.includes('spreadsheetml')) {
         const imported = parseInt(res.headers['x-import-imported'] || '0', 10);
         const failed = parseInt(res.headers['x-import-failed'] || '0', 10);
-        const blob = new Blob([res.data], {
+        const failedBlob = new Blob([res.data], {
           type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         });
-        setResult({ imported, failed, failedBlob: blob });
+        
+        let errorSummary = '';
+        const rawSummary = res.headers['x-import-error-summary'];
+        if (rawSummary) {
+          try {
+            errorSummary = atob(rawSummary);
+          } catch (e) {
+            console.error("Failed to decode error summary", e);
+          }
+        }
+        
+        setResult({ imported, failed, failedBlob, errorSummary });
         setStep('done');
         if (imported > 0) onImported();
       } else {
@@ -313,6 +325,21 @@ export default function LeadBulkImportDialog({ isOpen, onClose, onImported }: Pr
                   <Download className="h-4 w-4" />
                   Download Failed Leads Report
                 </button>
+                {result.errorSummary && (
+                  <div className="mt-4 p-3 rounded-md bg-white border border-red-100 text-left">
+                    <p className="text-xs font-semibold text-red-800 mb-1">Error Preview:</p>
+                    <ul className="list-disc list-inside text-xs text-red-600 space-y-1">
+                      {result.errorSummary.split(' | ').map((err, idx) => (
+                        <li key={idx} className="truncate">{err}</li>
+                      ))}
+                    </ul>
+                    {result.failed > 5 && (
+                      <p className="mt-2 text-[10px] text-red-400 italic">
+                        ...and more. Please check the Excel file for all errors.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
