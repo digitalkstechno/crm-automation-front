@@ -477,6 +477,7 @@ import { baseUrl, getAuthToken } from '@/config';
 import { ApiLead, ApiStatus } from './types';
 import { Eye, Download, Search, Pencil, Trash2 } from 'lucide-react';
 import { getFileIcon } from '@/utills/utill';
+import CustomDatePicker from '../CustomDatePicker';
 
 interface Props {
   lead: ApiLead | null;
@@ -829,10 +830,12 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-500">Date</label>
-                    <input
-                      type="date"
-                      value={editNextDate}
-                      onChange={(e) => setEditNextDate(e.target.value)}
+                    <CustomDatePicker
+                      selected={editNextDate ? new Date(editNextDate) : null}
+                      onChange={(date) => {
+                        const dateString = date ? date.toLocaleDateString('en-CA') : "";
+                        setEditNextDate(dateString);
+                      }}
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 transition-all outline-none"
                     />
                   </div>
@@ -1127,8 +1130,12 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-500">Date</label>
-                <input type="date" value={editFollowUpData.date}
-                  onChange={e => setEditFollowUpData(p => ({ ...p, date: e.target.value }))}
+                <CustomDatePicker 
+                  selected={editFollowUpData.date ? new Date(editFollowUpData.date) : null}
+                  onChange={(date) => {
+                    const dateString = date ? date.toLocaleDateString('en-CA') : "";
+                    setEditFollowUpData(p => ({ ...p, date: dateString }))
+                  }}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-500" />
               </div>
               <div className="space-y-1">

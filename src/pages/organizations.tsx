@@ -38,6 +38,28 @@ export function OrganizationsContent() {
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search);
+  const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('organizationsFilters');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.search) setSearch(parsed.search);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      setIsFiltersLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isFiltersLoaded) {
+      localStorage.setItem('organizationsFilters', JSON.stringify({ search }));
+    }
+  }, [search, isFiltersLoaded]);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -102,7 +124,9 @@ export function OrganizationsContent() {
     }
   };
 
-  useEffect(() => { fetchData(); }, [debouncedSearch, currentPage, pageSize]);
+  useEffect(() => {
+    if (isFiltersLoaded && search === debouncedSearch) fetchData();
+  }, [debouncedSearch, search, currentPage, pageSize, isFiltersLoaded]);
 
   const handleSave = async (values: { _id?: string; name: string }) => {
     setIsSubmitting(true);
@@ -203,6 +227,8 @@ export function OrganizationsContent() {
         onEdit={canUpdate ? handleEdit : undefined}
         onDelete={canDelete ? (row) => { setToDelete(row); setShowDeleteDialog(true); } : undefined}
         addButton={canCreate ? { label: 'Add Organization', onClick: handleAdd } : undefined}
+        initialSearch={search}
+        loading={!isFiltersLoaded || search !== debouncedSearch}
       />
 
       {/* DELETE CONFIRMATION DIALOG */}

@@ -49,6 +49,28 @@ export function StaffManagementContent() {
   const [search, setSearch] = useState('');
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('staffFilters');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.search) setSearch(parsed.search);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      setIsFiltersLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isFiltersLoaded) {
+      localStorage.setItem('staffFilters', JSON.stringify({ search }));
+    }
+  }, [search, isFiltersLoaded]);
 
   const debouncedSearch = useDebounce(search, 500);
 
@@ -136,8 +158,8 @@ export function StaffManagementContent() {
   }, [page, limit, debouncedSearch, token]);
 
   useEffect(() => {
-    fetchStaff();
-  }, [fetchStaff]);
+    if (isFiltersLoaded && search === debouncedSearch) fetchStaff();
+  }, [fetchStaff, isFiltersLoaded, search, debouncedSearch]);
 
   const togglePasswordVisibility = (id: string) => {
     setVisiblePasswords((prev) => {
@@ -347,8 +369,8 @@ export function StaffManagementContent() {
                 }
               : undefined
           }
-          // Optional: pass isLoading if your DataTable supports loading UI
-          // isLoading={isLoading}
+          initialSearch={search}
+          loading={!isFiltersLoaded || search !== debouncedSearch || isLoading}
         />
       </div>
 

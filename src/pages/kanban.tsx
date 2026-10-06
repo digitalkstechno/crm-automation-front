@@ -13,6 +13,7 @@ import { baseUrl, getAuthToken } from "@/config";
 import Dialog from "@/components/Dialog";
 import { ListCollapse, Plus } from "lucide-react";
 import Select from "react-select";
+import CustomDatePicker from "@/components/CustomDatePicker";
 import { KanbanColumnSkeleton } from "@/components/ui/Skeleton";
 
 type ApiUser = {
@@ -1342,12 +1343,12 @@ export default function LeadsPage() {
               <label className="block text-sm font-medium text-slate-700">
                 Next Follow-Up
               </label>
-              <input
-                type="date"
-                value={addForm.lastFollowUp}
-                onChange={(e) =>
-                  setAddForm((p) => ({ ...p, lastFollowUp: e.target.value }))
-                }
+              <CustomDatePicker
+                selected={addForm.lastFollowUp ? new Date(addForm.lastFollowUp) : null}
+                onChange={(date) => {
+                  const dateString = date ? date.toLocaleDateString('en-CA') : "";
+                  setAddForm((p) => ({ ...p, lastFollowUp: dateString }))
+                }}
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -1358,15 +1359,12 @@ export default function LeadsPage() {
                   <label className="block text-sm font-medium text-slate-700">
                     Next Follow-Up Date
                   </label>
-                  <input
-                    type="date"
-                    value={addForm.nextFollowupDate ?? ""}
-                    onChange={(e) =>
-                      setAddForm((p) => ({
-                        ...p,
-                        nextFollowupDate: e.target.value,
-                      }))
-                    }
+                  <CustomDatePicker
+                    selected={addForm.nextFollowupDate ? new Date(addForm.nextFollowupDate) : null}
+                    onChange={(date) => {
+                      const dateString = date ? date.toLocaleDateString('en-CA') : "";
+                      setAddForm((p) => ({ ...p, nextFollowupDate: dateString }))
+                    }}
                     className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -1539,10 +1537,12 @@ export default function LeadsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="text-sm text-gray-600 mb-2">Next Follow-Up Date</div>
-                  <input
-                    type="date"
-                    value={editingNextFollowupDate}
-                    onChange={(e) => setEditingNextFollowupDate(e.target.value)}
+                  <CustomDatePicker
+                    selected={editingNextFollowupDate ? new Date(editingNextFollowupDate) : null}
+                    onChange={(date) => {
+                      const dateString = date ? date.toLocaleDateString('en-CA') : "";
+                      setEditingNextFollowupDate(dateString)
+                    }}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   />
                 </div>

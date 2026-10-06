@@ -45,6 +45,21 @@ export function TeamsContent() {
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search);
+  const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedSearch = localStorage.getItem('teamsSearch');
+      if (savedSearch) setSearch(savedSearch);
+      setIsFiltersLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isFiltersLoaded) {
+      localStorage.setItem('teamsSearch', search);
+    }
+  }, [search, isFiltersLoaded]);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -128,7 +143,7 @@ export function TeamsContent() {
     }
   };
 
-  useEffect(() => { fetchData(); }, [debouncedSearch, currentPage, pageSize]);
+  useEffect(() => { if (isFiltersLoaded && search === debouncedSearch) fetchData(); }, [debouncedSearch, search, currentPage, pageSize, isFiltersLoaded]);
 
   const handleSave = async (values: { _id?: string; name: string; teamLeader?: string }) => {
     setIsSubmitting(true);
@@ -237,6 +252,8 @@ export function TeamsContent() {
         onEdit={canUpdate ? handleEdit : undefined}
         onDelete={canDelete ? (row) => { setToDelete(row); setShowDeleteDialog(true); } : undefined}
         addButton={canCreate ? { label: 'Add Team', onClick: handleAdd } : undefined}
+        initialSearch={search}
+        loading={!isFiltersLoaded || search !== debouncedSearch}
       />
 
       {/* DELETE CONFIRMATION DIALOG */}

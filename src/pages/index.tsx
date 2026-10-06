@@ -3,6 +3,7 @@
   import { useEffect, useState } from "react";
   import type { ComponentType } from "react";
   import { useRouter } from "next/navigation";
+  import CustomDatePicker from "@/components/CustomDatePicker";
   import {
     PieChart,
     Pie,
@@ -107,6 +108,35 @@
     const [toDate, setToDate] = useState("");
     const [staffList, setStaffList] = useState<any[]>([]);
     const [selectedStaff, setSelectedStaff] = useState<string>("");
+    const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
+
+    // Load filters on mount
+    useEffect(() => {
+      if (typeof window !== "undefined") {
+        try {
+          const saved = localStorage.getItem("dashboardFilters");
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.fromDate) setFromDate(parsed.fromDate);
+            if (parsed.toDate) setToDate(parsed.toDate);
+            if (parsed.selectedStaff) setSelectedStaff(parsed.selectedStaff);
+          }
+        } catch (e) {
+          console.error("Failed to parse saved filters", e);
+        }
+        setIsFiltersLoaded(true);
+      }
+    }, []);
+
+    // Save filters on change
+    useEffect(() => {
+      if (typeof window !== "undefined" && isFiltersLoaded) {
+        localStorage.setItem(
+          "dashboardFilters",
+          JSON.stringify({ fromDate, toDate, selectedStaff })
+        );
+      }
+    }, [fromDate, toDate, selectedStaff, isFiltersLoaded]);
 
     const token =
       typeof window !== "undefined" ? getAuthToken() : null;
@@ -307,7 +337,7 @@
     };
 
     useEffect(() => {
-      if (token) {
+      if (token && isFiltersLoaded) {
         fetchLeadSummary();
         fetchUpcomingFollowups(1);
         fetchDueFollowups(1);
@@ -316,7 +346,7 @@
         // Fetch staff stats for filtering. The backend handles returning only the staffs they are allowed to see.
         fetchStaffPerformance();
       }
-    }, [token, permissions, fromDate, toDate, selectedStaff]);
+    }, [token, permissions, fromDate, toDate, selectedStaff, isFiltersLoaded]);
 
     useEffect(() => {
       if (typeof window !== "undefined") {
@@ -731,19 +761,23 @@
                 <div className="flex items-center gap-3 w-full sm:w-auto grid grid-cols-2 sm:flex">
                   <div className="relative w-full">
                     <label className="absolute -top-2 left-3 px-1 bg-white text-[9px] font-bold text-blue-500 uppercase tracking-widest z-10">From</label>
-                    <input 
-                      type="date" 
-                      value={fromDate}
-                      onChange={(e) => setFromDate(e.target.value)}
+                    <CustomDatePicker 
+                      selected={fromDate ? new Date(fromDate) : null}
+                      onChange={(date) => {
+                        const dateString = date ? date.toLocaleDateString('en-CA') : "";
+                        setFromDate(dateString);
+                      }}
                       className="px-2 sm:px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs sm:text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer w-full"
                     />
                   </div>
                   <div className="relative w-full">
                     <label className="absolute -top-2 left-3 px-1 bg-white text-[9px] font-bold text-blue-500 uppercase tracking-widest z-10">To</label>
-                    <input 
-                      type="date" 
-                      value={toDate}
-                      onChange={(e) => setToDate(e.target.value)}
+                    <CustomDatePicker 
+                      selected={toDate ? new Date(toDate) : null}
+                      onChange={(date) => {
+                        const dateString = date ? date.toLocaleDateString('en-CA') : "";
+                        setToDate(dateString);
+                      }}
                       className="px-2 sm:px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs sm:text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer w-full"
                     />
                   </div>

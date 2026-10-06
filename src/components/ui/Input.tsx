@@ -334,6 +334,7 @@
 
 import React, { useState } from "react";
 import { Eye, EyeOff, AlertCircle, CheckCircle, Check } from "lucide-react";
+import CustomDatePicker from "../CustomDatePicker";
 
 interface FormInputProps {
   label?: string;
@@ -630,6 +631,18 @@ const FormInput: React.FC<FormInputProps> = ({
             accept={accept}
             disabled={disabled}
             className={getFileInputClasses()}
+          />
+        ) : type === "date" ? (
+          <CustomDatePicker
+            selected={value ? new Date(value) : null}
+            onChange={(date: Date | null) => {
+               // Format Date to YYYY-MM-DD string as expected by standard inputs
+               const dateString = date ? date.toLocaleDateString('en-CA') : "";
+               onChange({ target: { name, value: dateString } });
+            }}
+            className={getInputClasses()}
+            placeholderText={placeholder}
+            // Add any custom props if needed, though CustomDatePicker handles basic ones
           />
         ) : (
           <input

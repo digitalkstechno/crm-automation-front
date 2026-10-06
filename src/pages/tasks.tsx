@@ -27,6 +27,34 @@ export default function TasksPage() {
   const [kanbanData, setKanbanData] = useState<any[]>([]);
   const [kanbanLoading, setKanbanLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
+
+  // Load saved filters
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('tasksFilters');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.searchQuery) setSearchQuery(parsed.searchQuery);
+          if (parsed.activeTab) setActiveTab(parsed.activeTab);
+          if (parsed.viewMode) setViewMode(parsed.viewMode);
+        }
+      } catch (e) {
+        console.error('Failed to load tasks filters', e);
+      }
+      setIsFiltersLoaded(true);
+    }
+  }, []);
+
+  // Save filters on change
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isFiltersLoaded) {
+      localStorage.setItem('tasksFilters', JSON.stringify({
+        searchQuery, activeTab, viewMode
+      }));
+    }
+  }, [searchQuery, activeTab, viewMode, isFiltersLoaded]);
 
   const [taskPermissions, setTaskPermissions] = useState<{
     readAll?: boolean;
@@ -122,8 +150,8 @@ export default function TasksPage() {
   }, [effectiveTab]);
 
   useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    if (isFiltersLoaded) fetchTasks();
+  }, [fetchTasks, isFiltersLoaded]);
 
   useEffect(() => {
     // fetchSummary();
@@ -267,6 +295,7 @@ export default function TasksPage() {
               onView={(row) => setViewTask(row)}
               onEdit={(row) => { setEditTask(row); setShowDialog(true); }}
               onDelete={(row) => setDeleteTask(row)}
+              initialSearch={searchQuery}
             />
           )}
 

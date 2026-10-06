@@ -257,3 +257,15 @@ button {
   background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
   background-size: 200% 100%;
 }
+/* Custom react-datepicker holiday styles */
+.react-datepicker__day.red-holiday-day {
+  color: #dc2626 !important; /* red-600 */
+  background-color: #fee2e2 !important; /* light red-100 */
+  border-radius: 50% !important;
+}
+.react-datepicker__day.red-holiday-day:hover {
+  background-color: #fecaca !important; /* red-200 hover */
+}
+
+.react-datepicker-popper { z-index: 99999 !important; }
+

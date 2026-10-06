@@ -56,6 +56,21 @@ export function TaskStatusContent() {
     const [totalRecords, setTotalRecords] = useState(0);
     const [search, setSearch] = useState('');
     const debouncedSearch = useDebounce(search, 600);
+    const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const savedSearch = localStorage.getItem('taskStatusSearch');
+            if (savedSearch) setSearch(savedSearch);
+            setIsFiltersLoaded(true);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && isFiltersLoaded) {
+            localStorage.setItem('taskStatusSearch', search);
+        }
+    }, [search, isFiltersLoaded]);
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -117,8 +132,10 @@ export function TaskStatusContent() {
 
     // initial load & whenever search/page/limit changes
     useEffect(() => {
-        fetchData();
-    }, [debouncedSearch, currentPage, pageSize]);
+        if (isFiltersLoaded && search === debouncedSearch) {
+            fetchData();
+        }
+    }, [debouncedSearch, search, currentPage, pageSize, isFiltersLoaded]);
 
     /* ================= SAVE (ADD / EDIT) ================= */
 
@@ -282,6 +299,8 @@ export function TaskStatusContent() {
                         setIsDialogOpen(true);
                     },
                 }}
+                initialSearch={search}
+                loading={!isFiltersLoaded || search !== debouncedSearch}
             />
 
             {/* DELETE CONFIRMATION DIALOG */}

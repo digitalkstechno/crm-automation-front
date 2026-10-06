@@ -42,6 +42,7 @@ interface DataTableProps<T> {
   loading?: boolean;
   actions?: boolean;
   title?: string;
+  initialSearch?: string;
   subtitle?: string;
   striped?: boolean;
   addButton?: {
@@ -92,10 +93,17 @@ export default function DataTable<T extends Record<string, any>>({
   selectable,
   selectedRows = [],
   onSelectionChange,
+  initialSearch = '',
 }: DataTableProps<T>) {
-  const [searchValue, setSearchValue] = useState('');
+  const [searchValue, setSearchValue] = useState(initialSearch);
   const [showFilters, setShowFilters] = useState(false);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (initialSearch !== undefined) {
+      setSearchValue(initialSearch);
+    }
+  }, [initialSearch]);
 
   const renderCell = (column: Column<T>, row: T) => {
     const value = row[column.key as string];

@@ -60,6 +60,21 @@ export function LeadSourcesContent() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [sourceToDelete, setSourceToDelete] = useState<LeadItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedSearch = localStorage.getItem('leadSourcesSearch');
+      if (savedSearch) setSearch(savedSearch);
+      setIsFiltersLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isFiltersLoaded) {
+      localStorage.setItem('leadSourcesSearch', search);
+    }
+  }, [search, isFiltersLoaded]);
 
   const token = typeof window !== 'undefined' ? getAuthToken() : null;
   const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
@@ -111,8 +126,10 @@ export function LeadSourcesContent() {
 
   // initial load & whenever search/page/limit changes
   useEffect(() => {
-    fetchData();
-  }, [debouncedSearch, currentPage, pageSize]);
+    if (isFiltersLoaded && search === debouncedSearch) {
+      fetchData();
+    }
+  }, [debouncedSearch, search, currentPage, pageSize, isFiltersLoaded]);
 
   /* ================= SAVE (ADD / EDIT) ================= */
 
@@ -227,6 +244,8 @@ export function LeadSourcesContent() {
             setIsDialogOpen(true);
           },
         }}
+        initialSearch={search}
+        loading={!isFiltersLoaded || search !== debouncedSearch}
       />
 
       {/* DELETE CONFIRMATION DIALOG */}

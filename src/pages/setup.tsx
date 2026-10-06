@@ -28,20 +28,39 @@ export default function Setup() {
   const [permissions, setPermissions] = useState<any>(null);
   const [loadingPermissions, setLoadingPermissions] = useState(true);
 
-  // Sync activeTab with URL query parameter - FIXED: Check if router.query.tab exists
+  // Sync activeTab with URL query parameter or localStorage
   useEffect(() => {
-    if (router.query.tab) {
-      const tab = router.query.tab as string;
+    if (router.isReady) {
       const validTabs = ['Role Management', 'Staff Management', 'Lead Sources', 'Lead Status', 'Kanban Status', 'Lead Labels', 'Lead Priority', 'Teams', 'Organizations', 'Task Status', 'Field Settings'];
-      if (validTabs.includes(tab)) {
-        setActiveTab(tab as any);
+      
+      if (router.query.tab) {
+        const tab = router.query.tab as string;
+        if (validTabs.includes(tab)) {
+          setActiveTab(tab as any);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('setupActiveTab', tab);
+          }
+        }
+      } else if (typeof window !== 'undefined') {
+        const savedTab = localStorage.getItem('setupActiveTab');
+        if (savedTab && validTabs.includes(savedTab)) {
+          setActiveTab(savedTab as any);
+          // Optional: Update URL to reflect saved tab
+          router.replace({
+            pathname: router.pathname,
+            query: { ...router.query, tab: savedTab },
+          }, undefined, { shallow: true });
+        }
       }
     }
-  }, [router.query.tab]);
+  }, [router.isReady, router.query.tab, router.pathname]);
 
   // Handle tab change and update URL
   const handleTabChange = (tab: 'Role Management' | 'Staff Management' | 'Lead Sources' | 'Lead Status' | 'Kanban Status' | 'Lead Labels' | 'Lead Priority' | 'Teams' | 'Organizations' | 'Task Status' | 'Field Settings') => {
     setActiveTab(tab);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('setupActiveTab', tab);
+    }
     router.push({
       pathname: router.pathname,
       query: { ...router.query, tab },

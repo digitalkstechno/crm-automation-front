@@ -22,6 +22,7 @@ interface TaskListViewProps {
     onView: (task: Task) => void;
     onEdit: (task: Task) => void;
     onDelete: (task: Task) => void;
+    initialSearch?: string;
 }
 
 export default function TaskListView({
@@ -40,6 +41,7 @@ export default function TaskListView({
     onView,
     onEdit,
     onDelete,
+    initialSearch = '',
 }: TaskListViewProps) {
     const columns: Column<Task>[] = [
         {
@@ -128,6 +130,7 @@ export default function TaskListView({
             onView={onView}
             onEdit={onEdit}
             onDelete={onDelete}
+            initialSearch={initialSearch}
         />
     );
 }

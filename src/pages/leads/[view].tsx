@@ -15,6 +15,7 @@ import LeadAddDialog from '@/components/leads/LeadAddDialog';
 import LeadViewDialog from '@/components/leads/LeadViewDialog';
 import LeadBulkImportDialog from '@/components/leads/LeadBulkImportDialog';
 import { PageSkeleton, KanbanColumnSkeleton } from '@/components/ui/Skeleton';
+import CustomDatePicker from '@/components/CustomDatePicker';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 import {
@@ -59,6 +60,48 @@ export default function LeadsPage() {
   const [toDate, setToDate] = useState('');
   const [amountBudgetOptions, setAmountBudgetOptions] = useState<string[]>([]);
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
+  const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
+
+  // ── Load saved filters on mount ───────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('leadsFilters');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.statusFilter) setStatusFilter(parsed.statusFilter);
+          if (parsed.sourceFilter) setSourceFilter(parsed.sourceFilter);
+          if (parsed.staffFilter) setStaffFilter(parsed.staffFilter);
+          if (parsed.amountBudgetFilter) setAmountBudgetFilter(parsed.amountBudgetFilter);
+          
+          if (
+            parsed.statusFilter?.length > 0 ||
+            parsed.sourceFilter?.length > 0 ||
+            parsed.staffFilter?.length > 0 ||
+            parsed.amountBudgetFilter?.length > 0
+          ) {
+            setShowFilterDrawer(true);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse saved filters', e);
+      }
+      setIsFiltersLoaded(true);
+    }
+  }, []);
+
+  // ── Save filters on change ────────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isFiltersLoaded) {
+      const filtersToSave = {
+        statusFilter,
+        sourceFilter,
+        staffFilter,
+        amountBudgetFilter,
+      };
+      localStorage.setItem('leadsFilters', JSON.stringify(filtersToSave));
+    }
+  }, [statusFilter, sourceFilter, staffFilter, amountBudgetFilter, isFiltersLoaded]);
 
   const debouncedSearch = useDebounce(search, 500);
 
@@ -150,7 +193,7 @@ export default function LeadsPage() {
     listPagination,
     lostPagination,
     wonPagination,
-  } = useLeadsData(activeTab, filters, viewMode, kanbanSubView);
+  } = useLeadsData(activeTab, filters, viewMode, kanbanSubView, isFiltersLoaded && search === debouncedSearch);
 
   // ── Sync URL → state ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -488,19 +531,23 @@ export default function LeadsPage() {
                 <div className="flex items-center gap-2 mt-2">
                   <div className="relative flex-1">
                     <label className="absolute -top-2 left-3 px-1 bg-white text-[9px] font-bold text-blue-500 uppercase tracking-widest z-10">From</label>
-                    <input 
-                      type="date" 
-                      value={fromDate}
-                      onChange={(e) => setFromDate(e.target.value)}
+                    <CustomDatePicker 
+                      selected={fromDate ? new Date(fromDate) : null}
+                      onChange={(date) => {
+                        const dateString = date ? date.toLocaleDateString('en-CA') : "";
+                        setFromDate(dateString);
+                      }}
                       className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer h-[42px]"
                     />
                   </div>
                   <div className="relative flex-1">
                     <label className="absolute -top-2 left-3 px-1 bg-white text-[9px] font-bold text-blue-500 uppercase tracking-widest z-10">To</label>
-                    <input 
-                      type="date" 
-                      value={toDate}
-                      onChange={(e) => setToDate(e.target.value)}
+                    <CustomDatePicker 
+                      selected={toDate ? new Date(toDate) : null}
+                      onChange={(date) => {
+                        const dateString = date ? date.toLocaleDateString('en-CA') : "";
+                        setToDate(dateString);
+                      }}
                       className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 transition-all cursor-pointer h-[42px]"
                     />
                   </div>

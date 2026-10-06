@@ -7,6 +7,7 @@ import { baseUrl, getAuthToken } from '@/config';
 import { toast } from 'react-toastify';
 import Label from './ui/Label';
 import Select from 'react-select';
+import CustomDatePicker from './CustomDatePicker';
 
 interface DropdownItem {
   _id: string;
@@ -501,11 +502,12 @@ export default function LeadAddDialog({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Next Follow-up Date</Label>
-                  <input
-                    type="date"
-                    name="nextFollowupDate"
-                    value={formData.nextFollowupDate}
-                    onChange={handleChange}
+                  <CustomDatePicker
+                    selected={formData.nextFollowupDate ? new Date(formData.nextFollowupDate) : null}
+                    onChange={(date: Date | null) => {
+                      const dateString = date ? date.toLocaleDateString('en-CA') : "";
+                      handleChange({ target: { name: 'nextFollowupDate', value: dateString } } as any);
+                    }}
                     className="w-full border border-slate-400 rounded px-3 py-2 text-black"
                   />
                 </div>

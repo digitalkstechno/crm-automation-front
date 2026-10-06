@@ -143,8 +143,22 @@ export function RolesContent() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
-
   const debouncedSearch = useDebounce(searchTerm, 500);
+  const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedSearch = localStorage.getItem('rolesSearch');
+      if (savedSearch) setSearchTerm(savedSearch);
+      setIsFiltersLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isFiltersLoaded) {
+      localStorage.setItem('rolesSearch', searchTerm);
+    }
+  }, [searchTerm, isFiltersLoaded]);
 
   const token = getAuthToken();
   const [setupPermissions, setSetupPermissions] = useState<{
@@ -209,8 +223,10 @@ export function RolesContent() {
   }, [currentPage, pageSize, debouncedSearch, token]);
 
   useEffect(() => {
-    fetchRoles();
-  }, [fetchRoles]);
+    if (isFiltersLoaded && searchTerm === debouncedSearch) {
+      fetchRoles();
+    }
+  }, [fetchRoles, isFiltersLoaded, searchTerm, debouncedSearch]);
 
   const refreshAfterMutation = () => {
     fetchRoles();
@@ -343,6 +359,8 @@ export function RolesContent() {
                 }
               : undefined
           }
+          initialSearch={searchTerm}
+          loading={!isFiltersLoaded || searchTerm !== debouncedSearch || isLoading}
         />
       </div>
 

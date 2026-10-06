@@ -19,7 +19,8 @@ export function useLeadsData(
   activeTab: 'all' | 'my' = 'all',
   filters: Filters = {},
   viewMode: 'list' | 'kanban' = 'list',
-  kanbanSubView: 'board' | 'lost' | 'won' = 'board'
+  kanbanSubView: 'board' | 'lost' | 'won' = 'board',
+  isFiltersLoaded: boolean = true
 ) {
   const [leads, setLeads] = useState<ApiLead[]>([]);
   const [leadsList, setLeadsList] = useState<ApiLead[]>([]);
@@ -79,6 +80,7 @@ export function useLeadsData(
     tab = stateRef.current.activeTab,
     f: Filters = stateRef.current.filters
   ) => {
+    setLoading(true);
     try {
       const useKanbanEndpoint = !!baseUrl.getKanbanData;
 
@@ -129,6 +131,8 @@ export function useLeadsData(
     } catch (e) {
       console.error('fetchKanbanLeads error:', e);
       setLeads([]);
+    } finally {
+      setLoading(false);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -138,6 +142,7 @@ export function useLeadsData(
     page = stateRef.current.listPage,
     limit = stateRef.current.listLimit
   ) => {
+    setLoading(true);
     try {
       const url = tab === 'my' ? baseUrl.myLeads : baseUrl.getAllLeads;
       const res = await axios.get(url, {
@@ -162,6 +167,8 @@ export function useLeadsData(
     } catch (e) {
       console.error('fetchLeadsList error:', e);
       setLeadsList([]);
+    } finally {
+      setLoading(false);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -171,6 +178,7 @@ export function useLeadsData(
     page = stateRef.current.lostPage,
     limit = stateRef.current.lostLimit
   ) => {
+    setLoading(true);
     try {
       const res = await axios.get(baseUrl.getLostLeads, {
         headers: getHeaders(),
@@ -196,6 +204,8 @@ export function useLeadsData(
     } catch (e) {
       console.error('fetchLostLeads error:', e);
       setLostLeads([]);
+    } finally {
+      setLoading(false);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -205,6 +215,7 @@ export function useLeadsData(
     page = stateRef.current.wonPage,
     limit = stateRef.current.wonLimit
   ) => {
+    setLoading(true);
     try {
       const res = await axios.get(baseUrl.getWonLeads, {
         headers: getHeaders(),
@@ -230,6 +241,8 @@ export function useLeadsData(
     } catch (e) {
       console.error('fetchWonLeads error:', e);
       setWonLeads([]);
+    } finally {
+      setLoading(false);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -333,31 +346,11 @@ export function useLeadsData(
   // 1. Meta — once
   useEffect(() => { fetchMeta(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 2. Initial data load
-  useEffect(() => {
-    let cancelled = false;
-    const init = async () => {
-      setLoading(true);
-      if (viewMode === 'list') {
-        await Promise.all([fetchLeadsList(activeTab, filters, 1, listLimit), fetchCounts(activeTab, filters)]);
-      } else {
-        const calls: Promise<void>[] = [
-          // Global Kanban fetch removed - component now fetches status-wise
-          fetchCounts(activeTab, filters),
-        ];
-        if (kanbanSubView === 'lost') calls.push(fetchLostLeads(activeTab, filters, 1, lostLimit));
-        if (kanbanSubView === 'won') calls.push(fetchWonLeads(activeTab, filters, 1, wonLimit));
-        await Promise.all(calls);
-      }
-      if (!cancelled) setLoading(false);
-    };
-    init();
-    return () => { cancelled = true; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
+  // 2. Initial data load (Removed because Effect 3 handles it now)
   // 3. Re-fetch when viewMode / activeTab / filters change
   const prevKey = useRef('');
   useEffect(() => {
+    if (!isFiltersLoaded) return;
     const key = JSON.stringify({ viewMode, activeTab, filters });
     if (key === prevKey.current) return;
     prevKey.current = key;
@@ -380,6 +373,7 @@ export function useLeadsData(
   // 4. Kanban sub-view changed
   const prevSubView = useRef(kanbanSubView);
   useEffect(() => {
+    if (!isFiltersLoaded) return;
     if (prevSubView.current === kanbanSubView) return;
     prevSubView.current = kanbanSubView;
     if (viewMode !== 'kanban') return;
@@ -391,6 +385,7 @@ export function useLeadsData(
   // 5. List page change
   const prevListPage = useRef(listPage);
   useEffect(() => {
+    if (!isFiltersLoaded) return;
     if (prevListPage.current === listPage) return;
     prevListPage.current = listPage;
     if (viewMode === 'list') fetchLeadsList(activeTab, filters, listPage, listLimit);
@@ -399,6 +394,7 @@ export function useLeadsData(
   // 6. Lost page change
   const prevLostPage = useRef(lostPage);
   useEffect(() => {
+    if (!isFiltersLoaded) return;
     if (prevLostPage.current === lostPage) return;
     prevLostPage.current = lostPage;
     if (viewMode === 'kanban' && kanbanSubView === 'lost') fetchLostLeads(activeTab, filters, lostPage, lostLimit);
@@ -407,13 +403,24 @@ export function useLeadsData(
   // 7. Won page change
   const prevWonPage = useRef(wonPage);
   useEffect(() => {
+    if (!isFiltersLoaded) return;
     if (prevWonPage.current === wonPage) return;
     prevWonPage.current = wonPage;
     if (viewMode === 'kanban' && kanbanSubView === 'won') fetchWonLeads(activeTab, filters, wonPage, wonLimit);
   }, [wonPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 8. Limit change
+  const prevLimits = useRef({ list: listLimit, lost: lostLimit, won: wonLimit });
   useEffect(() => {
+    if (!isFiltersLoaded) return;
+    if (
+      prevLimits.current.list === listLimit &&
+      prevLimits.current.lost === lostLimit &&
+      prevLimits.current.won === wonLimit
+    ) return;
+    
+    prevLimits.current = { list: listLimit, lost: lostLimit, won: wonLimit };
+
     if (viewMode === 'list') {
       fetchLeadsList(activeTab, filters, 1, listLimit);
     } else {

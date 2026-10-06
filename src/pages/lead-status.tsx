@@ -59,6 +59,21 @@ export function LeadStatusContent() {
   const [allData, setAllData] = useState<LeadItem[]>([]);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 600);
+  const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedSearch = localStorage.getItem('leadStatusSearch');
+      if (savedSearch) setSearch(savedSearch);
+      setIsFiltersLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isFiltersLoaded) {
+      localStorage.setItem('leadStatusSearch', search);
+    }
+  }, [search, isFiltersLoaded]);
 
   // pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -129,8 +144,10 @@ export function LeadStatusContent() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [debouncedSearch, currentPage, pageSize]);
+    if (isFiltersLoaded && search === debouncedSearch) {
+      fetchData();
+    }
+  }, [debouncedSearch, search, currentPage, pageSize, isFiltersLoaded]);
 
   /* ================= SAVE (add or edit) ================= */
 
@@ -256,6 +273,8 @@ export function LeadStatusContent() {
             setIsDialogOpen(true);
           },
         }}
+        initialSearch={search}
+        loading={!isFiltersLoaded || search !== debouncedSearch}
       />
 
       {/* DELETE CONFIRMATION DIALOG */}

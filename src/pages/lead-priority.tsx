@@ -31,6 +31,21 @@ export function LeadPriorityContent() {
   const [totalRecords, setTotalRecords] = useState(0);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 600);
+  const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedSearch = localStorage.getItem('leadPrioritySearch');
+      if (savedSearch) setSearch(savedSearch);
+      setIsFiltersLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isFiltersLoaded) {
+      localStorage.setItem('leadPrioritySearch', search);
+    }
+  }, [search, isFiltersLoaded]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -82,7 +97,7 @@ export function LeadPriorityContent() {
     }
   };
 
-  useEffect(() => { fetchData(); }, [debouncedSearch, currentPage, pageSize]);
+  useEffect(() => { if (isFiltersLoaded && search === debouncedSearch) fetchData(); }, [debouncedSearch, search, currentPage, pageSize, isFiltersLoaded]);
 
   const handleDeleteClick = (row: PriorityItem) => { setItemToDelete(row); setShowDeleteDialog(true); };
 
@@ -138,6 +153,8 @@ export function LeadPriorityContent() {
             setIsDialogOpen(true);
           },
         }}
+        initialSearch={search}
+        loading={!isFiltersLoaded || search !== debouncedSearch}
       />
 
       <DeleteDialog

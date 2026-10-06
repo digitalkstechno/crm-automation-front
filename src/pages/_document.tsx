@@ -8,6 +8,7 @@ export default function Document() {
       </Head>
       <body className="antialiased">
         <Main />
+        <div id="root-portal"></div>
         <NextScript />
       </body>
     </Html>
