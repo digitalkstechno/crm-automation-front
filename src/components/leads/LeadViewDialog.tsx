@@ -518,7 +518,16 @@ export default function LeadViewDialog({ lead, statuses, onClose, onRefresh }: P
   useEffect(() => {
     if (lead) {
       setEditStatus(lead.leadStatus?._id || '');
-      setEditNextDate(lead.nextFollowupDate || '');
+      // Format the date properly for the input type="date"
+      let defaultDate = '';
+      if (lead.nextFollowupDate) {
+        try {
+          defaultDate = new Date(lead.nextFollowupDate).toISOString().split('T')[0];
+        } catch(e) {
+          defaultDate = lead.nextFollowupDate; // fallback
+        }
+      }
+      setEditNextDate(defaultDate);
       setEditNextTime(lead.nextFollowupTime || '');
       setLocalFollowUps(lead.followUps || []);
     }
